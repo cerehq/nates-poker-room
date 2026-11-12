@@ -208,7 +208,7 @@
       .reactions .rlbl{ font-size:11.5px; color:var(--muted); font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
       .react-btn{ border:1px solid var(--line); background:var(--panel-2); border-radius:999px; font-size:18px; line-height:1; padding:7px 11px; min-height:40px; }
       .react-btn:active{ transform:scale(1.18); }
-      .react-float{ position:absolute; left:50%; top:2px; transform:translateX(-50%); font-size:32px; z-index:9; pointer-events:none; animation:reactFloat 2.2s ease-out forwards; text-shadow:0 2px 8px rgba(0,0,0,.5); }
+      .react-float{ position:absolute; left:50%; top:2px; transform:translateX(-50%); font-size:32px; z-index:9; pointer-events:none; animation:reactFloat 3.5s ease-out forwards; text-shadow:0 2px 8px rgba(0,0,0,.5); }
       @keyframes reactFloat{ 0%{ transform:translate(-50%,10px) scale(.5); opacity:0; } 14%{ opacity:1; } 100%{ transform:translate(-50%,-52px) scale(1.2); opacity:0; } }
 
       /* seats */
@@ -1336,12 +1336,12 @@ function humanBet(seq, s, label){
       if(label==="pre"){
         if(ev.cat>=4) setTip(`<b>${ev.name}</b> before the draw is a monster start. <b>Raise it</b> — you want chips in while you’re ahead, and you’ll draw few or no cards.`);
         else if(ev.cat===3) setTip(`<b>Two pair</b> already. That’s a strong draw hand — <b>call or raise</b>, then toss the odd card and draw 1.`);
-        else if(ev.cat===2) setTip(`A <b>pair</b> to build on. ${toCall>60?"The bet to you is steep for one pair — folding is defensible, but":""} Standard play: <b>${toCall>0?"call":"check"}</b>, keep the pair, draw 3 and hope wilds show up.`);
+        else if(ev.cat===2) setTip(`A <b>pair</b> to build on. ${toCall>60?"The bet to you is steep for one pair — folding is defensible, but":""} Standard play: <b>${toCall>0?"call":"check"}</b>, keep the pair, ${drawVariant().wilds ? "draw 3 and hope wilds show up." : "draw 3 and look for trips or two pair."}`);
         else setTip(drawVariant().wilds ? `Nothing yet but rags. With deuces and jokers wild, one wild card changes everything — ${toCall===0?"it’s free to see the draw: <b>check</b>.":toCall<=50?"a cheap <b>call</b> is fine.":"that price is rich for a prayer — <b>fold</b> and wait for a better spot."}` : `Nothing yet — and no wilds to save you in classic draw. ${toCall===0?"It’s free to see the draw: <b>check</b>, keep your best card and draw the rest.":toCall<=50?"a cheap <b>call</b> is fine — keep your best card and draw the rest.":"that price is rich for a prayer — <b>fold</b> and wait for a better spot."}`);
       } else {
         if(ev.cat>=5) setTip(`You made <b>${ev.name}</b>. Bet it like you mean it — <b>raise</b>. Hands this strong don’t need to be shy.`);
         else if(ev.cat>=3) setTip(`<b>${ev.name}</b> after the draw. Solid — <b>${toCall>0?"call":"bet with a raise"}</b> and make the chasers pay.`);
-        else if(ev.cat===2) setTip(`Just a <b>pair</b> after drawing. It wins more often than you’d think at a wild table, but don’t go to war — ${toCall>0?"call small, fold big.":"check and show it cheap."}`);
+        else if(ev.cat===2) setTip(drawVariant().wilds ? `Just a <b>pair</b> after drawing. It wins more often than you’d think at a wild table, but don’t go to war — ${toCall>0?"call small, fold big.":"check and show it cheap."}` : `Just a <b>pair</b> after drawing. That's all showdown value in classic draw — the deck holds no wilds to rescue it — so don’t go to war: ${toCall>0?"call small, fold big.":"check and show it cheap."}`);
         else setTip(`The draw missed. If anyone bets big into you, <b>fold</b> — there’s always another hand in about ten seconds.`);
       }
     }
@@ -1452,7 +1452,7 @@ async function drawPhase(seq, drawNum, cap){
       : ev.cat===4 ? "Trips! The gold-outlined cards are your dead weight — <b>toss those "+d+"</b> and keep the three of a kind."
       : ev.cat===3 ? "<b>Two pair</b> — toss the lone card (gold outline) and draw 1 for a shot at a full house."
       : ev.cat===2 ? (drawVariant().wilds ? "Keep the <b>pair</b>, toss the other "+d+" (gold outlines). Wild cards love landing on a fresh draw." : "Keep the <b>pair</b>, toss the other "+d+" (gold outlines) and draw for trips or two pair.")
-      : ev.cat===1 ? "Nothing made yet. The gold-outlined cards are the toss — keep your best high card and any wild, and let the draw do its work."
+      : ev.cat===1 ? (drawVariant().wilds ? "Nothing made yet. The gold-outlined cards are the toss — keep your best high card and any wild, and let the draw do its work." : "Nothing made yet. The gold-outlined cards are the toss — keep your best high card, and let the draw do its work.")
       : "Strong hand — <b>"+ev.name+"</b>. Stand pat and get ready to bet it.";
     setTip(why + " Tap cards to mark them for the toss — marked cards lift and get a ✕ THROW tag.");
   }
@@ -2354,16 +2354,17 @@ function mpStartHelloRetry(){
 function mpStopHelloRetry(){ if(mp.helloRetryTimer){ clearInterval(mp.helloRetryTimer); mp.helloRetryTimer = null; } }
 function mpJoinFailed(msg){
   mp.joining = false;
+  if(mp.joinWatchTimer){ clearTimeout(mp.joinWatchTimer); mp.joinWatchTimer = null; }
   const go = $("join-go");
   if(go){ go.disabled = false; go.textContent = "Join Table"; }
   if(msg) $("join-note").textContent = msg;
 }
 function mpJoin(){
-  if(!mpRelayReady()) return;
+  if(!mpRelayReady()){ if(mp.joining) mpJoinFailed("The game relay didn\u2019t load \u2014 check your connection and tap Join Table again."); return; }
   const code = ($("net-code-in").value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if(code.length < 4){ netStatus("Enter the room code your host gave you first.", "err"); return; }
+  if(code.length < 4){ netStatus("Enter the room code your host gave you first.", "err"); if(mp.joining) mpJoinFailed("That invite link is missing its room code \u2014 ask the host to send the Room Invite Link again."); return; }
   const client = mpGetClient();
-  if(!client){ netStatus("Couldn\u2019t start the game relay in this browser. Solo play still works.", "err"); return; }
+  if(!client){ netStatus("Couldn\u2019t start the game relay in this browser. Solo play still works.", "err"); if(mp.joining) mpJoinFailed("Couldn\u2019t start the game relay in this browser \u2014 reload the page and tap Join Table again."); return; }
   mpTeardownChannel();
   mp.code = code;
   mp.heartbeatSeen = false; mp.hostQuietShown = false; mp.guestSeated = false; mp.lastHeartbeat = 0;
@@ -2697,7 +2698,7 @@ function mpRenderSnap(snap, isHost){
   if(snap.room) snap.room.forEach(s=>{ s.theme = mpSanTheme(s.theme); });
   if(snap.lastLog && !isHost) snap.lastLog = Object.assign({}, snap.lastLog, { msg: mpSanLogHtml(snap.lastLog.msg) });
   mp.snap = snap;
-  if(snap.game !== game){ game = snap.game; paintGameSegs(); }
+  if(snap.game !== game){ game = snap.game; paintGameSegs(); mp._coachKey = null; if(mode === "apprentice" && tipsOn && (snap.phase === "lobby" || snap.phase === "done")) setTip(gameIntroTip(snap.game)); }
   // order seats so the viewer's own seat is at the bottom
   const mine = snap.seats.findIndex(s=>s.pid === mp.myPid);
   const order = snap.seats.map((s, i)=>i);
@@ -2749,9 +2750,10 @@ function mpRenderSnap(snap, isHost){
   paintBoard(snap.board || []);
   if(snap.center) setCenter(snap.center[0], snap.center[1]);
   paintWinBanner(snap.winBanner || null);
-  const activeSeat = snap.activePid ? snap.seats.find(s=>s.pid === snap.activePid) : null;
+  const activeSeat = (snap.phase !== "done" && snap.activePid) ? snap.seats.find(s=>s.pid === snap.activePid) : null;
   mpSetTurnUI(activeSeat ? { pid: activeSeat.pid, name: activeSeat.name, theme: activeSeat.theme } : null, snap.turnWhat);
   if(activeSeat) $("tb-who").textContent = activeSeat.pid === mp.myPid ? "Your turn" : activeSeat.name + "’s turn";
+  else if(snap.phase === "done") $("tb-who").textContent = snap.center ? snap.center[0] : "Hand over";   // showdown/result state — never a stale "X's turn"
   if(snap.lastLog && snap.lastLog.id !== mp.lastLogId){ mp.lastLogId = snap.lastLog.id; if(!isHost) log(snap.lastLog.msg, snap.lastLog.win); }
   if(isHost) mpRenderHostControls(); else mpRenderGuestIdle(snap);
   mpRenderRoomList(snap.room.concat(snap.seats.filter(s=>s.kind === "ai" && !snap.room.some(r=>r.name === s.name)).map(s=>({ name: s.name, kind: "ai", theme: s.theme, short: s.short, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0 }))));
@@ -2766,6 +2768,7 @@ function mpRenderSnap(snap, isHost){
   // is open, re-deal its selection visuals + tap handlers onto the fresh nodes
   if(mp.drawUI) mpPaintDrawCards();
   mpOffTurnCoach(snap, isHost);
+  reapplyReactions();   // the rebuild above wiped the seat DOM — repaint any reaction floats still inside their TTL
 }
 /* Ready gate: the host deals only once every seated player is in.
    Guests ready up from their own screens (state lives on the roster, so
@@ -2988,6 +2991,16 @@ function mpPaintDrawCards(){
   const c = $("mp-draw-count");
   if(c) c.textContent = ui.sel.size === 0 ? `Tap cards to throw away — up to ${ui.cap}.` : `${ui.sel.size} to throw away — tap DRAW when ready.`;
 }
+/* The current game's intro coach line — the same copy the solo table
+   resets paint. MP game switches (host) and snapshot game changes
+   (guests) refresh the coach from this, so a stale previous-game tip
+   (e.g. the 3/2 game's 54-card jokers text) never survives a switch. */
+function gameIntroTip(g){
+  if(g === "holdem") return "Hold'em in one breath: <b>two cards of your own, five shared on the board</b>, best five-card hand wins. Pairs and big cards play before the flop; after it, the coach reads your made hand off the board for you.";
+  if(g === "bj") return "Blackjack in one sentence: <b>get closer to 21 than the dealer without going over</b>. The dealer’s face-up card is your crystal ball — the coach reads it for you on every decision while Apprentice mode is on.";
+  const V = DRAW_VARIANTS[g] || DRAW_VARIANTS.draw;
+  return V.tip;
+}
 /* Off-turn Apprentice coach: a seated player in Apprentice mode gets a
    read on their OWN dealt hand from their own snapshot — even when it
    isn't their turn. (Before this, guests off-turn only saw the generic
@@ -3034,11 +3047,15 @@ function mpBuildPromptUI(kind, ctx, respond){
       return;
     }
     const ev = myCards.length ? evaluateFor(myCards) : null;
+    // coach copy follows the SNAPSHOT's game variant, never a cached one:
+    // the 3/2 wild lines below are for the wild game only (live classic
+    // hands were getting "one wild card flips everything" before this)
+    const vw = snap && DRAW_VARIANTS[snap.game] ? DRAW_VARIANTS[snap.game].wilds : drawVariant().wilds;
     if(ev && mode === "apprentice" && tipsOn){
       if(ev.cat >= 4) setTip(`<b>${ev.name}</b> — a monster. <b>Raise it</b> and build the pot while you’re ahead.`);
       else if(ev.cat === 3) setTip(`<b>Two pair</b> already — <b>call or raise</b>, then draw 1 to the odd card.`);
-      else if(ev.cat === 2) setTip(`A <b>pair</b> to build on. Standard play: <b>${ctx.toCall > 0 ? "call" : "check"}</b>, keep the pair, draw 3 — wilds love a fresh draw.`);
-      else setTip(`Nothing made yet. With jokers and deuces wild, one wild card flips everything — ${ctx.toCall === 0 ? "<b>check</b> and see the draw free." : ctx.toCall <= 50 ? "a cheap <b>call</b> is fine." : "that price is rich for a prayer — <b>fold</b>."}`);
+      else if(ev.cat === 2) setTip(`A <b>pair</b> to build on. Standard play: <b>${ctx.toCall > 0 ? "call" : "check"}</b>, keep the pair, ${vw ? "draw 3 — wilds love a fresh draw." : "draw 3 and look for trips or two pair."}`);
+      else setTip(vw ? `Nothing made yet. With jokers and deuces wild, one wild card flips everything — ${ctx.toCall === 0 ? "<b>check</b> and see the draw free." : ctx.toCall <= 50 ? "a cheap <b>call</b> is fine." : "that price is rich for a prayer — <b>fold</b>."}` : `Nothing made yet — and no wilds to save you in classic draw. ${ctx.toCall === 0 ? "<b>check</b> and see the draw free — keep your best card and draw the rest." : ctx.toCall <= 50 ? "a cheap <b>call</b> is fine — keep your best card and draw the rest." : "that price is rich for a prayer — <b>fold</b>."}`);
     }
     let html = `<button class="btn fold" id="mp-fold">Fold</button>`;
     html += ctx.toCall > 0
@@ -3057,9 +3074,11 @@ function mpBuildPromptUI(kind, ctx, respond){
     const sugg = (mode === "apprentice" && tipsOn) ? suggestFor(myCards).slice(0, cap) : [];
     if(mode === "apprentice" && tipsOn){
       const ev = evaluateFor(myCards);
+      const dvw = snap && DRAW_VARIANTS[snap.game] ? DRAW_VARIANTS[snap.game].wilds : drawVariant().wilds;
       setTip(ev.cat >= 5 ? `You’re holding <b>${ev.name}</b> — <b>stand pat</b>, don’t break it up.`
         : ev.cat === 2 || ev.cat === 3 || ev.cat === 4 ? `<b>${ev.name}</b>. The gold-outlined cards are the toss — keep your made hand and draw the rest.`
-        : `Nothing made yet — the gold outlines are the coach’s toss. Keep your best high card and any wild.`);
+        : dvw ? `Nothing made yet — the gold outlines are the coach’s toss. Keep your best high card and any wild.`
+        : `Nothing made yet — the gold outlines are the coach’s toss. Keep your best high card.`);
     }
     mp.drawUI = { sel: new Set(), cap, sugg, cards: myCards };
     setControls(`<span class="ctl-note" style="font-size:14.5px"><b>${drawNum === 1 ? "First draw" : "Second draw"} — your draw.</b> Tap the cards you want to throw away, then tap DRAW. <span id="mp-draw-count">Tap cards to throw away — up to ${cap}.</span></span>
@@ -3139,6 +3158,7 @@ function mpGuestOnData(msg){
   if(msg.t === "state"){ mpRenderSnap(msg, false); }
   if(msg.t === "seat" && msg.token){
     mp.guestSeated = true; mp.joining = false; mpStopHelloRetry();
+    if(mp.joinWatchTimer){ clearTimeout(mp.joinWatchTimer); mp.joinWatchTimer = null; }
     if(mp.guestHelloTimer){ clearTimeout(mp.guestHelloTimer); mp.guestHelloTimer = null; }
     mp.myToken = String(msg.token);
     if(mp.returnedNotice){ mp.returnedNotice = false; showNotice("You’re back — seat restored.", true); }
@@ -3195,12 +3215,31 @@ function mpGuestOnData(msg){
    it to all. Host taps broadcast directly. ~1 per second per player. */
 const REACTION_SET = ["👏", "😂", "😮", "🔥"];
 let lastReactAt = 0;
-function showReaction(seatElId, emoji){
+/* Floats live in a TTL registry, not just in the DOM: every snapshot
+   re-render rebuilds #seats (innerHTML), which used to wipe a float the
+   moment any game action synced — in a live hand that's under a second,
+   so other screens never saw the reaction even though the relay worked.
+   The registry re-paints live floats after every re-render until their
+   ~3.5s TTL expires. */
+const REACTION_TTL = 3500;
+const activeReactions = new Map();   // key -> {seatElId, emoji, until}
+let reactSeq = 0;
+function paintReactionFloat(seatElId, emoji, key){
   const seat = document.getElementById(seatElId); if(!seat) return;
+  if(seat.querySelector('[data-rkey="' + key + '"]')) return;
   const s = document.createElement("span");
-  s.className = "react-float"; s.textContent = emoji;
+  s.className = "react-float"; s.textContent = emoji; s.dataset.rkey = key;
   seat.appendChild(s);
-  setTimeout(()=>{ s.remove(); }, 2300);
+}
+function showReaction(seatElId, emoji){
+  const key = "r" + (++reactSeq) + "-" + Date.now();
+  activeReactions.set(key, { seatElId, emoji, until: Date.now() + REACTION_TTL });
+  paintReactionFloat(seatElId, emoji, key);
+  setTimeout(()=>{ activeReactions.delete(key); const el = document.querySelector('[data-rkey="' + key + '"]'); if(el) el.remove(); }, REACTION_TTL + 150);
+}
+function reapplyReactions(){
+  const now = Date.now();
+  activeReactions.forEach((r, key)=>{ if(r.until <= now){ activeReactions.delete(key); return; } paintReactionFloat(r.seatElId, r.emoji, key); });
 }
 function handleReactionFrom(pid, emoji){
   if(!REACTION_SET.includes(emoji)) return false;
@@ -3358,7 +3397,7 @@ function mpLoneWinner(){
   w.seat.stack += MD.pot;
   w.seat.handsWon = (w.seat.handsWon || 0) + 1; w.seat.chipsWon = (w.seat.chipsWon || 0) + MD.pot;
   MD.reveal = true;
-  mp.phase = "done"; mp.activeSeatPid = w.seat.pid;
+  mp.phase = "done"; mp.activeSeatPid = null;   // hand over: nobody is "on turn" — the banner shows the result, not a turn
   setCenter(w.seat.name + " takes it", `Wins the ${fmt(MD.pot)} pot — no showdown needed.`);
   $("tb-what").textContent = "Everyone else folded.";
   mp.winBanner = `${w.seat.name} won ${fmt(MD.pot)} chips — everyone else folded`;
@@ -3395,7 +3434,7 @@ function mpShowdown(){
   const share = Math.floor(MD.pot / winners.length);
   winners.forEach(w=>{ w.st.seat.stack += share; w.st.seat.handsWon = (w.st.seat.handsWon || 0) + 1; w.st.seat.chipsWon = (w.st.seat.chipsWon || 0) + share; });
   const names = winners.map(w=>w.st.seat.name).join(" & ");
-  mp.phase = "done"; mp.activeSeatPid = winners[0].st.seat.pid;
+  mp.phase = "done"; mp.activeSeatPid = null;   // hand over: nobody is "on turn" — the banner shows the result, not a turn
   setCenter(names + (winners.length > 1 ? " split it" : " wins"), `${best.ev.name} takes ${fmt(MD.pot)}.`);
   $("tb-what").textContent = "Showdown.";
   mp.winBanner = `${names} won ${fmt(MD.pot)} chips with ${best.ev.name}`;
@@ -3491,7 +3530,7 @@ function mpHoldemLoneWinner(){
   w.seat.stack += MH.pot;
   w.seat.handsWon = (w.seat.handsWon || 0) + 1; w.seat.chipsWon = (w.seat.chipsWon || 0) + MH.pot;
   MH.reveal = true;
-  mp.phase = "done"; mp.activeSeatPid = w.seat.pid;
+  mp.phase = "done"; mp.activeSeatPid = null;   // hand over: nobody is "on turn" — the banner shows the result, not a turn
   setCenter(w.seat.name + " takes it", `Wins the ${fmt(MH.pot)} pot — no showdown needed.`);
   $("tb-what").textContent = "Everyone else folded.";
   mp.winBanner = `${w.seat.name} won ${fmt(MH.pot)} chips — everyone else folded`;
@@ -3508,7 +3547,7 @@ function mpHoldemShowdown(){
   const share = Math.floor(MH.pot / winners.length);
   winners.forEach(w=>{ w.st.seat.stack += share; w.st.seat.handsWon = (w.st.seat.handsWon || 0) + 1; w.st.seat.chipsWon = (w.st.seat.chipsWon || 0) + share; });
   const names = winners.map(w=>w.st.seat.name).join(" & ");
-  mp.phase = "done"; mp.activeSeatPid = winners[0].st.seat.pid;
+  mp.phase = "done"; mp.activeSeatPid = null;   // hand over: nobody is "on turn" — the banner shows the result, not a turn
   setCenter(names + (winners.length > 1 ? " split it" : " wins"), `${best.ev.name} takes ${fmt(MH.pot)}.`);
   $("tb-what").textContent = "Showdown.";
   mp.winBanner = `${names} won ${fmt(MH.pot)} chips with ${best.ev.name}`;
@@ -3626,6 +3665,8 @@ setGame = function(g){
     game = g; handSeq++; mp.seq++;
     paintGameSegs();
     mpResetTableMP();
+    mp._coachKey = null;   // coach state never carries across a game switch
+    if(mode === "apprentice" && tipsOn) setTip(gameIntroTip(g));
     log("Live room switched to <b>" + GAME_NAMES[g] + "</b>.");
     return;
   }
@@ -3660,20 +3701,39 @@ $("join-appr").addEventListener("click", ()=>{ joinModeChoice = "apprentice"; $(
 $("join-exp").addEventListener("click", ()=>{ joinModeChoice = "expert"; $("join-exp").classList.add("on"); $("join-appr").classList.remove("on"); clickSound(500); });
 $("join-go").addEventListener("click", ()=>{
   if(mp.joining) return;
-  const nm = $("join-name").value.trim();
-  if(nm) $("net-name").value = nm;
-  setMode(joinModeChoice);
-  const chip = $("join-chip").value.trim();
-  if(chip) applyChipPrompt(chip);
-  mp.pendingInvite = mp.urlInvite; mp.pendingRejoin = mp.urlRejoin;
-  const code = mp.urlRoom || ($("net-code-in").value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if(!code || code.length < 4){ $("join-note").textContent = "That invite link is missing its room code — ask the host to send the Room Invite Link again."; return; }
-  $("net-code-in").value = code;
-  mp.joining = true;
-  const go = $("join-go"); go.disabled = true; go.textContent = "Joining…";
-  $("join-note").textContent = "Joining room " + code + " — one moment…";
-  clickSound(520);
-  mpJoin();
+  // Join-critical state FIRST (invite/rejoin tokens, room code, joining
+  // guard), then the cosmetic steps (name, mode, chips) — all inside one
+  // guard. Before this fix the cosmetic steps ran first with no error
+  // path at all: any throw in them, or an early return inside mpJoin,
+  // killed the click silently and the card just sat there (the live
+  // personal-invite failure). A landing failure must ALWAYS land on
+  // this card — never nowhere.
+  try{
+    mp.pendingInvite = mp.urlInvite; mp.pendingRejoin = mp.urlRejoin;
+    const code = mp.urlRoom || ($("net-code-in").value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if(!code || code.length < 4){ $("join-note").textContent = "That invite link is missing its room code — ask the host to send the Room Invite Link again."; return; }
+    $("net-code-in").value = code;
+    mp.joining = true;
+    const go = $("join-go"); go.disabled = true; go.textContent = "Joining…";
+    $("join-note").textContent = "Joining room " + code + " — one moment…";
+    const nm = $("join-name").value.trim();
+    if(nm) $("net-name").value = nm;
+    setMode(joinModeChoice);
+    const chip = $("join-chip").value.trim();
+    if(chip) applyChipPrompt(chip);
+    clickSound(520);
+    if(mp.joinWatchTimer) clearTimeout(mp.joinWatchTimer);
+    mp.joinWatchTimer = setTimeout(()=>{
+      mp.joinWatchTimer = null;
+      if(mp.joining && !mp.guestSeated){
+        const m = "Still no seat — the host may not have this room open anymore, or the relay hiccuped. Tap Join Table to try again.";
+        mpJoinFailed(m); netStatus(m, "err");
+      }
+    }, 9000);
+    mpJoin();
+  }catch(e){
+    mpJoinFailed("Something on this page hiccuped while joining (" + (e && e.message ? e.message : "unknown error") + "). Tap Join Table to try again.");
+  }
 });
 $("net-code-in").addEventListener("keydown", (e)=>{ if(e.key === "Enter") mpJoin(); });
 $("net-leave").addEventListener("click", ()=>{ clickSound(400); mpLeave(false); });
