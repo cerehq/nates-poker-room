@@ -201,6 +201,15 @@
       .win-banner.on{ display:block; animation:winpop .35s ease-out; }
       @keyframes winpop{ from{ transform:scale(.92); opacity:0; } to{ transform:scale(1); opacity:1; } }
       .readybadge{ background:#2e9e5b !important; }
+      .board{ display:flex; gap:4px; justify-content:center; align-items:center; margin-bottom:7px; }
+      .board:empty{ display:none; }
+      .board .blbl{ font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; opacity:.85; margin-right:2px; font-weight:700; }
+      .reactions{ display:flex; gap:7px; justify-content:center; align-items:center; margin-top:10px; }
+      .reactions .rlbl{ font-size:11.5px; color:var(--muted); font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
+      .react-btn{ border:1px solid var(--line); background:var(--panel-2); border-radius:999px; font-size:18px; line-height:1; padding:7px 11px; min-height:40px; }
+      .react-btn:active{ transform:scale(1.18); }
+      .react-float{ position:absolute; left:50%; top:2px; transform:translateX(-50%); font-size:32px; z-index:9; pointer-events:none; animation:reactFloat 2.2s ease-out forwards; text-shadow:0 2px 8px rgba(0,0,0,.5); }
+      @keyframes reactFloat{ 0%{ transform:translate(-50%,10px) scale(.5); opacity:0; } 14%{ opacity:1; } 100%{ transform:translate(-50%,-52px) scale(1.2); opacity:0; } }
 
       /* seats */
       .seat{ position:absolute; width:31%; max-width:250px; z-index:4; text-align:center; }
@@ -431,12 +440,14 @@
     <header class="topbar">
       <div>
         <h1>Nate&rsquo;s <span class="thin">Poker Room</span></h1>
-        <div class="sub">One digital table, two house games — Five Card 3/2 Draw &amp; Blackjack. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
+        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Five Card Draw &amp; Blackjack. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
       </div>
       <div class="bar-controls">
         <div class="seg" role="tablist" aria-label="Game">
           <span class="seg-label">Game</span>
           <button id="seg-draw" class="on" type="button">Five Card 3/2 Draw</button>
+          <button id="seg-holdem" type="button">Texas Hold'em</button>
+          <button id="seg-classic" type="button">Five Card Draw</button>
           <button id="seg-bj" type="button">Blackjack</button>
         </div>
         <div class="seg" aria-label="Skill mode">
@@ -492,6 +503,7 @@
                 <div class="fl-sub">EST. GAME NIGHT</div>
               </div>
               <div class="center-info">
+                <div class="board" id="board"></div>
                 <span class="pot" id="pot-box" style="visibility:hidden"><span class="lbl">Pot</span><span id="pot-amt">0</span></span>
                 <div class="center-msg" id="center-msg">Ready when you are</div>
                 <div class="center-sub" id="center-sub">Five Card 3/2 Draw — jokers &amp; deuces wild · two draws: up to 3, then up to 2.</div>
@@ -502,6 +514,13 @@
         </div>
 
         <div class="controls" id="controls"></div>
+        <div class="reactions" id="reactions" aria-label="Seat reactions">
+          <span class="rlbl">React</span>
+          <button class="react-btn" type="button" data-react="👏" aria-label="Clap">👏</button>
+          <button class="react-btn" type="button" data-react="😂" aria-label="Laugh">😂</button>
+          <button class="react-btn" type="button" data-react="😮" aria-label="Wow">😮</button>
+          <button class="react-btn" type="button" data-react="🔥" aria-label="Fire">🔥</button>
+        </div>
         <div class="action-notice" id="action-notice" role="status"></div>
       </section>
 
@@ -639,6 +658,31 @@
               <li><b>Double down</b> on your first two cards — one card, then stand.</li>
               <li><b>Seats play in turn:</b> Don, then you, then Layton. The felt follows the turn.</li>
               <li><b>Shoe:</b> four decks, reshuffled when it runs low.</li>
+            </ul>
+          </details>
+        </div>
+
+        <div class="panel">
+          <details class="rules">
+            <summary>House rules — Texas Hold'em</summary>
+            <ul>
+              <li><b>Blinds:</b> 5 / 10 — small blind left of the button, big blind next. Heads-up, the button posts the small blind.</li>
+              <li><b>Hole cards:</b> 2, private to you. <b>Board:</b> flop (3), turn (1), river (1), shared by everyone.</li>
+              <li><b>Betting:</b> no-limit in 50 / 100 / 200 raise steps, max 3 raises a round — preflop, flop, turn, river.</li>
+              <li><b>Showdown:</b> best <b>five of your seven</b> cards (2 hole + 5 board). The board itself can play — then the pot splits.</li>
+              <li><b>No wilds</b> — a straight 52-card deck.</li>
+            </ul>
+          </details>
+        </div>
+
+        <div class="panel">
+          <details class="rules">
+            <summary>House rules — Five Card Draw (classic)</summary>
+            <ul>
+              <li><b>Deck:</b> a straight 52 — <b>no jokers, no wilds</b>; deuces are just deuces.</li>
+              <li><b>Ante:</b> 10 chips from everyone, every hand.</li>
+              <li><b>One draw only</b> — up to <b>5</b> cards after the first betting round, then a final betting round and showdown.</li>
+              <li><b>Betting:</b> raises in 50 / 100 / 200 steps, max 3 raises a round.</li>
             </ul>
           </details>
         </div>
@@ -793,7 +837,23 @@
        and friendly reloads are NOT winnings and never touch these. */
     function resetSoloStats(){ players.forEach(p=>{ p.handsWon = 0; p.chipsWon = 0; }); }
     const byId = (id) => players.find(p=>p.id===id);
-    let game = "draw";            // "draw" | "bj"
+    let game = "draw";            // "draw" | "classic" | "holdem" | "bj"
+    /* Draw-game variants: the 3/2 signature game (wilds, two draws) and
+       classic Five Card Draw (no wilds, one draw of up to 5). Hold'em and
+       Blackjack are their own engines. */
+    const DRAW_VARIANTS = {
+      draw:    { name:"Five Card 3/2 Draw", wilds:true,  draws:[3,2], ante:10,
+                 sub:"Jokers & deuces wild · two draws — up to 3, then up to 2 · five of a kind tops the table.",
+                 tip:"New hand, fresh deck — <b>54 cards</b> with 2 jokers, and every deuce is wild too. That means pairs and trips show up a lot more often than in straight poker. Hit <b>Deal</b> and I’ll size up your hand." },
+      classic: { name:"Five Card Draw", wilds:false, draws:[5], ante:10,
+                 sub:"No wilds — a straight 52-card deck · one draw, up to 5 cards.",
+                 tip:"Classic draw, the old-school way — <b>no wilds</b>, one draw of up to 5. Made hands are scarcer here, so a pair is a real start. Hit <b>Deal</b> and I’ll size up your hand." },
+    };
+    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", bj:"Blackjack" };
+    function isDrawGame(g){ return g === "draw" || g === "classic"; }
+    function drawVariant(){ return DRAW_VARIANTS[game] || DRAW_VARIANTS.draw; }
+    function evaluateFor(cards){ return drawVariant().wilds ? evaluate5(cards) : evaluatePlain(cards); }
+    function buildDeckForGame(){ return drawVariant().wilds ? buildDrawDeck() : buildPlainDeck(); }
     let mode = "apprentice";      // "apprentice" | "expert"
     let tipsOn = true;
     let handSeq = 0;              // aborts stale async loops
@@ -860,7 +920,8 @@
           _nudgeFiredTurn = _nudgeTurn;
           try{ if(navigator && navigator.vibrate) navigator.vibrate(200); }catch(e){}
           document.body.classList.add("nudge-on");
-        }, 20000);
+          if(mp.joining){ mpJoinFailed(!mp.heartbeatSeen ? "No host is answering in that room — check the link, and that the host still has the room open. Then tap Join Table again." : "The host is there but didn’t answer — tap Join Table again."); $("joincard").style.display = ""; }
+      }, 20000);
       }
       const wrap = $("turn-timer"), bar = $("tt-bar"), txt = $("tt-txt");
       if(!wrap || !bar || !txt) return;
@@ -931,7 +992,7 @@
       if(card.joker) return `<div class="card joker ${opts.cls||""}" ${opts.attrs||""}><span class="r">JOKER</span><span class="s">★ wild ★</span></div>`;
       const lbl = RANKLBL[card.r] || card.r;
       const red = RED[card.s] ? " red":"";
-      const wild = game==="draw" && card.r===2 ? `<span class="wildtag">WILD</span>` : "";
+      const wild = isDrawGame(game) && drawVariant().wilds && card.r===2 ? `<span class="wildtag">WILD</span>` : "";
       return `<div class="card${red} ${opts.cls||""}" ${opts.attrs||""}><span class="r">${lbl}</span><span class="s">${SUITS[card.s]}</span><span class="pip">${SUITS[card.s]}</span>${wild}</div>`;
     }
 
@@ -982,6 +1043,67 @@
       }
       return best;
     }
+    /* No-wilds evaluator (classic draw + Hold'em hands of 5): the same
+       category scale as the wild evaluator, scored on the cards as they lie. */
+    function evaluatePlain(cards){
+      const ranks = cards.map(c=>c.r);
+      const flush = cards.length > 0 && cards.every(c=>c.s === cards[0].s);
+      return evalRanks(ranks, flush);
+    }
+    /* Best 5 of 7 for Hold'em: try every 5-card subset, keep the best. */
+    function evaluate7(cards){
+      let best = null;
+      const n = cards.length;
+      if(n === 5) return evaluatePlain(cards);
+      // best 5-card subset of 5..7 cards (21 subsets at most)
+      const combos = [];
+      (function gen(start, cur){
+        if(cur.length === 5){ combos.push(cur.slice()); return; }
+        for(let i = start; i < n; i++){ cur.push(i); gen(i + 1, cur); cur.pop(); }
+      })(0, []);
+      for(const c of combos){
+        const ev = evaluatePlain(c.map(k => cards[k]));
+        if(!best || cmpEval(ev, best) > 0) best = ev;
+      }
+      return best;
+    }
+    /* Hold'em coach read — shared by the solo table, host prompts and
+       guests. hole/board are always the CALLER's own view of the hand. */
+    function holdemCoachHTML(hole, board, toCall){
+      hole = hole || []; board = board || [];
+      if(hole.length < 2) return "";
+      if(board.length === 0){
+        const pair = hole[0].r === hole[1].r;
+        const hi = Math.max(hole[0].r, hole[1].r), lo = Math.min(hole[0].r, hole[1].r);
+        const suited = hole[0].s === hole[1].s;
+        if(pair && hi >= 10) return `A <b>pocket pair, ${RANKLBL[hi]||hi}s</b> — a premium Hold'em start. <b>Raise it</b> and build the pot.`;
+        if(pair) return `A <b>pocket pair</b> to start. Worth a <b>${toCall>0?"call":"bet"}</b> — you're hoping to flop a set (three of a kind).`;
+        if(hi === 14 && lo >= 10) return `<b>Ace-${RANKLBL[lo]||lo}</b> — two big cards${suited?" and suited":""}. A strong start: <b>raise or call</b> with confidence.`;
+        if(hi >= 12 && suited) return `Two high cards, <b>suited</b> — flush potential on top. A reasonable <b>${toCall>0?"call":"bet"}</b>.`;
+        if(Math.abs(hole[0].r - hole[1].r) === 1 && lo >= 7) return `<b>Connected cards</b> — straight potential if the flop cooperates. Cheap to see a flop; don't overpay.`;
+        return `Two unpaired cards. Hold'em rewards patience — ${toCall>0 ? (toCall<=30?"a cheap <b>call</b> is fine.":"that price is steep for this — <b>fold</b> and wait.") : "<b>check</b> and see the flop free."}`;
+      }
+      const ev = evaluate7(hole.concat(board));
+      const street = board.length === 3 ? "flop" : board.length === 4 ? "turn" : "river";
+      if(ev.cat >= 7) return `On the ${street} you've made <b>${ev.name}</b> — a monster. <b>Raise</b> and get paid.`;
+      if(ev.cat >= 5) return `On the ${street}: <b>${ev.name}</b>. Strong — <b>${toCall>0?"call, and raising is fine too":"bet it"}</b>.`;
+      if(ev.cat >= 3) return `On the ${street}: <b>${ev.name}</b>. Respectable — <b>${toCall>0?"call reasonable bets":"bet for value"}</b>, but watch for bigger hands on this board.`;
+      if(ev.cat === 2) return `On the ${street}: just a <b>pair</b> so far. Pairs win plenty of Hold'em pots, but don't go to war — ${toCall>0?"call small, fold big.":"check and see what develops."}`;
+      return `On the ${street}: <b>high card</b> only. ${board.length>=5 ? "Nothing developed — if it's expensive, <b>fold</b>." : "Cards are still coming — " + (toCall>0 ? (toCall<=30?"a cheap <b>call</b> can chase a pair or a draw.":"<b>fold</b> rather than pay up for a hope.") : "<b>check</b> and take the free card.")}`;
+    }
+    /* No-wilds draw strategy (classic): keep made hands, draw to the pair. */
+    function suggestDiscardsPlain(cards){
+      const ev = evaluatePlain(cards);
+      if(ev.cat >= 5) return [];
+      const counts = {}; cards.forEach(c=>{ counts[c.r] = (counts[c.r]||0) + 1; });
+      const idx = cards.map((c,i)=>i);
+      if(ev.cat === 4 || ev.cat === 3 || ev.cat === 2) return idx.filter(i=> counts[cards[i].r] === 1);
+      const suitCounts = {}; cards.forEach(c=>{ suitCounts[c.s] = (suitCounts[c.s]||0) + 1; });
+      for(const s in suitCounts){ if(suitCounts[s] === 4) return idx.filter(i=> cards[i].s !== +s); }
+      const sorted = idx.slice().sort((a,b)=> cards[b].r - cards[a].r);
+      return sorted.slice(2);
+    }
+    function suggestFor(cards){ return drawVariant().wilds ? suggestDiscards(cards) : suggestDiscardsPlain(cards); }
     /* draw strategy shared by AI + coach: returns indices to discard (max 3) */
     function suggestDiscards(cards){
       const isWild = (c)=> c.joker || c.r===2;
@@ -1053,11 +1175,20 @@ function refreshPlates(){
   players.forEach(p=>{ const s=document.querySelector("#seat-"+p.id+" .stk"); if(s) s.textContent = fmt(p.stack)+" chips"; });
   renderBank();
 }
+function paintBoard(cards){
+  const el = $("board"); if(!el) return;
+  el.innerHTML = (cards && cards.length) ? `<span class="blbl">Board</span>` + cards.map(c=>cardHTML(c,{})).join("") : "";
+}
 function setPot(v){ $("pot-box").style.visibility = v>0?"visible":"hidden"; $("pot-amt").textContent = fmt(v); }
 function setControls(html){ $("controls").innerHTML = html; }
 function wireBtn(id, fn){ const b=$(id); if(b) b.addEventListener("click", ()=>{ clickSound(520); fn(); }); }
 
 /* ================= FIVE CARD DRAW ================= */
+function buildPlainDeck(){
+  const d=[];
+  for(let s=0;s<4;s++) for(let r=2;r<=14;r++) d.push({r,s});
+  return shuffle(d);
+}
 function buildDrawDeck(){
   const d=[];
   for(let s=0;s<4;s++) for(let r=2;r<=14;r++) d.push({r,s});
@@ -1066,25 +1197,26 @@ function buildDrawDeck(){
 }
 function resetDrawTable(){
   hideTurnTimer(); paintWinBanner(null); resetSoloStats();
-  D = { phase:"idle", pot:0, deck:[], button: D? (D.button+1)%4 : 0, currentBet:0, raises:0, sel:new Set(), resolver:null, startIdx:0, drawCap:3, drawNum:1 };
+  const V = drawVariant();
+  D = { phase:"idle", pot:0, deck:[], button: D? (D.button+1)%4 : 0, currentBet:0, raises:0, sel:new Set(), resolver:null, startIdx:0, drawCap:V.draws[0], drawNum:1 };
   seatsEl.innerHTML = players.map(p=>seatShell(p,{button:false})).join("");
   players.forEach(p=>{ setStatus(p.id,""); setBetBadge(p.id,0); $("cards-"+p.id).innerHTML=""; });
-  setPot(0); refreshPlates();
-  setTurn(null, "Five Card 3/2 Draw — ante 10, two draws (up to 3, then up to 2), jokers & deuces wild.");
+  setPot(0); refreshPlates(); paintBoard([]);
+  setTurn(null, V.name + " — ante 10, " + (V.wilds ? "two draws (up to 3, then up to 2), jokers & deuces wild." : "one draw (up to 5), no wilds."));
   setControls(`<button class="btn primary" id="btn-deal">Deal a hand — ante 10</button>
     ${byId("you").stack<100?`<button class="btn" id="btn-rebuy">Top up to 1,000</button>`:""}`);
   wireBtn("btn-deal", startDrawHand);
   wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetDrawTable(); });
-  setCenter("Five Card 3/2 Draw", "Jokers & deuces wild · two draws — up to 3, then up to 2 · five of a kind tops the table.");
-  if(mode==="apprentice" && tipsOn) setTip("New hand, fresh deck — <b>54 cards</b> with 2 jokers, and every deuce is wild too. That means pairs and trips show up a lot more often than in straight poker. Hit <b>Deal</b> and I’ll size up your hand.");
+  setCenter(V.name, V.sub);
+  if(mode==="apprentice" && tipsOn) setTip(V.tip);
 }
-
 async function startDrawHand(){
   const seq = ++handSeq;
-  paintWinBanner(null);
+  const V = drawVariant();
+  paintWinBanner(null); paintBoard([]);
   setControls("");
   players.forEach(p=>{ if(p.stack<=0) p.stack = 500; });   // broke friends get a friendly reload
-  D.deck = buildDrawDeck(); D.pot=0; D.sel.clear();
+  D.deck = buildDeckForGame(); D.pot=0; D.sel.clear();
   D.state = players.map(p=>({ p, hand:[], folded:false, bet:0, roundBet:0, acted:false }));
   seatsEl.innerHTML = players.map((p,i)=>seatShell(p,{button: i===D.button})).join("");
   players.forEach(p=>{ setStatus(p.id,""); setBetBadge(p.id,0); });
@@ -1096,29 +1228,24 @@ async function startDrawHand(){
   for(let round=0; round<5; round++) for(const s of D.state) s.hand.push(D.deck.pop());
   renderDrawHands(false);
   clickSound(440);
-  setCenter("First betting round", "One round of bets, then the first draw — up to 3.");
+  const betLabels = ["pre","mid","post"];
+  setCenter("First betting round", V.draws.length>1 ? "One round of bets, then the first draw — up to 3." : "One round of bets, then the draw — up to 5.");
   await bettingRound(seq, "pre");
   if(seq!==handSeq || !D) return;
   if(await checkLoneWinner(seq)) return;
-  await drawPhase(seq, 1, 3);
-  if(seq!==handSeq || !D) return;
-  if(await checkLoneWinner(seq)) return;
-  D.state.forEach(s=>{ s.roundBet=0; s.acted=false; }); D.currentBet=0; D.raises=0;
-  setCenter("Second betting round", "One more round of bets, then the second draw — up to 2.");
-  await bettingRound(seq, "mid");
-  if(seq!==handSeq || !D) return;
-  if(await checkLoneWinner(seq)) return;
-  await drawPhase(seq, 2, 2);
-  if(seq!==handSeq || !D) return;
-  if(await checkLoneWinner(seq)) return;
-  setCenter("Final betting round", "Last bets — then we show ’em.");
-  D.state.forEach(s=>{ s.roundBet=0; s.acted=false; }); D.currentBet=0; D.raises=0;
-  await bettingRound(seq, "post");
-  if(seq!==handSeq || !D) return;
-  if(await checkLoneWinner(seq)) return;
+  for(let di=0; di<V.draws.length; di++){
+    await drawPhase(seq, di+1, V.draws[di]);
+    if(seq!==handSeq || !D) return;
+    if(await checkLoneWinner(seq)) return;
+    const last = di === V.draws.length-1;
+    D.state.forEach(s=>{ s.roundBet=0; s.acted=false; }); D.currentBet=0; D.raises=0;
+    setCenter(last ? "Final betting round" : "Second betting round", last ? "Last bets — then we show ’em." : "One more round of bets, then the second draw — up to 2.");
+    await bettingRound(seq, betLabels[di+1] || "post");
+    if(seq!==handSeq || !D) return;
+    if(await checkLoneWinner(seq)) return;
+  }
   showdown(seq);
 }
-
 function drawSt(id){ return D.state.find(s=>s.p.id===id); }
 function renderDrawHands(reveal){
   for(const s of D.state){
@@ -1204,13 +1331,13 @@ function humanBet(seq, s, label){
   return new Promise(res=>{
     const toCall = D.currentBet - s.roundBet;
     const canRaise = D.raises<3 && s.p.stack > toCall;
-    const ev = evaluate5(s.hand);
+    const ev = evaluateFor(s.hand);
     if(mode==="apprentice" && tipsOn){
       if(label==="pre"){
         if(ev.cat>=4) setTip(`<b>${ev.name}</b> before the draw is a monster start. <b>Raise it</b> — you want chips in while you’re ahead, and you’ll draw few or no cards.`);
         else if(ev.cat===3) setTip(`<b>Two pair</b> already. That’s a strong draw hand — <b>call or raise</b>, then toss the odd card and draw 1.`);
         else if(ev.cat===2) setTip(`A <b>pair</b> to build on. ${toCall>60?"The bet to you is steep for one pair — folding is defensible, but":""} Standard play: <b>${toCall>0?"call":"check"}</b>, keep the pair, draw 3 and hope wilds show up.`);
-        else setTip(`Nothing yet but rags. With deuces and jokers wild, one wild card changes everything — ${toCall===0?"it’s free to see the draw: <b>check</b>.":toCall<=50?"a cheap <b>call</b> is fine.":"that price is rich for a prayer — <b>fold</b> and wait for a better spot."}`);
+        else setTip(drawVariant().wilds ? `Nothing yet but rags. With deuces and jokers wild, one wild card changes everything — ${toCall===0?"it’s free to see the draw: <b>check</b>.":toCall<=50?"a cheap <b>call</b> is fine.":"that price is rich for a prayer — <b>fold</b> and wait for a better spot."}` : `Nothing yet — and no wilds to save you in classic draw. ${toCall===0?"It’s free to see the draw: <b>check</b>, keep your best card and draw the rest.":toCall<=50?"a cheap <b>call</b> is fine — keep your best card and draw the rest.":"that price is rich for a prayer — <b>fold</b> and wait for a better spot."}`);
       } else {
         if(ev.cat>=5) setTip(`You made <b>${ev.name}</b>. Bet it like you mean it — <b>raise</b>. Hands this strong don’t need to be shy.`);
         else if(ev.cat>=3) setTip(`<b>${ev.name}</b> after the draw. Solid — <b>${toCall>0?"call":"bet with a raise"}</b> and make the chasers pay.`);
@@ -1259,7 +1386,7 @@ function humanBet(seq, s, label){
 }
 function aiBet(s, label){
   const toCall = D.currentBet - s.roundBet;
-  const ev = evaluate5(s.hand);
+  const ev = evaluateFor(s.hand);
   let strength = ev.cat + Math.random()*1.6;
   if(label==="pre" && ev.cat<=2) strength -= 0.6;        // pre-draw pairs are everywhere with wilds
   const stack = s.p.stack;
@@ -1298,16 +1425,16 @@ async function checkLoneWinner(seq){
 
 async function drawPhase(seq, drawNum, cap){
   D.phase = "draw"; D.drawNum = drawNum; D.drawCap = cap;
-  setCenter(drawNum===1 ? "First draw — up to 3" : "Second draw — up to 2", "Draws go seat by seat — watch the banner for whose draw it is.");
+  setCenter(drawVariant().draws.length===1 ? "The draw — up to " + cap : (drawNum===1 ? "First draw — up to 3" : "Second draw — up to 2"), "Draws go seat by seat — watch the banner for whose draw it is.");
   hideTurnTimer();
   // AI draws first (in turn order), then the player picks
   const order = [1,2,3,0].map(k=>D.state[(D.button+k)%4]).filter(s=>!s.folded);
   for(const s of order){
     if(s.p.id==="you") continue;
-    setTurn(s.p, drawNum===1 ? "First draw — up to 3 cards." : "Second draw — up to 2 cards.");
+    setTurn(s.p, (drawVariant().draws.length===1 ? "The draw" : (drawNum===1 ? "First draw" : "Second draw")) + " — up to " + cap + " cards.");
     await sleep(650);
     if(seq!==handSeq || !D) return;
-    const disc = suggestDiscards(s.hand).slice(0, cap);
+    const disc = suggestFor(s.hand).slice(0, cap);
     disc.sort((a,b)=>b-a).forEach(i=>{ s.hand.splice(i,1); });
     while(s.hand.length<5) s.hand.push(D.deck.pop());
     setStatus(s.p.id, disc.length? `Drew ${disc.length}` : "Stood pat");
@@ -1316,15 +1443,15 @@ async function drawPhase(seq, drawNum, cap){
   }
   const you = drawSt("you");
   if(you.folded){ D.phase="between"; return; }
-  setTurn(you.p, (drawNum===1 ? "First draw — up to 3." : "Second draw — up to 2.") + " Your draw — tap the cards you want to throw away, then tap DRAW.");
-  suggestCache = (mode==="apprentice" && tipsOn) ? suggestDiscards(you.hand).slice(0, cap) : [];
+  setTurn(you.p, (drawVariant().draws.length===1 ? "The draw — up to " + cap + "." : (drawNum===1 ? "First draw — up to 3." : "Second draw — up to 2.")) + " Your draw — tap the cards you want to throw away, then tap DRAW.");
+  suggestCache = (mode==="apprentice" && tipsOn) ? suggestFor(you.hand).slice(0, cap) : [];
   if(mode==="apprentice" && tipsOn){
-    const ev = evaluate5(you.hand);
+    const ev = evaluateFor(you.hand);
     const d = suggestCache.length;
     const why = ev.cat>=6 ? "You’ve already got <b>"+ev.name+"</b> — don’t break it up. <b>Stand pat.</b>"
       : ev.cat===4 ? "Trips! The gold-outlined cards are your dead weight — <b>toss those "+d+"</b> and keep the three of a kind."
       : ev.cat===3 ? "<b>Two pair</b> — toss the lone card (gold outline) and draw 1 for a shot at a full house."
-      : ev.cat===2 ? "Keep the <b>pair</b>, toss the other "+d+" (gold outlines). Wild cards love landing on a fresh draw."
+      : ev.cat===2 ? (drawVariant().wilds ? "Keep the <b>pair</b>, toss the other "+d+" (gold outlines). Wild cards love landing on a fresh draw." : "Keep the <b>pair</b>, toss the other "+d+" (gold outlines) and draw for trips or two pair.")
       : ev.cat===1 ? "Nothing made yet. The gold-outlined cards are the toss — keep your best high card and any wild, and let the draw do its work."
       : "Strong hand — <b>"+ev.name+"</b>. Stand pat and get ready to bet it.";
     setTip(why + " Tap cards to mark them for the toss — marked cards lift and get a ✕ THROW tag.");
@@ -1344,11 +1471,11 @@ async function drawPhase(seq, drawNum, cap){
       if(timedOut) showNotice("Time ran out — you were stood pat.");
       D.sel.clear(); D.phase="between"; suggestCache=[];
       setControls(""); renderDrawHands(false);
-      const ev2 = evaluate5(you.hand);
+      const ev2 = evaluateFor(you.hand);
       if(mode==="apprentice" && tipsOn) setTip(`After the draw you’re holding <b>${ev2.name}</b>. ${ev2.cat>=5?"That’s a hand to bet — raise and make them pay to chase.":ev2.cat>=3?"Respectable. Call reasonable bets; raise if it feels quiet.":ev2.cat===2?"One pair is thin after a draw — keep bets small or fold to real pressure.":"The draw missed — if it gets expensive, let it go."}`);
       res();
     };
-    setControls(`<span class="ctl-note" style="font-size:14.5px"><b>${drawNum===1?"First draw":"Second draw"} — your draw.</b> Tap the cards you want to throw away, then tap DRAW. <span id="draw-count">Tap cards to throw away — up to ${cap}.</span></span>
+    setControls(`<span class="ctl-note" style="font-size:14.5px"><b>${drawVariant().draws.length===1?"The draw":(drawNum===1?"First draw":"Second draw")} — your draw.</b> Tap the cards you want to throw away, then tap DRAW. <span id="draw-count">Tap cards to throw away — up to ${cap}.</span></span>
       <button class="btn primary" id="btn-draw">Draw 0 cards</button>
       <button class="btn" id="btn-pat">Stand pat</button>
       <span class="ctl-note">Gold outline = coach’s suggestion.</span>`);
@@ -1368,7 +1495,7 @@ function showdown(seq){
   D.phase = "showdown";
   renderDrawHands(true);
   const alive = D.state.filter(s=>!s.folded);
-  let best=null; const scored = alive.map(s=>{ const ev=evaluate5(s.hand); setStatus(s.p.id, ev.name); if(!best||cmpEval(ev,best.ev)>0) best={s,ev}; return {s,ev}; });
+  let best=null; const scored = alive.map(s=>{ const ev=evaluateFor(s.hand); setStatus(s.p.id, ev.name); if(!best||cmpEval(ev,best.ev)>0) best={s,ev}; return {s,ev}; });
   const winners = scored.filter(x=>cmpEval(x.ev,best.ev)===0);
   const share = Math.floor(D.pot / winners.length);
   winners.forEach(w=>{ w.s.p.stack += share; w.s.p.handsWon = (w.s.p.handsWon || 0) + 1; w.s.p.chipsWon = (w.s.p.chipsWon || 0) + share; });
@@ -1379,7 +1506,7 @@ function showdown(seq){
   paintWinBanner(`${names} won ${fmt(D.pot)} chips with ${best.ev.name}`);
   log(`<b>${names}</b> won ${fmt(D.pot)} chips with <b>${best.ev.name}</b>.`, true);
   if(mode==="apprentice" && tipsOn){
-    if(winners.some(w=>w.s.p.id==="you")) setTip("<b>Nice hand.</b> Notice how many pots at this table are decided by wild cards — a deuce in the hand is worth more than an ace in the deck. That’s why loose calls before the draw pay off here.");
+    if(winners.some(w=>w.s.p.id==="you")) setTip(drawVariant().wilds ? "<b>Nice hand.</b> Notice how many pots at this table are decided by wild cards — a deuce in the hand is worth more than an ace in the deck. That’s why loose calls before the draw pay off here." : "<b>Nice hand.</b> In classic draw there are no wilds to hide behind — betting your made hands hard is the whole game.");
     else setTip(`<b>${best.s.p.name}</b> showed <b>${best.ev.name}</b>. File that away: watch how they bet hands like that next time — patterns are free information.`);
   }
   refreshPlates(); setPot(0); D.pot=0;
@@ -1392,6 +1519,198 @@ function endDrawHand(){
     ${byId("you").stack<100?`<button class="btn" id="btn-rebuy">Top up to 1,000</button>`:""}`);
   wireBtn("btn-deal", startDrawHand);
   wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetDrawTable(); });
+}
+
+
+/* ================= TEXAS HOLD'EM (solo) ================= */
+let H = null;   // hold'em state
+function resetHoldemTable(){
+  hideTurnTimer(); paintWinBanner(null); resetSoloStats();
+  H = { phase:"idle", pot:0, deck:[], board:[], button: H ? (H.button+1)%4 : 0, currentBet:0, raises:0, state:null };
+  seatsEl.innerHTML = players.map(p=>seatShell(p,{button:false})).join("");
+  players.forEach(p=>{ setStatus(p.id,""); setBetBadge(p.id,0); const c=$("cards-"+p.id); if(c) c.innerHTML=""; });
+  setPot(0); refreshPlates(); paintBoard([]);
+  setTurn(null, "Texas Hold'em — blinds 5/10, two hole cards, five community cards, best five of seven wins.");
+  setControls(`<button class="btn primary" id="btn-deal">Deal a hand — blinds 5/10</button>
+    ${byId("you").stack<100?`<button class="btn" id="btn-rebuy">Top up to 1,000</button>`:""}`);
+  wireBtn("btn-deal", startHoldemHand);
+  wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetHoldemTable(); });
+  setCenter("Texas Hold'em", "Blinds 5/10 · button rotates · flop, turn, river · best 5 of 7.");
+  if(mode==="apprentice" && tipsOn) setTip("Hold'em in one breath: <b>two cards of your own, five shared on the board</b>, best five-card hand wins. Pairs and big cards play before the flop; after it, I'll read your made hand off the board for you.");
+}
+function renderHoldemHands(reveal){
+  if(!H || !H.state) return;
+  for(const s of H.state){
+    const el = $("cards-"+s.p.id); if(!el) continue;
+    const showFace = s.p.id==="you" || reveal;
+    el.innerHTML = s.hand.map(c=> cardHTML(c,{ back:!showFace })).join("");
+    const seatEl = $("seat-"+s.p.id); if(seatEl) seatEl.classList.toggle("folded", !!s.folded);
+    setBetBadge(s.p.id, s.roundBet || 0);
+  }
+  paintBoard(H.board);
+}
+function holdemAlive(){ return H.state.filter(s=>!s.folded); }
+async function startHoldemHand(){
+  const seq = ++handSeq;
+  paintWinBanner(null); paintBoard([]);
+  setControls("");
+  players.forEach(p=>{ if(p.stack<=0) p.stack = 500; });
+  H.deck = buildPlainDeck(); H.pot = 0; H.board = []; H.raises = 0;
+  H.state = players.map(p=>({ p, hand:[], folded:false, bet:0, roundBet:0, status:"" }));
+  seatsEl.innerHTML = players.map((p,i)=>seatShell(p,{button: i===H.button})).join("");
+  players.forEach(p=>{ setStatus(p.id,""); setBetBadge(p.id,0); });
+  const n = H.state.length;
+  const sbIdx = n === 2 ? H.button : (H.button+1)%n;
+  const bbIdx = n === 2 ? (H.button+1)%n : (H.button+2)%n;
+  const postBlind = (s, amt, lbl)=>{ const pay = Math.min(amt, s.p.stack); s.p.stack -= pay; s.bet += pay; s.roundBet += pay; H.pot += pay; setStatus(s.p.id, lbl); };
+  postBlind(H.state[sbIdx], 5, "Small blind 5");
+  postBlind(H.state[bbIdx], 10, "Big blind 10");
+  H.currentBet = 10;
+  for(let k=0;k<2;k++) for(const s of H.state) s.hand.push(H.deck.pop());
+  refreshPlates(); setPot(H.pot);
+  log("Hold'em dealt — blinds 5/10, " + H.state[sbIdx].p.name + " small, " + H.state[bbIdx].p.name + " big.");
+  renderHoldemHands(false);
+  clickSound(440);
+  const streets = ["preflop","flop","turn","river"];
+  for(let si=0; si<streets.length; si++){
+    const street = streets[si];
+    if(si>0){
+      const cnt = si===1 ? 3 : 1;
+      for(let k=0;k<cnt;k++) H.board.push(H.deck.pop());
+      H.state.forEach(s=>{ s.roundBet=0; }); H.currentBet=0; H.raises=0;
+      setCenter(street==="flop" ? "The flop" : street==="turn" ? "The turn" : "The river", "Community cards are on the board — best five of seven wins.");
+      renderHoldemHands(false);
+      log("The " + street + " is out.");
+    } else setCenter("Preflop", "Betting starts left of the big blind.");
+    await holdemBettingRound(seq, street);
+    if(seq!==handSeq || !H) return;
+    if(await checkHoldemLoneWinner(seq)) return;
+  }
+  holdemShowdown(seq);
+}
+async function holdemBettingRound(seq, street){
+  H.phase = "bet";
+  const n = H.state.length;
+  let idx = street==="preflop" ? (n===2 ? H.button : (H.button+3)%n) : (H.button+1)%n;
+  const needAct = new Set(holdemAlive().filter(s=>s.p.stack>0).map(s=>s.p.id));
+  let guard = 0;
+  while(needAct.size>0 && guard++<60){
+    if(seq!==handSeq || !H) return;
+    const s = H.state[idx]; idx = (idx+1)%n;
+    if(s.folded || !needAct.has(s.p.id)) continue;
+    if(holdemAlive().length<=1) break;
+    setTurn(s.p, street==="preflop" ? "Preflop betting." : "Betting on the " + street + ".");
+    if(s.p.id==="you") await humanHoldemBet(seq, s, street);
+    else { hideTurnTimer(); await sleep(700 + Math.random()*600); if(seq!==handSeq || !H) return; aiHoldemBet(s, street); }
+    if(seq!==handSeq || !H) return;
+    needAct.delete(s.p.id);
+    if(s._raised){ holdemAlive().forEach(o=>{ if(o.p.id!==s.p.id && o.p.stack>0) needAct.add(o.p.id); }); s._raised=false; }
+    renderHoldemHands(false);
+  }
+  H.phase = "between";
+  players.forEach(p=> setBetBadge(p.id, 0));
+  H.state.forEach(s=>{ s.bet = 0; });
+}
+function humanHoldemBet(seq, s, street){
+  return new Promise(res=>{
+    const toCall = H.currentBet - s.roundBet;
+    const canRaise = H.raises<3 && s.p.stack > toCall;
+    if(mode==="apprentice" && tipsOn) setTip(holdemCoachHTML(s.hand, H.board, toCall));
+    let html = `<button class="btn fold" id="act-fold">Fold</button>`;
+    html += toCall>0 ? `<button class="btn primary" id="act-call">Call ${fmt(toCall)}</button>` : `<button class="btn primary" id="act-call">Check</button>`;
+    if(canRaise) [50,100,200].forEach(amt=>{ const need = toCall + amt; if(s.p.stack>=need) html += `<button class="btn" data-raise="${amt}">Raise +${amt}</button>`; });
+    const evTxt = H.board.length>=3 ? evaluate7(s.hand.concat(H.board)).name : (s.hand[0].r===s.hand[1].r ? "Pocket pair" : "Two hole cards");
+    html += `<span class="ctl-note">${street==="preflop"?"Preflop":("On the "+street)} · your hand: <b>${evTxt}</b> · pot ${fmt(H.pot)}</span>`;
+    setControls(html);
+    let settled = false;
+    const done = ()=>{ if(settled) return; settled = true; clearTimeout(tmo); hideTurnTimer(); setControls(""); res(); };
+    showTurnTimer(TURN_MS, "Your betting turn");
+    const tmo = setTimeout(()=>{
+      if(settled) return;
+      if(seq !== handSeq){ done(); return; }
+      if(toCall > 0){ s.folded = true; setStatus(s.p.id, "Folded"); log("<b>You</b> ran out of time — auto-folded."); showNotice("Time ran out — you were folded."); }
+      else { setStatus(s.p.id, "Checked"); log("<b>You</b> ran out of time — auto-checked."); showNotice("Time ran out — auto-checked."); }
+      done();
+    }, TURN_MS);
+    wireBtn("act-fold", ()=>{ s.folded=true; setStatus(s.p.id,"Folded"); log("<b>You</b> folded."); done(); });
+    wireBtn("act-call", ()=>{
+      const pay = Math.min(toCall, s.p.stack); s.p.stack-=pay; s.roundBet+=pay; s.bet+=pay; H.pot+=pay;
+      setStatus(s.p.id, toCall>0? "Called" : "Checked"); refreshPlates(); setPot(H.pot); done();
+    });
+    document.querySelectorAll("[data-raise]").forEach(b=> b.addEventListener("click", ()=>{
+      clickSound(520);
+      const amt = +b.dataset.raise; const need = toCall + amt;
+      s.p.stack-=need; s.roundBet+=need; s.bet+=need; H.pot+=need;
+      H.currentBet = s.roundBet; H.raises++; s._raised = true;
+      setStatus(s.p.id, "Raised to "+fmt(s.roundBet)); refreshPlates(); setPot(H.pot);
+      log(`<b>You</b> raised to ${fmt(s.roundBet)}.`);
+      done();
+    }));
+  });
+}
+function holdemStrength(hand, board){
+  if(board.length>=3){ const ev = evaluate7(hand.concat(board)); return ev.cat + (ev.tie[0]||0)/100; }
+  const pair = hand[0].r===hand[1].r;
+  const hi = Math.max(hand[0].r, hand[1].r);
+  if(pair) return 4 + hi/10;
+  return (hi>=13?3.2: hi>=11?2.6: hi>=9?2.0:1.4) + (hand[0].s===hand[1].s?0.3:0) + (Math.abs(hand[0].r-hand[1].r)===1?0.2:0);
+}
+function aiHoldemBet(s, street){
+  const toCall = H.currentBet - s.roundBet;
+  const strength = holdemStrength(s.hand, H.board) + Math.random()*1.4;
+  const pay = (amt)=>{ const p=Math.min(amt, s.p.stack); s.p.stack-=p; s.roundBet+=p; s.bet+=p; H.pot+=p; };
+  if(toCall>0 && strength<2.4 && toCall > s.p.stack*0.12 && Math.random()<0.75){
+    s.folded=true; setStatus(s.p.id,"Folded"); log(`<b>${s.p.name}</b> folded.`);
+  } else if(H.raises<3 && s.p.stack>toCall && strength>=6.2 && Math.random()<0.55){
+    const amt = [50,100,200][Math.floor(Math.random()*3)]; const need = toCall+amt;
+    if(s.p.stack>=need){ pay(need); H.currentBet=s.roundBet; H.raises++; s._raised=true; setStatus(s.p.id,"Raised to "+fmt(s.roundBet)); log(`<b>${s.p.name}</b> raised to ${fmt(s.roundBet)}.`); }
+    else { pay(toCall); setStatus(s.p.id, toCall>0?"Called":"Checked"); }
+  } else {
+    pay(toCall); setStatus(s.p.id, toCall>0?"Called":"Checked");
+    if(toCall>0) log(`<b>${s.p.name}</b> called ${fmt(toCall)}.`);
+  }
+  refreshPlates(); setPot(H.pot);
+}
+async function checkHoldemLoneWinner(seq){
+  const alive = holdemAlive();
+  if(alive.length>1) return false;
+  const w = alive[0];
+  w.p.stack += H.pot;
+  w.p.handsWon = (w.p.handsWon || 0) + 1; w.p.chipsWon = (w.p.chipsWon || 0) + H.pot;
+  renderHoldemHands(true);
+  setTurn(w.p, "Everyone else folded.");
+  $("tb-who").textContent = w.p.id==="you" ? "You win the hand" : w.p.name + " wins the hand";
+  setCenter(w.p.name + " takes it", `Wins the ${fmt(H.pot)} pot — no showdown needed.`);
+  paintWinBanner(`${w.p.name} won ${fmt(H.pot)} chips — everyone else folded`);
+  log(`<b>${w.p.name}</b> won ${fmt(H.pot)} chips — everyone else folded.`, true);
+  refreshPlates(); setPot(0); endHoldemHand();
+  return true;
+}
+function holdemShowdown(seq){
+  H.phase = "showdown";
+  renderHoldemHands(true);
+  const alive = holdemAlive();
+  let best=null;
+  const scored = alive.map(s=>{ const ev=evaluate7(s.hand.concat(H.board)); setStatus(s.p.id, ev.name); if(!best||cmpEval(ev,best.ev)>0) best={s,ev}; return {s,ev}; });
+  const winners = scored.filter(x=>cmpEval(x.ev,best.ev)===0);
+  const share = Math.floor(H.pot / winners.length);
+  winners.forEach(w=>{ w.s.p.stack += share; w.s.p.handsWon = (w.s.p.handsWon || 0) + 1; w.s.p.chipsWon = (w.s.p.chipsWon || 0) + share; });
+  const names = winners.map(w=>w.s.p.name).join(" & ");
+  setTurn(winners[0].s.p, "Showdown.");
+  $("tb-who").textContent = winners.length>1 ? "Split pot" : (winners[0].s.p.id==="you" ? "You win the hand" : winners[0].s.p.name + " wins the hand");
+  setCenter(names + (winners.length>1 || winners[0].s.p.id==="you" ? " win" : " wins"), `${best.ev.name} takes ${fmt(H.pot)}.`);
+  paintWinBanner(`${names} won ${fmt(H.pot)} chips with ${best.ev.name}`);
+  log(`<b>${names}</b> won ${fmt(H.pot)} chips with <b>${best.ev.name}</b>.`, true);
+  refreshPlates(); setPot(0); H.pot=0;
+  endHoldemHand();
+}
+function endHoldemHand(){
+  hideTurnTimer();
+  if(H) H.phase="idle";
+  setControls(`<button class="btn primary" id="btn-deal">Deal the next hand</button>
+    ${byId("you").stack<100?`<button class="btn" id="btn-rebuy">Top up to 1,000</button>`:""}`);
+  wireBtn("btn-deal", startHoldemHand);
+  wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetHoldemTable(); });
 }
 
 /* ================= BLACKJACK ================= */
@@ -1411,7 +1730,7 @@ function bjValue(hand){
   return { total, soft };
 }
 function resetBJTable(){
-  hideTurnTimer(); paintWinBanner(null); resetSoloStats();
+  hideTurnTimer(); paintWinBanner(null); resetSoloStats(); paintBoard([]);
   B = { phase:"idle", bet:25, hands:{}, dealer:[], holeHidden:true, resolver:null };
   seatsEl.innerHTML =
     `<div class="seat pos-dealer" id="seat-dealer"><div class="seat-inner">
@@ -1618,16 +1937,20 @@ function settleBJ(seq, dealerHadBJ){
 }
 
 /* ================= mode / game switching ================= */
-function setGame(g){
-  if(g===game && (D||B)) { /* still refresh */ }
-  game = g; handSeq++;
-  $("seg-draw").classList.toggle("on", g==="draw");
-  $("seg-bj").classList.toggle("on", g==="bj");
-  if(g==="draw"){ B=null; resetDrawTable(); }
-  else { D=null; resetBJTable(); }
-  log(g==="draw" ? "Switched the table to <b>Five Card 3/2 Draw</b>." : "Switched the table to <b>Blackjack</b>.");
+function paintGameSegs(){
+  $("seg-draw").classList.toggle("on", game==="draw");
+  $("seg-classic").classList.toggle("on", game==="classic");
+  $("seg-holdem").classList.toggle("on", game==="holdem");
+  $("seg-bj").classList.toggle("on", game==="bj");
 }
-function setMode(m){
+function setGame(g){
+  game = g; handSeq++;
+  paintGameSegs();
+  if(isDrawGame(g)){ B=null; H=null; resetDrawTable(); }
+  else if(g==="holdem"){ D=null; B=null; resetHoldemTable(); }
+  else { D=null; H=null; resetBJTable(); }
+  log("Switched the table to <b>" + GAME_NAMES[g] + "</b>.");
+}function setMode(m){
   mode = m;
   document.body.classList.toggle("expert", m==="expert");
   $("seg-appr").classList.toggle("on", m==="apprentice");
@@ -1635,16 +1958,18 @@ function setMode(m){
   $("tips-switch-wrap").classList.toggle("off", m==="expert");
   $("tips-toggle").disabled = (m==="expert");
   if(m==="apprentice") setTip("Apprentice mode — coach is back on the rail. Deal a hand and I’ll walk you through the spots that matter.");
-  else if(game==="draw" && D) renderDrawHands(false);
+  else if(isDrawGame(game) && D) renderDrawHands(false);
 }
 $("seg-draw").addEventListener("click", ()=>{ clickSound(500); setGame("draw"); });
+$("seg-classic").addEventListener("click", ()=>{ clickSound(500); setGame("classic"); });
+$("seg-holdem").addEventListener("click", ()=>{ clickSound(500); setGame("holdem"); });
 $("seg-bj").addEventListener("click", ()=>{ clickSound(500); setGame("bj"); });
 $("seg-appr").addEventListener("click", ()=>{ clickSound(500); setMode("apprentice"); });
 $("seg-exp").addEventListener("click", ()=>{ clickSound(500); setMode("expert"); });
 $("tips-toggle").addEventListener("change", (e)=>{
   tipsOn = e.target.checked;
   if(tipsOn && mode==="apprentice") setTip("Tips back on. I’ll chime in on your decisions — betting, drawing, doubling — as they come up.");
-  if(game==="draw" && D && D.phase==="draw"){ suggestCache = tipsOn&&mode==="apprentice" ? suggestDiscards(drawSt("you").hand) : []; renderDrawHands(false); }
+  if(isDrawGame(game) && D && D.phase==="draw"){ suggestCache = tipsOn&&mode==="apprentice" ? suggestFor(drawSt("you").hand) : []; renderDrawHands(false); }
 });
 
 /* ================= chip studio ================= */
@@ -1746,6 +2071,7 @@ const mp = {
   heartbeatTimer: null,    // host: host-alive heartbeat interval
   lastHeartbeat: 0, heartbeatSeen: false, hostQuietShown: false,   // guest: host liveness
   guestWatchTimer: null, guestHelloTimer: null, guestSeated: false, guestPromptTimer: null, returnedNotice: false,
+  helloRetryTimer: null, joining: false, holdemButton: -1, _coachKey: null, _reactAt: {},
 };
 /* --- relay transport helpers --- */
 function mpChannelName(code){ return "poker-room-" + code; }
@@ -1844,6 +2170,7 @@ function mpRejoinLink(){
 }
 let MD = null;             // host draw hand state
 let MB = null;             // host blackjack hand state
+let MH = null;             // host hold'em hand state
 const AI_DEFS = [
   { name:"Don",    themeText:"crimson with gold trim and diamonds" },
   { name:"Thomas", themeText:"orange sunset stripes with black trim" },
@@ -2012,6 +2339,25 @@ function mpCreate(){
     }
   });
 }
+function mpSendHello(){
+  mpToHost({ t: "hello", profile: mpProfile(), inviteId: mp.pendingInvite || null, rejoinToken: mp.pendingRejoin || null });
+}
+function mpStartHelloRetry(){
+  mpStopHelloRetry();
+  let tries = 0;
+  mp.helloRetryTimer = setInterval(()=>{
+    if(mp.role !== "guest" || mp.guestSeated || !mp.channel){ mpStopHelloRetry(); return; }
+    if(++tries > 10){ mpStopHelloRetry(); return; }
+    mpSendHello();
+  }, 3000);
+}
+function mpStopHelloRetry(){ if(mp.helloRetryTimer){ clearInterval(mp.helloRetryTimer); mp.helloRetryTimer = null; } }
+function mpJoinFailed(msg){
+  mp.joining = false;
+  const go = $("join-go");
+  if(go){ go.disabled = false; go.textContent = "Join Table"; }
+  if(msg) $("join-note").textContent = msg;
+}
 function mpJoin(){
   if(!mpRelayReady()) return;
   const code = ($("net-code-in").value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -2042,7 +2388,8 @@ function mpJoin(){
     if(status === "SUBSCRIBED"){
       mp.role = "guest";
       mp.lastHeartbeat = Date.now();
-      mpToHost({ t: "hello", profile: mpProfile(), inviteId: mp.pendingInvite || null, rejoinToken: mp.pendingRejoin || null });
+      mpSendHello();
+      mpStartHelloRetry();
       $("joincard").style.display = "none";
       $("net-lobby").style.display = "none";
       $("net-room").style.display = "";
@@ -2068,6 +2415,7 @@ function mpJoin(){
       }, 20000);
     } else if(status === "TIMED_OUT" || status === "CHANNEL_ERROR" || status === "CLOSED"){
       if(mp.role !== "guest") mpRelayFailStatus(status);
+      if(mp.joining) mpJoinFailed("Couldn’t reach the game relay (" + status + ") — check your connection and tap Join Table again.");
     }
   });
 }
@@ -2082,7 +2430,9 @@ function mpLeave(silent){
   mp.guestSeated = false; mp.heartbeatSeen = false; mp.lastHeartbeat = 0; mp.hostQuietShown = false; mp.claiming = false;
   mpTeardownChannel();
   mp.conns.clear();
-  mp.roster = []; mp.snap = null; mp.drawUI = null; MD = null; MB = null;
+  mp.roster = []; mp.snap = null; mp.drawUI = null; MD = null; MB = null; MH = null;
+  mpStopHelloRetry(); mp.joining = false;
+  const _jg = $("join-go"); if(_jg){ _jg.disabled = false; _jg.textContent = "Join Table"; }
   mp.myToken = null; mp.pendingInvite = null; mp.pendingRejoin = null;
   $("net-rejoin-row").style.display = "none";
   $("net-lobby").style.display = "";
@@ -2196,6 +2546,10 @@ function mpHostHandleMsg(fromPid, msg){
   if(msg.t === "topup"){
     mpDoTopUp(fromPid);
   }
+  if(msg.t === "reaction"){
+    // relay only what passed the whitelist + rate limit on this side too
+    if(handleReactionFrom(fromPid, msg.emoji)) mpBroadcastAll({ t: "reaction", pid: fromPid, emoji: msg.emoji });
+  }
   if(msg.t === "ready"){
     const s = mp.roster.find(x=>x.pid === fromPid);
     // an away seat's flag stays cleared — it can ready up again once it's back
@@ -2247,7 +2601,8 @@ function mpSyncProfile(){
 /* ---------------- snapshots: what each device may see ---------------- */
 function mpSeatsForHand(){
   // roster humans in seat order + optional AI fill, for the CURRENT hand states
-  if(game === "draw" && MD) return MD.state.map(s=>s.seat);
+  if(isDrawGame(game) && MD) return MD.state.map(s=>s.seat);
+  if(game === "holdem" && MH) return MH.state.map(s=>s.seat);
   if(game === "bj" && MB) return MB.order.map(pid=> MB.seats[pid].seat);
   // no hand on the table: in deal-only mode the host is the House, not a seat
   const disp = (mp.phase === "lobby" || mp.phase === "done") ? mp.hostMode : mp.activeHostMode;
@@ -2255,7 +2610,7 @@ function mpSeatsForHand(){
 }
 function mpBuildSnap(forPid){
   const seats = mpSeatsForHand();
-  const inHand = (game === "draw" && MD) || (game === "bj" && MB);
+  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "bj" && MB);
   const snapSeats = seats.map(seat=>{
     const rseat = mp.roster.find(x=>x.pid === seat.pid);
     const base = { pid: seat.pid, name: seat.name, short: seat.short, theme: seat.theme, stack: seat.stack,
@@ -2263,12 +2618,20 @@ function mpBuildSnap(forPid){
                    ready: seat.kind === "ai" ? false : !!(rseat && rseat.ready),
                    handsWon: seat.handsWon || 0, chipsWon: seat.chipsWon || 0,
                    bet: 0, status: "", folded: false, bust: false, cardCount: 0, cards: null };
-    if(game === "draw" && MD){
+    if(isDrawGame(game) && MD){
       const st = MD.state.find(s=>s.seat.pid === seat.pid);
       if(st){
         base.bet = st.bet; base.folded = st.folded; base.status = st.status || ""; base.cardCount = st.hand.length;
         if(seat.pid === forPid) base.cards = st.hand;                       // own cards only
         else if(MD.reveal && !st.folded) base.cards = st.hand;              // showdown reveal
+      }
+    }
+    if(game === "holdem" && MH){
+      const st = MH.state.find(s=>s.seat.pid === seat.pid);
+      if(st){
+        base.bet = st.roundBet; base.folded = st.folded; base.status = st.status || ""; base.cardCount = st.hand.length;
+        if(seat.pid === forPid) base.cards = st.hand;                       // own hole cards only
+        else if(MH.reveal && !st.folded) base.cards = st.hand;              // showdown reveal
       }
     }
     if(game === "bj" && MB){
@@ -2288,7 +2651,8 @@ function mpBuildSnap(forPid){
     t: "state", game, phase: mp.phase,
     hostMode: dispMode,
     house: (dispMode === "deal" && hostSeat) ? { pid: hostSeat.pid, name: hostSeat.name, theme: hostSeat.theme } : null,
-    pot: game === "draw" && MD ? MD.pot : 0,
+    pot: isDrawGame(game) && MD ? MD.pot : (game === "holdem" && MH ? MH.pot : 0),
+    board: game === "holdem" && MH ? MH.board : [],
     activePid: mp.activeSeatPid || null,
     activeTheme: activeSeat ? activeSeat.theme : null,
     activeName: activeSeat ? activeSeat.name : null,
@@ -2333,7 +2697,7 @@ function mpRenderSnap(snap, isHost){
   if(snap.room) snap.room.forEach(s=>{ s.theme = mpSanTheme(s.theme); });
   if(snap.lastLog && !isHost) snap.lastLog = Object.assign({}, snap.lastLog, { msg: mpSanLogHtml(snap.lastLog.msg) });
   mp.snap = snap;
-  if(snap.game !== game){ game = snap.game; $("seg-draw").classList.toggle("on", game === "draw"); $("seg-bj").classList.toggle("on", game === "bj"); }
+  if(snap.game !== game){ game = snap.game; paintGameSegs(); }
   // order seats so the viewer's own seat is at the bottom
   const mine = snap.seats.findIndex(s=>s.pid === mp.myPid);
   const order = snap.seats.map((s, i)=>i);
@@ -2345,7 +2709,7 @@ function mpRenderSnap(snap, isHost){
     return MP_POS[order.indexOf(seatIdx)] || "pos-top";
   };
   let html = "";
-  if(snap.house && snap.game === "draw"){
+  if(snap.house && snap.game !== "bj"){
     // The House seat: dealer only — no cards, no stack, never a player.
     html += `<div class="seat pos-dealer" id="seat-house"><div class="seat-inner">
       <div class="cards" id="cards-mp-house"></div>
@@ -2382,6 +2746,7 @@ function mpRenderSnap(snap, isHost){
   });
   seatsEl.innerHTML = html;
   setPot(snap.pot || 0);
+  paintBoard(snap.board || []);
   if(snap.center) setCenter(snap.center[0], snap.center[1]);
   paintWinBanner(snap.winBanner || null);
   const activeSeat = snap.activePid ? snap.seats.find(s=>s.pid === snap.activePid) : null;
@@ -2400,6 +2765,7 @@ function mpRenderSnap(snap, isHost){
   // the seats rebuild above just replaced every card node: if MY draw prompt
   // is open, re-deal its selection visuals + tap handlers onto the fresh nodes
   if(mp.drawUI) mpPaintDrawCards();
+  mpOffTurnCoach(snap, isHost);
 }
 /* Ready gate: the host deals only once every seated player is in.
    Guests ready up from their own screens (state lives on the roster, so
@@ -2461,9 +2827,8 @@ function mpAutoDealCancel(sync){
 function mpHostDealNow(){
   mpAutoDealCancel(false);
   mp.gateOkSince = 0;
-  if(game === "draw") mpStartDraw(); else mpStartBJ();
-}
-function mpAutoDealTick(){
+  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else mpStartBJ();
+}function mpAutoDealTick(){
   if(mp.role !== "host"){ mp.gateOkSince = 0; return; }
   if(mp.phase !== "lobby" && mp.phase !== "done"){ mp.gateOkSince = 0; mpAutoDealCancel(true); return; }
   if(!mp.autoDeal){ mp.gateOkSince = 0; mpAutoDealCancel(true); return; }
@@ -2495,7 +2860,7 @@ function mpRenderHostControls(){
     // the label ALWAYS matches the gate's verdict + reason (incl. AWAY)
     const dealLabel = cdSec != null
       ? `Dealing in ${cdSec}… — tap to deal now`
-      : gate.ok ? `${other}${game === "draw" ? " — ante 10" : ""}`
+      : gate.ok ? `${other}${isDrawGame(game) ? " — ante 10" : game === "holdem" ? " — blinds 5/10" : ""}`
       : gate.reason === "away" ? mpAwayLabel(gate.awayNames)
       : gate.reason === "players" ? `Waiting for players — ${gate.players} of 2 seated`
       : `Waiting for ready — ${gate.readyCount} of ${gate.needCount} ready`;
@@ -2623,13 +2988,52 @@ function mpPaintDrawCards(){
   const c = $("mp-draw-count");
   if(c) c.textContent = ui.sel.size === 0 ? `Tap cards to throw away — up to ${ui.cap}.` : `${ui.sel.size} to throw away — tap DRAW when ready.`;
 }
+/* Off-turn Apprentice coach: a seated player in Apprentice mode gets a
+   read on their OWN dealt hand from their own snapshot — even when it
+   isn't their turn. (Before this, guests off-turn only saw the generic
+   "coach is back on the rail" text while the host got hand-specific
+   tips.) Runs at the end of every snapshot render; keyed on the hand +
+   board + phase so it speaks once per change, never per snapshot. The
+   live prompt UI owns the coach on your actual turn. */
+function mpOffTurnCoach(snap, isHost){
+  if(mode !== "apprentice" || !tipsOn) return;
+  if(mp.role === "host" && mpDisplayHostMode() === "deal") return;   // the House holds no hand
+  if(mp.guestPrompt) return;
+  if(snap.activePid === mp.myPid) return;
+  if(snap.phase === "lobby" || snap.phase === "done") return;
+  const mySeat = snap.seats.find(s=>s.pid === mp.myPid);
+  if(!mySeat || !mySeat.cards || !mySeat.cards.length) return;
+  const key = snap.game + "|" + mySeat.cards.map(c=> c.joker ? "J" : c.r + "-" + c.s).join(",") + "|" + (snap.board ? snap.board.length : 0) + "|" + snap.phase;
+  if(mp._coachKey === key) return;
+  mp._coachKey = key;
+  if(snap.game === "holdem"){
+    setTip("<b>Your hand so far:</b> " + holdemCoachHTML(mySeat.cards, snap.board || [], 0));
+  } else if(isDrawGame(snap.game)){
+    const ev = evaluateFor(mySeat.cards);
+    const sugg = suggestFor(mySeat.cards);
+    setTip(`<b>Your hand:</b> ${ev.name}. ` + (ev.cat>=5 ? "That's a made hand — sit tight and plan to bet it when your turn comes." : ev.cat>=2 ? `When your draw comes, the plan is to keep the made part and toss ${sugg.length} — the gold outlines will show you.` : "Nothing made yet — when your draw comes, keep your best high card" + (DRAW_VARIANTS[snap.game] && DRAW_VARIANTS[snap.game].wilds ? " and any wild card" : "") + " and draw the rest."));
+  }
+}
 /* Builds the decision UI on THIS device and coaches from THIS device's cards only. */
 function mpBuildPromptUI(kind, ctx, respond){
   const snap = mp.snap;
   const mySeat = snap ? snap.seats.find(s=>s.pid === mp.myPid) : null;
   const myCards = mySeat && mySeat.cards ? mySeat.cards : [];
   if(kind === "bet"){
-    const ev = myCards.length ? evaluate5(myCards) : null;
+    if(ctx && ctx.game === "holdem"){
+      if(mode === "apprentice" && tipsOn) setTip(holdemCoachHTML(myCards, (snap && snap.board) || [], ctx.toCall));
+      let hhtml = `<button class="btn fold" id="mp-fold">Fold</button>`;
+      hhtml += ctx.toCall > 0 ? `<button class="btn primary" id="mp-call">Call ${fmt(ctx.toCall)}</button>` : `<button class="btn primary" id="mp-call">Check</button>`;
+      if(ctx.raises < 3) [50, 100, 200].forEach(amt=>{ if(ctx.stack >= ctx.toCall + amt) hhtml += `<button class="btn" data-mpraise="${amt}">Raise +${amt}</button>`; });
+      const hev = (snap && snap.board && snap.board.length >= 3 && myCards.length === 2) ? evaluate7(myCards.concat(snap.board)).name : (myCards.length === 2 && myCards[0].r === myCards[1].r ? "Pocket pair" : "Two hole cards");
+      hhtml += `<span class="ctl-note">Live Hold'em · pot ${fmt(ctx.pot)} · your hand: <b>${hev}</b> — this shows only on your screen.</span>`;
+      setControls(hhtml);
+      wireBtn("mp-fold", ()=> respond({ type: "fold" }));
+      wireBtn("mp-call", ()=> respond({ type: "call" }));
+      document.querySelectorAll("[data-mpraise]").forEach(b=> b.addEventListener("click", ()=>{ clickSound(520); respond({ type: "raise", amt: +b.dataset.mpraise }); }));
+      return;
+    }
+    const ev = myCards.length ? evaluateFor(myCards) : null;
     if(ev && mode === "apprentice" && tipsOn){
       if(ev.cat >= 4) setTip(`<b>${ev.name}</b> — a monster. <b>Raise it</b> and build the pot while you’re ahead.`);
       else if(ev.cat === 3) setTip(`<b>Two pair</b> already — <b>call or raise</b>, then draw 1 to the odd card.`);
@@ -2650,9 +3054,9 @@ function mpBuildPromptUI(kind, ctx, respond){
   if(kind === "draw"){
     const cap = (ctx && ctx.cap) || 3;
     const drawNum = (ctx && ctx.drawNum) || 1;
-    const sugg = (mode === "apprentice" && tipsOn) ? suggestDiscards(myCards).slice(0, cap) : [];
+    const sugg = (mode === "apprentice" && tipsOn) ? suggestFor(myCards).slice(0, cap) : [];
     if(mode === "apprentice" && tipsOn){
-      const ev = evaluate5(myCards);
+      const ev = evaluateFor(myCards);
       setTip(ev.cat >= 5 ? `You’re holding <b>${ev.name}</b> — <b>stand pat</b>, don’t break it up.`
         : ev.cat === 2 || ev.cat === 3 || ev.cat === 4 ? `<b>${ev.name}</b>. The gold-outlined cards are the toss — keep your made hand and draw the rest.`
         : `Nothing made yet — the gold outlines are the coach’s toss. Keep your best high card and any wild.`);
@@ -2692,8 +3096,18 @@ function mpBuildPromptUI(kind, ctx, respond){
 }
 function mpAIAction(seat, kind, ctx){
   if(kind === "bet"){
+    if(ctx && ctx.game === "holdem"){
+      const st = MH.state.find(s=>s.seat.pid === seat.pid);
+      const strength = holdemStrength(st.hand, MH.board) + Math.random() * 1.4;
+      if(ctx.toCall > 0 && strength < 2.4 && ctx.toCall > seat.stack * 0.12 && Math.random() < 0.75) return { type: "fold" };
+      if(ctx.raises < 3 && strength >= 6.2 && Math.random() < 0.55){
+        const amt = [50, 100, 200][Math.floor(Math.random() * 3)];
+        if(seat.stack >= ctx.toCall + amt) return { type: "raise", amt };
+      }
+      return { type: "call" };
+    }
     const st = MD.state.find(s=>s.seat.pid === seat.pid);
-    const ev = evaluate5(st.hand);
+    const ev = evaluateFor(st.hand);
     let strength = ev.cat + Math.random() * 1.6;
     if(ctx.phaseLabel === "pre" && ev.cat <= 2) strength -= 0.6;
     if(ctx.toCall > 0 && strength < 2.2 && ctx.toCall > seat.stack * 0.12 && Math.random() < 0.75) return { type: "fold" };
@@ -2705,7 +3119,7 @@ function mpAIAction(seat, kind, ctx){
   }
   if(kind === "draw"){
     const st = MD.state.find(s=>s.seat.pid === seat.pid);
-    return { type: "draw", indices: suggestDiscards(st.hand).slice(0, (ctx && ctx.cap) || 3) };
+    return { type: "draw", indices: suggestFor(st.hand).slice(0, (ctx && ctx.cap) || 3) };
   }
   if(kind === "bjbet") return { type: "bet", amt: 25 };
   if(kind === "bj"){
@@ -2724,7 +3138,7 @@ function mpGuestOnData(msg){
   if(!msg || typeof msg !== "object") return;
   if(msg.t === "state"){ mpRenderSnap(msg, false); }
   if(msg.t === "seat" && msg.token){
-    mp.guestSeated = true;
+    mp.guestSeated = true; mp.joining = false; mpStopHelloRetry();
     if(mp.guestHelloTimer){ clearTimeout(mp.guestHelloTimer); mp.guestHelloTimer = null; }
     mp.myToken = String(msg.token);
     if(mp.returnedNotice){ mp.returnedNotice = false; showNotice("You’re back — seat restored.", true); }
@@ -2733,12 +3147,13 @@ function mpGuestOnData(msg){
     $("net-rejoinlink").value = mpRejoinLink();
   }
   if(msg.t === "invite-taken"){
-    mpLeave(true);
+    mpLeave(true); mpJoinFailed();
     netStatus("That personal invite was already claimed by the person it was made for — a forwarded link can’t take their seat. Ask the host for the shared Room Invite Link, or a personal invite of your own.", "err");
     $("joincard").style.display = "";
     $("join-note").textContent = "That personal invite is already in use. You can still join with the shared Room Invite Link — ask the host to send it.";
     return;
   }
+  if(msg.t === "reaction" && msg.pid !== mp.myPid) handleReactionFrom(msg.pid, msg.emoji);
   if(msg.t === "full"){ mpRoomEnded("That room is full — four seats max. Ask the host to start a bigger night another way, or try again when a seat opens."); }
   if(msg.t === "prompt"){
     mp.guestPrompt = msg.promptId;
@@ -2773,22 +3188,65 @@ function mpGuestOnData(msg){
   }
 }
 
+/* ---------------- seat reactions ----------------
+   A tap sends one emoji that floats over the sender's seat on every
+   screen. Solo: local only. MP guests: to-host, the host validates
+   against the whitelist, rate-limits per sender, shows it and relays
+   it to all. Host taps broadcast directly. ~1 per second per player. */
+const REACTION_SET = ["👏", "😂", "😮", "🔥"];
+let lastReactAt = 0;
+function showReaction(seatElId, emoji){
+  const seat = document.getElementById(seatElId); if(!seat) return;
+  const s = document.createElement("span");
+  s.className = "react-float"; s.textContent = emoji;
+  seat.appendChild(s);
+  setTimeout(()=>{ s.remove(); }, 2300);
+}
+function handleReactionFrom(pid, emoji){
+  if(!REACTION_SET.includes(emoji)) return false;
+  const now = Date.now();
+  mp._reactAt = mp._reactAt || {};
+  if(mp._reactAt[pid] && now - mp._reactAt[pid] < 900) return false;
+  mp._reactAt[pid] = now;
+  const seatEl = (mp.snap && mp.snap.house && mp.snap.house.pid === pid) ? "seat-house" : "seat-" + pid;
+  showReaction(seatEl, emoji);
+  return true;
+}
+function myReactionSeatEl(){
+  if(mp.role === "solo") return "seat-you";
+  if(mp.snap && mp.snap.house && mp.snap.house.pid === mp.myPid) return "seat-house";
+  return "seat-" + mp.myPid;
+}
+function sendReaction(emoji){
+  if(!REACTION_SET.includes(emoji)) return;
+  const now = Date.now();
+  if(now - lastReactAt < 900) return;
+  lastReactAt = now;
+  showReaction(myReactionSeatEl(), emoji);
+  if(mp.role === "host") mpBroadcastAll({ t: "reaction", pid: mp.myPid, emoji });
+  else if(mp.role === "guest") mpToHost({ t: "reaction", emoji });
+}
+document.querySelectorAll("[data-react]").forEach(b=> b.addEventListener("click", ()=>{ clickSound(660); sendReaction(b.dataset.react); }));
+
 /* ---------------- host: table reset & game flow ---------------- */
 function mpResetTableMP(){
   hideTurnTimer();
   mp.cdEndsAt = 0; mp.cdShownSec = null; mp.gateOkSince = 0;
   mp.winBanner = null; paintWinBanner(null); mpResetReady();
-  MD = null; MB = null; mp.phase = "lobby"; mp.activeSeatPid = null;
-  setCenter(game === "draw" ? "Five Card 3/2 Draw — live room" : "Blackjack — live room",
-            game === "draw" ? "Jokers & deuces wild · two draws — up to 3, then up to 2 · the host deals." : "Dealer stands on 17 · blackjack pays 3:2 · the host deals.");
+  MD = null; MB = null; MH = null; mp.phase = "lobby"; mp.activeSeatPid = null;
+  const info = game === "holdem"
+    ? ["Texas Hold'em — live room", "Blinds 5/10 · two hole cards · flop, turn, river · best 5 of 7 · the host deals."]
+    : isDrawGame(game)
+    ? [drawVariant().name + " — live room", drawVariant().wilds ? "Jokers & deuces wild · two draws — up to 3, then up to 2 · the host deals." : "No wilds · one draw — up to 5 · the host deals."]
+    : ["Blackjack — live room", "Dealer stands on 17 · blackjack pays 3:2 · the host deals."];
+  setCenter(info[0], info[1]);
   $("tb-what").textContent = mp.role === "host" ? "Your room, your deal. Hit Deal when everyone’s seated." : "Waiting for the host to deal.";
   mpSync();
-}
-function mpTableSeats(maxSeats){
+}function mpTableSeats(maxSeats){
   // Deal-only (the House): the host is NOT a player — excluded from the
   // seats entirely. On the draw table the dealer spot takes the top seat,
   // so a House-dealt draw game seats at most 3 players.
-  const capSeats = (mp.hostMode === "deal" && game === "draw") ? Math.min(maxSeats, 3) : maxSeats;
+  const capSeats = mp.hostMode === "deal" ? Math.min(maxSeats, 3) : maxSeats;   // the House dealer seat takes the top spot, so a deal-only table seats at most 3 players (Blackjack already caps at 3)
   const humans = mp.roster.filter(s=>!s.away && !(mp.hostMode === "deal" && s.pid === mp.myPid)).slice(0, capSeats);
   const seats = humans.map(s=> Object.assign({}, s));
   if(aiFillOn()){
@@ -2832,38 +3290,33 @@ async function mpStartDraw(){
     mpSync();
     return;
   }
-  MD = { pot: 0, deck: buildDrawDeck(), currentBet: 0, raises: 0, reveal: false,
+  const V = drawVariant();
+  MD = { pot: 0, deck: buildDeckForGame(), currentBet: 0, raises: 0, reveal: false,
          state: seats.map(seat=>({ seat, hand: [], folded: false, bet: 0, roundBet: 0, status: "" })) };
   for(const st of MD.state){ const a = Math.min(10, st.seat.stack); st.seat.stack -= a; st.bet += a; MD.pot += a; }
   for(let k = 0; k < 5; k++) for(const st of MD.state) st.hand.push(MD.deck.pop());
   mp.phase = "bet1";
   mp._lastLog = mpLogBoth("Live hand dealt — everyone antes 10.");
-  setCenter("First betting round", "One round of bets, then the first draw — up to 3.");
+  setCenter("First betting round", V.draws.length > 1 ? "One round of bets, then the first draw — up to 3." : "One round of bets, then the draw — up to 5.");
   mpSync();
+  const betLabels = ["pre", "mid", "post"];
   await mpBettingRound(seq, "pre");
   if(seq !== mp.seq || !MD) return;
   if(mpLoneWinner()) return;
-  await mpDrawPhase(seq, 1, 3);
-  if(seq !== mp.seq || !MD) return;
-  MD.state.forEach(s=>{ s.roundBet = 0; }); MD.currentBet = 0; MD.raises = 0;
-  mp.phase = "bet2";
-  setCenter("Second betting round", "One more round of bets, then the second draw — up to 2.");
-  mpSync();
-  await mpBettingRound(seq, "mid");
-  if(seq !== mp.seq || !MD) return;
-  if(mpLoneWinner()) return;
-  await mpDrawPhase(seq, 2, 2);
-  if(seq !== mp.seq || !MD) return;
-  MD.state.forEach(s=>{ s.roundBet = 0; }); MD.currentBet = 0; MD.raises = 0;
-  mp.phase = "bet3";
-  setCenter("Final betting round", "Last bets — then we show ’em.");
-  mpSync();
-  await mpBettingRound(seq, "post");
-  if(seq !== mp.seq || !MD) return;
-  if(mpLoneWinner()) return;
+  for(let di = 0; di < V.draws.length; di++){
+    await mpDrawPhase(seq, di + 1, V.draws[di]);
+    if(seq !== mp.seq || !MD) return;
+    MD.state.forEach(s=>{ s.roundBet = 0; }); MD.currentBet = 0; MD.raises = 0;
+    const last = di === V.draws.length - 1;
+    mp.phase = last ? "bet3" : "bet2";
+    setCenter(last ? "Final betting round" : "Second betting round", last ? "Last bets — then we show ’em." : "One more round of bets, then the second draw — up to 2.");
+    mpSync();
+    await mpBettingRound(seq, betLabels[di + 1] || "post");
+    if(seq !== mp.seq || !MD) return;
+    if(mpLoneWinner()) return;
+  }
   mpShowdown();
-}
-async function mpBettingRound(seq, label){
+}async function mpBettingRound(seq, label){
   const alive = ()=> MD.state.filter(s=>!s.folded);
   let idx = 0; while(MD.state[idx].folded) idx = (idx + 1) % MD.state.length;
   const needAct = new Set(alive().map(s=>s.seat.pid));
@@ -2915,12 +3368,12 @@ function mpLoneWinner(){
 }
 async function mpDrawPhase(seq, drawNum, cap){
   mp.phase = drawNum === 1 ? "draw1" : "draw2";
-  setCenter(drawNum === 1 ? "First draw — up to 3" : "Second draw — up to 2", "Draws go seat by seat — watch the banner for whose draw it is.");
+  setCenter(drawVariant().draws.length === 1 ? "The draw — up to " + cap : (drawNum === 1 ? "First draw — up to 3" : "Second draw — up to 2"), "Draws go seat by seat — watch the banner for whose draw it is.");
   for(const st of MD.state){
     if(seq !== mp.seq || !MD) return;
     if(st.folded) continue;
     mp.activeSeatPid = st.seat.pid;
-    $("tb-what").textContent = drawNum === 1 ? "First draw — up to 3." : "Second draw — up to 2.";
+    $("tb-what").textContent = drawVariant().draws.length === 1 ? "The draw — up to " + cap + "." : (drawNum === 1 ? "First draw — up to 3." : "Second draw — up to 2.");
     mpSync();
     const act = await mpPrompt(st.seat, "draw", { cap, drawNum });
     if(seq !== mp.seq || !MD) return;
@@ -2937,7 +3390,7 @@ function mpShowdown(){
   MD.reveal = true;
   const alive = MD.state.filter(s=>!s.folded);
   let best = null;
-  const scored = alive.map(st=>{ const ev = evaluate5(st.hand); st.status = ev.name; if(!best || cmpEval(ev, best.ev) > 0) best = { st, ev }; return { st, ev }; });
+  const scored = alive.map(st=>{ const ev = evaluateFor(st.hand); st.status = ev.name; if(!best || cmpEval(ev, best.ev) > 0) best = { st, ev }; return { st, ev }; });
   const winners = scored.filter(x=> cmpEval(x.ev, best.ev) === 0);
   const share = Math.floor(MD.pot / winners.length);
   winners.forEach(w=>{ w.st.seat.stack += share; w.st.seat.handsWon = (w.st.seat.handsWon || 0) + 1; w.st.seat.chipsWon = (w.st.seat.chipsWon || 0) + share; });
@@ -2948,6 +3401,119 @@ function mpShowdown(){
   mp.winBanner = `${names} won ${fmt(MD.pot)} chips with ${best.ev.name}`;
   mp._lastLog = mpLogBoth(`<b>${names}</b> won ${fmt(MD.pot)} chips with <b>${best.ev.name}</b>.`, true);
   MD.pot = 0; mpSeatStackSync(); mpResetReady(); mpSync();
+}
+
+/* ----- Texas Hold'em (host authority) ----- */
+async function mpStartHoldem(){
+  if(!mpReadyGate().ok){ mp._lastLog = mpLogBoth("Deal held — every seated player has to tap <b>I’m Ready</b> first."); mpSync(); return; }
+  const seq = ++mp.seq; handSeq++;
+  mp.winBanner = null;
+  mp.activeHostMode = mp.hostMode;   // the mode is locked in for this hand
+  mp.roster.forEach(r=>{ if(r.stack <= 0) r.stack = 500; });
+  const seats = mpTableSeats(4);
+  seats.forEach(s=>{ if(s.stack <= 0) s.stack = 500; });
+  if(seats.length < 2){
+    mp.phase = "lobby";
+    mp._lastLog = mpLogBoth("Not enough players to deal — invite a friend, or turn <b>Fill empty seats with AI</b> on.");
+    mpSync();
+    return;
+  }
+  mp.holdemButton = (mp.holdemButton + 1) % seats.length;
+  const btn = mp.holdemButton;
+  MH = { pot: 0, deck: buildPlainDeck(), board: [], currentBet: 0, raises: 0, reveal: false, button: btn,
+         state: seats.map(seat=>({ seat, hand: [], folded: false, bet: 0, roundBet: 0, status: "" })) };
+  const n = MH.state.length;
+  const post = (st, amt, label)=>{ const pay = Math.min(amt, st.seat.stack); st.seat.stack -= pay; st.bet += pay; st.roundBet += pay; MH.pot += pay; st.status = label; };
+  post(MH.state[n === 2 ? btn : (btn + 1) % n], 5, "Small blind 5");
+  post(MH.state[n === 2 ? (btn + 1) % n : (btn + 2) % n], 10, "Big blind 10");
+  MH.currentBet = 10;
+  for(let k = 0; k < 2; k++) for(const st of MH.state) st.hand.push(MH.deck.pop());
+  mp.phase = "bet1";
+  mp._lastLog = mpLogBoth("Live Hold'em dealt — blinds 5/10.");
+  setCenter("Preflop", "Betting starts left of the big blind.");
+  mpSync();
+  const streets = ["preflop", "flop", "turn", "river"];
+  for(let si = 0; si < streets.length; si++){
+    if(si > 0){
+      const cnt = si === 1 ? 3 : 1;
+      for(let k = 0; k < cnt; k++) MH.board.push(MH.deck.pop());
+      MH.state.forEach(s=>{ s.roundBet = 0; s.status = ""; }); MH.currentBet = 0; MH.raises = 0;
+      mp.phase = streets[si];
+      setCenter(si === 1 ? "The flop" : si === 2 ? "The turn" : "The river", "Community cards are on the board — best five of seven wins.");
+      mp._lastLog = mpLogBoth("The " + streets[si] + " is out.");
+      mpSync();
+    }
+    await mpHoldemBettingRound(seq, streets[si]);
+    if(seq !== mp.seq || !MH) return;
+    if(mpHoldemLoneWinner()) return;
+  }
+  mpHoldemShowdown();
+}
+async function mpHoldemBettingRound(seq, street){
+  const n = MH.state.length;
+  const alive = ()=> MH.state.filter(s=>!s.folded);
+  let idx = street === "preflop" ? (n === 2 ? MH.button : (MH.button + 3) % n) : (MH.button + 1) % n;
+  const needAct = new Set(alive().filter(s=>s.seat.stack > 0).map(s=>s.seat.pid));
+  let guard = 0;
+  while(needAct.size > 0 && guard++ < 60){
+    if(seq !== mp.seq || !MH) return;
+    const st = MH.state[idx]; idx = (idx + 1) % n;
+    if(st.folded || !needAct.has(st.seat.pid)) continue;
+    if(alive().length <= 1) break;
+    mp.activeSeatPid = st.seat.pid;
+    $("tb-what").textContent = street === "preflop" ? "Preflop betting." : "Betting on the " + street + ".";
+    mpSync();
+    const toCall = MH.currentBet - st.roundBet;
+    const act = await mpPrompt(st.seat, "bet", { toCall, raises: MH.raises, stack: st.seat.stack, pot: MH.pot, phaseLabel: street, game: "holdem" });
+    if(seq !== mp.seq || !MH) return;
+    needAct.delete(st.seat.pid);
+    if(act.type === "fold"){ st.folded = true; st.status = "Folded"; mp._lastLog = mpLogBoth(`<b>${st.seat.name}</b> folded.`); }
+    else {
+      let payAmt = Math.min(toCall, st.seat.stack);
+      if(act.type === "raise"){
+        const want = toCall + (act.amt || 50);
+        if(st.seat.stack >= want && MH.raises < 3) payAmt = want;
+      }
+      st.seat.stack -= payAmt; st.roundBet += payAmt; st.bet += payAmt; MH.pot += payAmt;
+      if(act.type === "raise" && payAmt > toCall){ MH.currentBet = st.roundBet; MH.raises++; st.status = "Raised to " + fmt(st.roundBet); mp._lastLog = mpLogBoth(`<b>${st.seat.name}</b> raised to ${fmt(st.roundBet)}.`);
+        alive().forEach(o=>{ if(o.seat.pid !== st.seat.pid && o.seat.stack > 0) needAct.add(o.seat.pid); });
+      } else st.status = toCall > 0 ? "Called" : "Checked";
+    }
+    mpSync();
+  }
+  mp.activeSeatPid = null;
+  MH.state.forEach(s=>{ s.bet = 0; });
+}
+function mpHoldemLoneWinner(){
+  const alive = MH.state.filter(s=>!s.folded);
+  if(alive.length > 1) return false;
+  const w = alive[0];
+  w.seat.stack += MH.pot;
+  w.seat.handsWon = (w.seat.handsWon || 0) + 1; w.seat.chipsWon = (w.seat.chipsWon || 0) + MH.pot;
+  MH.reveal = true;
+  mp.phase = "done"; mp.activeSeatPid = w.seat.pid;
+  setCenter(w.seat.name + " takes it", `Wins the ${fmt(MH.pot)} pot — no showdown needed.`);
+  $("tb-what").textContent = "Everyone else folded.";
+  mp.winBanner = `${w.seat.name} won ${fmt(MH.pot)} chips — everyone else folded`;
+  mp._lastLog = mpLogBoth(`<b>${w.seat.name}</b> won ${fmt(MH.pot)} chips — everyone else folded.`, true);
+  MH.pot = 0; mpSeatStackSync(); mpResetReady(); mpSync();
+  return true;
+}
+function mpHoldemShowdown(){
+  MH.reveal = true;
+  const alive = MH.state.filter(s=>!s.folded);
+  let best = null;
+  const scored = alive.map(st=>{ const ev = evaluate7(st.hand.concat(MH.board)); st.status = ev.name; if(!best || cmpEval(ev, best.ev) > 0) best = { st, ev }; return { st, ev }; });
+  const winners = scored.filter(x=> cmpEval(x.ev, best.ev) === 0);
+  const share = Math.floor(MH.pot / winners.length);
+  winners.forEach(w=>{ w.st.seat.stack += share; w.st.seat.handsWon = (w.st.seat.handsWon || 0) + 1; w.st.seat.chipsWon = (w.st.seat.chipsWon || 0) + share; });
+  const names = winners.map(w=>w.st.seat.name).join(" & ");
+  mp.phase = "done"; mp.activeSeatPid = winners[0].st.seat.pid;
+  setCenter(names + (winners.length > 1 ? " split it" : " wins"), `${best.ev.name} takes ${fmt(MH.pot)}.`);
+  $("tb-what").textContent = "Showdown.";
+  mp.winBanner = `${names} won ${fmt(MH.pot)} chips with ${best.ev.name}`;
+  mp._lastLog = mpLogBoth(`<b>${names}</b> won ${fmt(MH.pot)} chips with <b>${best.ev.name}</b>.`, true);
+  MH.pot = 0; mpSeatStackSync(); mpResetReady(); mpSync();
 }
 
 /* ----- Blackjack (host authority) ----- */
@@ -3052,16 +3618,15 @@ const _soloSetGame = setGame;
 setGame = function(g){
   if(mp.role === "guest"){
     log("The <b>host</b> picks the game in a live room — your table follows theirs.");
-    if(mp.snap){ game = mp.snap.game; $("seg-draw").classList.toggle("on", game === "draw"); $("seg-bj").classList.toggle("on", game === "bj"); }
+    if(mp.snap){ game = mp.snap.game; paintGameSegs(); }
     return;
   }
   if(mp.role === "host"){
     if(mp.phase !== "lobby" && mp.phase !== "done"){ log("Finish this hand first — the host can switch games between hands."); return; }
     game = g; handSeq++; mp.seq++;
-    $("seg-draw").classList.toggle("on", g === "draw");
-    $("seg-bj").classList.toggle("on", g === "bj");
+    paintGameSegs();
     mpResetTableMP();
-    log(g === "draw" ? "Live room switched to <b>Five Card 3/2 Draw</b>." : "Live room switched to <b>Blackjack</b>.");
+    log("Live room switched to <b>" + GAME_NAMES[g] + "</b>.");
     return;
   }
   _soloSetGame(g);
@@ -3094,13 +3659,19 @@ let joinModeChoice = "apprentice";
 $("join-appr").addEventListener("click", ()=>{ joinModeChoice = "apprentice"; $("join-appr").classList.add("on"); $("join-exp").classList.remove("on"); clickSound(500); });
 $("join-exp").addEventListener("click", ()=>{ joinModeChoice = "expert"; $("join-exp").classList.add("on"); $("join-appr").classList.remove("on"); clickSound(500); });
 $("join-go").addEventListener("click", ()=>{
+  if(mp.joining) return;
   const nm = $("join-name").value.trim();
   if(nm) $("net-name").value = nm;
   setMode(joinModeChoice);
   const chip = $("join-chip").value.trim();
   if(chip) applyChipPrompt(chip);
   mp.pendingInvite = mp.urlInvite; mp.pendingRejoin = mp.urlRejoin;
-  if(mp.urlRoom) $("net-code-in").value = mp.urlRoom;
+  const code = mp.urlRoom || ($("net-code-in").value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if(!code || code.length < 4){ $("join-note").textContent = "That invite link is missing its room code — ask the host to send the Room Invite Link again."; return; }
+  $("net-code-in").value = code;
+  mp.joining = true;
+  const go = $("join-go"); go.disabled = true; go.textContent = "Joining…";
+  $("join-note").textContent = "Joining room " + code + " — one moment…";
   clickSound(520);
   mpJoin();
 });
