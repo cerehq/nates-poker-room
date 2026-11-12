@@ -1198,7 +1198,7 @@ function buildDrawDeck(){
 function resetDrawTable(){
   hideTurnTimer(); paintWinBanner(null); resetSoloStats();
   const V = drawVariant();
-  D = { phase:"idle", pot:0, deck:[], button: D? (D.button+1)%4 : 0, currentBet:0, raises:0, sel:new Set(), resolver:null, startIdx:0, drawCap:V.draws[0], drawNum:1 };
+  D = { phase:"idle", pot:0, deck:[], button: D? (D.button+1)%4 : 0, currentBet:0, raises:0, sel:new Set(), resolver:null, startIdx:0, drawCap:V.draws[0], drawNum:1, state:[] };
   seatsEl.innerHTML = players.map(p=>seatShell(p,{button:false})).join("");
   players.forEach(p=>{ setStatus(p.id,""); setBetBadge(p.id,0); $("cards-"+p.id).innerHTML=""; });
   setPot(0); refreshPlates(); paintBoard([]);
@@ -1248,6 +1248,7 @@ async function startDrawHand(){
 }
 function drawSt(id){ return D.state.find(s=>s.p.id===id); }
 function renderDrawHands(reveal){
+  if(!D || !D.state) return;   // a cold table (boot / mode switch before any deal) has no hand state to paint — mirrors renderHoldemHands' guard
   for(const s of D.state){
     const el = $("cards-"+s.p.id); if(!el) continue;
     const isYou = s.p.id==="you";
@@ -1341,8 +1342,8 @@ function humanBet(seq, s, label){
       } else {
         if(ev.cat>=5) setTip(`You made <b>${ev.name}</b>. Bet it like you mean it — <b>raise</b>. Hands this strong don’t need to be shy.`);
         else if(ev.cat>=3) setTip(`<b>${ev.name}</b> after the draw. Solid — <b>${toCall>0?"call":"bet with a raise"}</b> and make the chasers pay.`);
-        else if(ev.cat===2) setTip(drawVariant().wilds ? `Just a <b>pair</b> after drawing. It wins more often than you’d think at a wild table, but don’t go to war — ${toCall>0?"call small, fold big.":"check and show it cheap."}` : `Just a <b>pair</b> after drawing. That's all showdown value in classic draw — the deck holds no wilds to rescue it — so don’t go to war: ${toCall>0?"call small, fold big.":"check and show it cheap."}`);
-        else setTip(`The draw missed. If anyone bets big into you, <b>fold</b> — there’s always another hand in about ten seconds.`);
+        else if(ev.cat===2) setTip(label==="mid" ? `Just a <b>pair</b> after the first draw — one draw left (up to 2). Keep the pair and draw to it; don’t go to war yet — ${toCall>0?"call small.":"check and take the last draw."}` : drawVariant().wilds ? `Just a <b>pair</b> after drawing. It wins more often than you’d think at a wild table, but don’t go to war — ${toCall>0?"call small, fold big.":"check and show it cheap."}` : `Just a <b>pair</b> after drawing. That's all showdown value in classic draw — the deck holds no wilds to rescue it — so don’t go to war: ${toCall>0?"call small, fold big.":"check and show it cheap."}`);
+        else setTip(label==="mid" ? `The first draw missed — one draw left (up to 2). Keep your best card${drawVariant().wilds?" and any wild":""} and take it; <b>fold</b> only to a big price.` : `The draw missed. If anyone bets big into you, <b>fold</b> — there’s always another hand in about ten seconds.`);
       }
     }
     let html = "";
@@ -2102,6 +2103,21 @@ function mpChannelSend(event, payload){
 }
 function mpToHost(msg){ mpChannelSend("to-host", { pid: mp.myPid, msg }); }
 function mpBroadcastAll(msg){ mpChannelSend("to-all", { msg }); }
+/* Host-side reaction relay. Reactions were the ONLY payload class
+   riding the "to-all" broadcast event — and the only one that failed
+   live (GQRDQ: sender + host saw floats, other guests never did,
+   3-for-3, while snapshots/prompts/seat-acks on "to-guest" worked in
+   the same session). So the relay now ALSO goes per-guest over
+   "to-guest" — the proven path, handled by the same mpGuestOnData
+   reaction branch. "to-all" is kept as a redundant second path; the
+   receiving side's per-player rate limit (~900ms in
+   handleReactionFrom) dedupes whichever copy arrives second, so no
+   screen ever paints a reaction twice. Defined here as a stub-free
+   helper; mpSendTo is declared later and resolved at call time. */
+function mpRelayReaction(fromPid, emoji){
+  mp.roster.filter(s=> s.kind === "guest" && s.pid !== fromPid).forEach(s=> mpSendTo(s.pid, { t: "reaction", pid: fromPid, emoji }));
+  mpBroadcastAll({ t: "reaction", pid: fromPid, emoji });
+}
 function mpTeardownChannel(){
   const ch = mp.channel; mp.channel = null;
   if(!ch) return;
@@ -2359,6 +2375,26 @@ function mpJoinFailed(msg){
   if(go){ go.disabled = false; go.textContent = "Join Table"; }
   if(msg) $("join-note").textContent = msg;
 }
+/* The no-seat watchdog: if a landing join hasn't produced a seat in 9s,
+   the card must say so — in the plain no-answer case AND in the error
+   case (a cosmetic step threw, mpJoinFailed already showed why and
+   cleared `joining`; the guest is still seatless 9s on, so the card
+   still owes them the "Still no seat…" guidance). It is armed BEFORE
+   the cosmetic steps in the landing handler: arming it after them
+   meant any throw in setMode/chip-prompt skipped arming entirely and
+   the error state had no watchdog at all (live GQRDQ finding). The
+   seat ack clears it; a successful seat makes it a no-op. */
+function mpArmJoinWatchdog(){
+  if(mp.joinWatchTimer) clearTimeout(mp.joinWatchTimer);
+  mp.joinWatchTimer = setTimeout(()=>{
+    mp.joinWatchTimer = null;
+    if(mp.guestSeated) return;
+    const m = "Still no seat — the host may not have this room open anymore, or the relay hiccuped. Tap Join Table to try again.";
+    if(mp.joining) mpJoinFailed(m);
+    else $("join-note").textContent = m;
+    netStatus(m, "err");
+  }, 9000);
+}
 function mpJoin(){
   if(!mpRelayReady()){ if(mp.joining) mpJoinFailed("The game relay didn\u2019t load \u2014 check your connection and tap Join Table again."); return; }
   const code = ($("net-code-in").value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -2549,7 +2585,7 @@ function mpHostHandleMsg(fromPid, msg){
   }
   if(msg.t === "reaction"){
     // relay only what passed the whitelist + rate limit on this side too
-    if(handleReactionFrom(fromPid, msg.emoji)) mpBroadcastAll({ t: "reaction", pid: fromPid, emoji: msg.emoji });
+    if(handleReactionFrom(fromPid, msg.emoji)) mpRelayReaction(fromPid, msg.emoji);
   }
   if(msg.t === "ready"){
     const s = mp.roster.find(x=>x.pid === fromPid);
@@ -3024,7 +3060,23 @@ function mpOffTurnCoach(snap, isHost){
   } else if(isDrawGame(snap.game)){
     const ev = evaluateFor(mySeat.cards);
     const sugg = suggestFor(mySeat.cards);
-    setTip(`<b>Your hand:</b> ${ev.name}. ` + (ev.cat>=5 ? "That's a made hand — sit tight and plan to bet it when your turn comes." : ev.cat>=2 ? `When your draw comes, the plan is to keep the made part and toss ${sugg.length} — the gold outlines will show you.` : "Nothing made yet — when your draw comes, keep your best high card" + (DRAW_VARIANTS[snap.game] && DRAW_VARIANTS[snap.game].wilds ? " and any wild card" : "") + " and draw the rest."));
+    const V = DRAW_VARIANTS[snap.game];
+    /* Phase-aware (the GQRDQ staleness fix): a draw plan is only honest
+       while a draw is still ahead FOR THIS SEAT. Phase order: bet1 ->
+       draw1 -> (bet2 -> draw2 in 3/2) -> bet3, the final bet. In bet3 —
+       or in a draw phase where this seat's status already reads
+       Drew/Stood pat — the hand is final, so the coach talks about
+       betting the made hand and never about a future draw. In bet2 /
+       draw2 the draw it means is the LAST one, and it says so. */
+    const drewAlready = /drew|stood pat/i.test(mySeat.status || "");
+    const drawAhead = snap.phase === "bet1" || snap.phase === "bet2" || ((snap.phase === "draw1" || snap.phase === "draw2") && !drewAlready);
+    const lastDraw = snap.phase === "bet2" || snap.phase === "draw2";
+    if(!drawAhead){
+      setTip(`<b>Your hand:</b> ${ev.name}. ` + (ev.cat>=5 ? "The draw is done — that's a made hand. Plan to bet it for value when your turn comes." : ev.cat>=2 ? "The draw is done — this is the hand you take to showdown. Back it while the price is fair; don't chase raises with it." : "The draw is done and nothing's made — it's betting only from here. If it gets expensive, let it go."));
+    }
+    else if(ev.cat>=5) setTip(`<b>Your hand:</b> ${ev.name}. That's a made hand — sit tight and plan to bet it when your turn comes.`);
+    else if(ev.cat>=2) setTip(`<b>Your hand:</b> ${ev.name}. When your ${lastDraw ? "last " : ""}draw comes, the plan is to keep the made part and toss ${sugg.length} — the gold outlines will show you.`);
+    else setTip(`<b>Your hand:</b> ${ev.name}. Nothing made yet — when your ${lastDraw ? "last " : ""}draw comes, keep your best high card` + (V && V.wilds ? " and any wild card" : "") + " and draw the rest.");
   }
 }
 /* Builds the decision UI on THIS device and coaches from THIS device's cards only. */
@@ -3052,10 +3104,16 @@ function mpBuildPromptUI(kind, ctx, respond){
     // hands were getting "one wild card flips everything" before this)
     const vw = snap && DRAW_VARIANTS[snap.game] ? DRAW_VARIANTS[snap.game].wilds : drawVariant().wilds;
     if(ev && mode === "apprentice" && tipsOn){
+      /* Phase-aware copy (ctx.phaseLabel: "pre" = before the first draw,
+         "mid" = 3/2 between draws — one LAST draw left, "post" = the
+         final bet, no draw left). The "post" lines never mention a
+         draw as a future event; before this the final-bet prompt still
+         coached "then draw 1 to the odd card" after the draw was over. */
+      const pl = (ctx && ctx.phaseLabel) || "pre";
       if(ev.cat >= 4) setTip(`<b>${ev.name}</b> — a monster. <b>Raise it</b> and build the pot while you’re ahead.`);
-      else if(ev.cat === 3) setTip(`<b>Two pair</b> already — <b>call or raise</b>, then draw 1 to the odd card.`);
-      else if(ev.cat === 2) setTip(`A <b>pair</b> to build on. Standard play: <b>${ctx.toCall > 0 ? "call" : "check"}</b>, keep the pair, ${vw ? "draw 3 — wilds love a fresh draw." : "draw 3 and look for trips or two pair."}`);
-      else setTip(vw ? `Nothing made yet. With jokers and deuces wild, one wild card flips everything — ${ctx.toCall === 0 ? "<b>check</b> and see the draw free." : ctx.toCall <= 50 ? "a cheap <b>call</b> is fine." : "that price is rich for a prayer — <b>fold</b>."}` : `Nothing made yet — and no wilds to save you in classic draw. ${ctx.toCall === 0 ? "<b>check</b> and see the draw free — keep your best card and draw the rest." : ctx.toCall <= 50 ? "a cheap <b>call</b> is fine — keep your best card and draw the rest." : "that price is rich for a prayer — <b>fold</b>."}`);
+      else if(ev.cat === 3) setTip(pl === "post" ? `<b>Two pair</b> — that's the hand you take to showdown; the draw is done. <b>Call or raise</b> while the price is fair.` : `<b>Two pair</b> already — <b>call or raise</b>, then draw 1 to the odd card${pl === "mid" ? " on the last draw" : ""}.`);
+      else if(ev.cat === 2) setTip(pl === "post" ? `A lone <b>pair</b> is all the draw left you. ${ctx.toCall > 0 ? "Call it cheap if you like — <b>fold</b> to real pressure." : "<b>Check</b> and show it down cheap."}` : `A <b>pair</b> to build on. Standard play: <b>${ctx.toCall > 0 ? "call" : "check"}</b>, keep the pair, ${pl === "mid" ? (vw ? "draw up to 2 on the last draw — wilds love a fresh draw." : "draw up to 2 on the last draw.") : (vw ? "draw 3 — wilds love a fresh draw." : "draw 3 and look for trips or two pair.")}`);
+      else setTip(pl === "post" ? `Nothing made — and no draw left to bail you out. ${ctx.toCall === 0 ? "<b>Check</b> it back and take the free showdown." : "that price is rich for a prayer — <b>fold</b>."}` : vw ? `Nothing made yet. With jokers and deuces wild, one wild card flips everything — ${ctx.toCall === 0 ? "<b>check</b> and see the draw free." : ctx.toCall <= 50 ? "a cheap <b>call</b> is fine." : "that price is rich for a prayer — <b>fold</b>."}` : `Nothing made yet — and no wilds to save you in classic draw. ${ctx.toCall === 0 ? "<b>check</b> and see the draw free — keep your best card and draw the rest." : ctx.toCall <= 50 ? "a cheap <b>call</b> is fine — keep your best card and draw the rest." : "that price is rich for a prayer — <b>fold</b>."}`);
     }
     let html = `<button class="btn fold" id="mp-fold">Fold</button>`;
     html += ctx.toCall > 0
@@ -3262,7 +3320,7 @@ function sendReaction(emoji){
   if(now - lastReactAt < 900) return;
   lastReactAt = now;
   showReaction(myReactionSeatEl(), emoji);
-  if(mp.role === "host") mpBroadcastAll({ t: "reaction", pid: mp.myPid, emoji });
+  if(mp.role === "host") mpRelayReaction(mp.myPid, emoji);
   else if(mp.role === "guest") mpToHost({ t: "reaction", emoji });
 }
 document.querySelectorAll("[data-react]").forEach(b=> b.addEventListener("click", ()=>{ clickSound(660); sendReaction(b.dataset.react); }));
@@ -3714,6 +3772,7 @@ $("join-go").addEventListener("click", ()=>{
     if(!code || code.length < 4){ $("join-note").textContent = "That invite link is missing its room code — ask the host to send the Room Invite Link again."; return; }
     $("net-code-in").value = code;
     mp.joining = true;
+    mpArmJoinWatchdog();   // armed FIRST — a throw in the cosmetic steps below must not disarm the only "still no seat" safety net
     const go = $("join-go"); go.disabled = true; go.textContent = "Joining…";
     $("join-note").textContent = "Joining room " + code + " — one moment…";
     const nm = $("join-name").value.trim();
@@ -3722,17 +3781,10 @@ $("join-go").addEventListener("click", ()=>{
     const chip = $("join-chip").value.trim();
     if(chip) applyChipPrompt(chip);
     clickSound(520);
-    if(mp.joinWatchTimer) clearTimeout(mp.joinWatchTimer);
-    mp.joinWatchTimer = setTimeout(()=>{
-      mp.joinWatchTimer = null;
-      if(mp.joining && !mp.guestSeated){
-        const m = "Still no seat — the host may not have this room open anymore, or the relay hiccuped. Tap Join Table to try again.";
-        mpJoinFailed(m); netStatus(m, "err");
-      }
-    }, 9000);
     mpJoin();
   }catch(e){
     mpJoinFailed("Something on this page hiccuped while joining (" + (e && e.message ? e.message : "unknown error") + "). Tap Join Table to try again.");
+    mpArmJoinWatchdog();   // the error state stays covered too: still seatless in 9s -> the card says "Still no seat…"
   }
 });
 $("net-code-in").addEventListener("keydown", (e)=>{ if(e.key === "Enter") mpJoin(); });
