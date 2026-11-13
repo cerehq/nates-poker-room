@@ -440,13 +440,14 @@
     <header class="topbar">
       <div>
         <h1>Nate&rsquo;s <span class="thin">Poker Room</span></h1>
-        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Five Card Draw &amp; Blackjack. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
+        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Five Card Draw &amp; Blackjack. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
       </div>
       <div class="bar-controls">
         <div class="seg" role="tablist" aria-label="Game">
           <span class="seg-label">Game</span>
           <button id="seg-draw" class="on" type="button">Five Card 3/2 Draw</button>
           <button id="seg-holdem" type="button">Texas Hold'em</button>
+          <button id="seg-omaha" type="button">Omaha</button>
           <button id="seg-classic" type="button">Five Card Draw</button>
           <button id="seg-bj" type="button">Blackjack</button>
         </div>
@@ -837,7 +838,7 @@
        and friendly reloads are NOT winnings and never touch these. */
     function resetSoloStats(){ players.forEach(p=>{ p.handsWon = 0; p.chipsWon = 0; }); }
     const byId = (id) => players.find(p=>p.id===id);
-    let game = "draw";            // "draw" | "classic" | "holdem" | "bj"
+    let game = "draw";            // "draw" | "classic" | "holdem" | "omaha" | "bj"
     /* Draw-game variants: the 3/2 signature game (wilds, two draws) and
        classic Five Card Draw (no wilds, one draw of up to 5). Hold'em and
        Blackjack are their own engines. */
@@ -849,7 +850,7 @@
                  sub:"No wilds — a straight 52-card deck · one draw, up to 5 cards.",
                  tip:"Classic draw, the old-school way — <b>no wilds</b>, one draw of up to 5. Made hands are scarcer here, so a pair is a real start. Hit <b>Deal</b> and I’ll size up your hand." },
     };
-    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", bj:"Blackjack" };
+    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", bj:"Blackjack" };
     function isDrawGame(g){ return g === "draw" || g === "classic"; }
     function drawVariant(){ return DRAW_VARIANTS[game] || DRAW_VARIANTS.draw; }
     function evaluateFor(cards){ return drawVariant().wilds ? evaluate5(cards) : evaluatePlain(cards); }
@@ -1090,6 +1091,148 @@
       if(ev.cat >= 3) return `On the ${street}: <b>${ev.name}</b>. Respectable — <b>${toCall>0?"call reasonable bets":"bet for value"}</b>, but watch for bigger hands on this board.`;
       if(ev.cat === 2) return `On the ${street}: just a <b>pair</b> so far. Pairs win plenty of Hold'em pots, but don't go to war — ${toCall>0?"call small, fold big.":"check and see what develops."}`;
       return `On the ${street}: <b>high card</b> only. ${board.length>=5 ? "Nothing developed — if it's expensive, <b>fold</b>." : "Cards are still coming — " + (toCall>0 ? (toCall<=30?"a cheap <b>call</b> can chase a pair or a draw.":"<b>fold</b> rather than pay up for a hope.") : "<b>check</b> and take the free card.")}`;
+    }
+    /* ================= OMAHA — the exactly-2 + exactly-3 evaluator =================
+       Omaha Hi: four hole cards, five on the board, and the showdown hand
+       is EXACTLY two hole cards plus EXACTLY three board cards — never
+       one, never three, and the board alone never plays. That constraint
+       lives here, in evaluateOmaha, and everything Omaha (showdown, AI,
+       coach) reads through it, so the rule can't leak anywhere. */
+    function combosOf(arr, k){
+      const out = [];
+      (function gen(start, cur){
+        if(cur.length === k){ out.push(cur.slice()); return; }
+        for(let i = start; i < arr.length; i++){ cur.push(arr[i]); gen(i + 1, cur); cur.pop(); }
+      })(0, []);
+      return out;
+    }
+    /* Best legal Omaha hand: all C(hole,2) x C(board,3) combinations
+       (60 at showdown with 4 hole cards and a full board). */
+    function evaluateOmaha(hole, board){
+      if(!hole || hole.length < 2 || !board || board.length < 3) return null;
+      let best = null;
+      for(const h2 of combosOf(hole, 2)){
+        for(const b3 of combosOf(board, 3)){
+          const ev = evaluatePlain(h2.concat(b3));
+          if(!best || cmpEval(ev, best) > 0) best = ev;
+        }
+      }
+      return best;
+    }
+    function omahaHasPair(cards){
+      const seen = {};
+      for(const c of (cards || [])){ if(seen[c.r]) return true; seen[c.r] = 1; }
+      return false;
+    }
+    /* Simple draw awareness for Omaha: a flush draw needs TWO hole cards
+       of the suit plus exactly two on the board; a straight draw is four
+       distinct ranks inside one five-card window with hole cards in it. */
+    function omahaDraws(hole, board){
+      let flush = false;
+      for(let s = 0; s < 4; s++){
+        if(hole.filter(c=>c.s === s).length >= 2 && board.filter(c=>c.s === s).length === 2) flush = true;
+      }
+      let straight = false;
+      const all = new Set(), holes = new Set();
+      hole.concat(board).forEach(c=>{ all.add(c.r); if(c.r === 14) all.add(1); });
+      hole.forEach(c=>{ holes.add(c.r); if(c.r === 14) holes.add(1); });
+      for(let hi = 5; hi <= 14 && !straight; hi++){
+        let n = 0, hn = 0;
+        for(let r = hi - 4; r <= hi; r++){ if(all.has(r)) n++; if(holes.has(r)) hn++; }
+        if(n === 4 && hn >= 1) straight = true;
+      }
+      return { flush, straight };
+    }
+    /* The beginner traps, checked against the LEGAL best hand. Each note
+       fires only when the illegal read would actually change the hand —
+       the coach names the trap instead of letting it ride. */
+    function omahaTrapNotes(hole, board, legal){
+      const notes = [];
+      if(!legal || !board || board.length < 3) return notes;
+      for(let s = 0; s < 4; s++){
+        const onBoard = board.filter(c=>c.s === s).length;
+        const inHand = hole.filter(c=>c.s === s).length;
+        if(onBoard >= 4 && inHand === 1)
+          notes.push(`Four ${SUITS[s]} on the board and one in your hand is <b>not a flush</b> in Omaha — a flush needs <b>two</b> of your own cards in the suit.`);
+      }
+      if(board.length === 5){
+        const boardEv = evaluatePlain(board);
+        const boardPlays = cmpEval(boardEv, legal) > 0;
+        if(boardPlays)
+          notes.push(`The board alone shows <b>${boardEv.name}</b> — but <b>the board alone never plays</b> in Omaha. You must use exactly two hole cards, so your hand is <b>${legal.name}</b>.`);
+        let best1 = null, best3 = null;
+        for(const h1 of combosOf(hole, 1)) for(const b4 of combosOf(board, 4)){
+          const ev = evaluatePlain(h1.concat(b4)); if(!best1 || cmpEval(ev, best1) > 0) best1 = ev;
+        }
+        for(const h3 of combosOf(hole, 3)) for(const b2 of combosOf(board, 2)){
+          const ev = evaluatePlain(h3.concat(b2)); if(!best3 || cmpEval(ev, best3) > 0) best3 = ev;
+        }
+        if(best1 && cmpEval(best1, legal) > 0 && !boardPlays)
+          notes.push(`One hole card would make <b>${best1.name}</b> with four from the board — Omaha says no: <b>exactly two</b> hole cards, so you're holding <b>${legal.name}</b>.`);
+        if(best3 && cmpEval(best3, legal) > 0)
+          notes.push(`Three of your hole cards would make <b>${best3.name}</b> — but you can't play three. Exactly two, so it's <b>${legal.name}</b>.`);
+      }
+      return notes;
+    }
+    function omahaStrength(hand, board){
+      if(board.length >= 3){
+        const ev = evaluateOmaha(hand, board);
+        let s = ev.cat + (ev.tie[0] || 0) / 100;
+        if(ev.cat <= 3){ const d = omahaDraws(hand, board); if(d.flush) s += 0.8; if(d.straight) s += 0.5; }
+        return s;
+      }
+      const counts = {}; hand.forEach(c=>{ counts[c.r] = (counts[c.r] || 0) + 1; });
+      const pairs = Object.entries(counts).filter(([,n])=>n >= 2).map(([r])=>+r);
+      const hi = Math.max(...hand.map(c=>c.r));
+      let s = 1.3 + hi / 14;
+      if(pairs.length === 2) s += 1.6;
+      else if(pairs.length === 1) s += pairs[0] >= 11 ? 2.0 : 1.2;
+      const suits = {}; hand.forEach(c=>{ suits[c.s] = (suits[c.s] || 0) + 1; });
+      const suitCounts = Object.values(suits);
+      if(suitCounts.filter(n=>n === 2).length === 2) s += 0.5;
+      else if(Math.max(...suitCounts) >= 3) s += 0.2;
+      const uniq = [...new Set(hand.map(c=>c.r))].sort((a,b)=>a-b);
+      if(uniq.length === 4 && uniq[3] - uniq[0] <= 4) s += 0.4;
+      return s;
+    }
+    /* Omaha coach — shared by the solo table, host prompts and guests;
+       hole/board are always the CALLER's own view of the hand. Phase-aware
+       like the Hold'em coach, with the exactly-2 rule as the core lesson:
+       trap notes ride along whenever the illegal read would change it. */
+    function omahaCoachHTML(hole, board, toCall){
+      hole = hole || []; board = board || [];
+      if(hole.length < 4) return "";
+      if(board.length === 0){
+        const counts = {}; hole.forEach(c=>{ counts[c.r] = (counts[c.r] || 0) + 1; });
+        const pairs = Object.entries(counts).filter(([,n])=>n >= 2).map(([r])=>+r).sort((a,b)=>b-a);
+        const suits = {}; hole.forEach(c=>{ suits[c.s] = (suits[c.s] || 0) + 1; });
+        const doubleSuited = Object.values(suits).filter(n=>n === 2).length === 2;
+        const uniq = [...new Set(hole.map(c=>c.r))].sort((a,b)=>a-b);
+        const rundown = uniq.length === 4 && uniq[3] - uniq[0] <= 4 && uniq[0] >= 6;
+        const rule = " Remember: at showdown you play <b>exactly two</b> of these four cards — never one, never three, and the board alone never counts.";
+        if(pairs.length === 2) return `Two pair dealt right in your hand — set and full-house paths everywhere. A <b>strong Omaha start</b>: <b>${toCall > 0 ? "call or raise" : "raise it"}</b>.${rule}`;
+        if(pairs.length === 1 && pairs[0] >= 12) return `A pair of <b>${RANKLBL[pairs[0]] || pairs[0]}s</b> with two helpers — premium in Omaha, where a pair wants company (sets, two pair, draws). <b>${toCall > 0 ? "Call or raise" : "Raise"}</b> with confidence.${rule}`;
+        if(pairs.length === 1) return `One pair in the hand. In Omaha a bare pair is only a start — you want the other two cards working too (suited, connected). ${toCall > 0 ? (toCall <= 30 ? "A cheap <b>call</b> is fine." : "That price is steep for it — <b>fold</b> is fine.") : "<b>Check</b> and see the flop."}${rule}`;
+        if(rundown) return `A <b>connected rundown</b> — four cards in sequence range, rich in straight draws. ${doubleSuited ? "Double-suited too — even better. " : ""}Worth ${toCall > 0 ? "a <b>call</b>" : "a <b>bet</b>"} to see a flop.${rule}`;
+        if(doubleSuited) return `<b>Double-suited</b> — two separate flush draws baked into one hand. Omaha loves hands that can win two ways. ${toCall > 0 ? "A <b>call</b> is reasonable." : "<b>Bet</b> it, or check and see the flop."}${rule}`;
+        return `Four cards that don't obviously work together. Omaha rewards coordination — pairs, suits, sequences. ${toCall > 0 ? (toCall <= 30 ? "A cheap <b>call</b> can still find a miracle flop." : "<b>Fold</b> and wait for a hand whose cards cooperate.") : "<b>Check</b> and take the free flop."}${rule}`;
+      }
+      const ev = evaluateOmaha(hole, board);
+      const street = board.length === 3 ? "flop" : board.length === 4 ? "turn" : "river";
+      let main;
+      if(ev.cat >= 7) main = `On the ${street} you've made <b>${ev.name}</b> — exactly two of yours, three from the board, near the top of what's possible. <b>Raise</b> and get paid.`;
+      else if(ev.cat >= 5) main = `On the ${street}: <b>${ev.name}</b>, built the legal way — two hole cards, three board cards. Strong: <b>${toCall > 0 ? "call, and raising is fine too" : "bet it"}</b>. In Omaha, though, always ask what beats it — four cards a player leaves a lot of room.`;
+      else if(ev.cat === 4) main = `On the ${street}: <b>${ev.name}</b>. Real, but Omaha trips get outrun more than you'd think — <b>${toCall > 0 ? "call reasonable bets" : "bet for value, carefully"}</b>.`;
+      else if(ev.cat === 3) main = `On the ${street}: <b>${ev.name}</b>. Middling in Omaha — two pair wants a cheap showdown. ${toCall > 0 ? "Call small, think hard about big." : "Check, or bet small."}`;
+      else if(ev.cat === 2) main = `On the ${street}: just a <b>pair</b> under the exactly-2 rule. Pairs are fragile in Omaha — ${toCall > 0 ? "call small only, fold to real pressure." : "check and hope the next cards help two of your cards at once."}`;
+      else main = `On the ${street}: <b>high card</b> under the exactly-2 rule. ${board.length >= 5 ? "Nothing developed — if it's expensive, <b>fold</b>." : "You're drawing — see the draw note below, and don't pay much for it."}`;
+      const extras = [];
+      if(board.length < 5 && ev.cat <= 3){
+        const d = omahaDraws(hole, board);
+        if(d.flush) extras.push("You've also got a real <b>flush draw</b> — two of your hole cards match two on the board in one suit.");
+        if(d.straight) extras.push("There's a <b>straight draw</b> working too — four ranks in a row across your hand and the board.");
+      }
+      return [main].concat(extras, omahaTrapNotes(hole, board, ev)).join(" ");
     }
     /* No-wilds draw strategy (classic): keep made hands, draw to the pair. */
     function suggestDiscardsPlain(cards){
@@ -1714,6 +1857,193 @@ function endHoldemHand(){
   wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetHoldemTable(); });
 }
 
+/* ================= OMAHA (solo) =================
+   Hold'em's sibling: same blinds 5/10, rotating button and streets,
+   but four hole cards and the exactly-2 + exactly-3 showdown rule —
+   every read (showdown, AI, coach) goes through evaluateOmaha. */
+let O = null;   // omaha state
+function resetOmahaTable(){
+  hideTurnTimer(); paintWinBanner(null); resetSoloStats();
+  O = { phase:"idle", pot:0, deck:[], board:[], button: O ? (O.button+1)%4 : 0, currentBet:0, raises:0, state:null };
+  seatsEl.innerHTML = players.map(p=>seatShell(p,{button:false})).join("");
+  players.forEach(p=>{ setStatus(p.id,""); setBetBadge(p.id,0); const c=$("cards-"+p.id); if(c) c.innerHTML=""; });
+  setPot(0); refreshPlates(); paintBoard([]);
+  setTurn(null, "Omaha — blinds 5/10, four hole cards, exactly two of yours plus three from the board make your hand.");
+  setControls(`<button class="btn primary" id="btn-deal">Deal a hand — blinds 5/10</button>
+    ${byId("you").stack<100?`<button class="btn" id="btn-rebuy">Top up to 1,000</button>`:""}`);
+  wireBtn("btn-deal", startOmahaHand);
+  wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetOmahaTable(); });
+  setCenter("Omaha", "Blinds 5/10 · button rotates · flop, turn, river · exactly 2 of yours + 3 from the board.");
+  if(mode==="apprentice" && tipsOn) setTip("Omaha in one breath: <b>four cards of your own, five shared on the board</b> — but your hand is <b>exactly two of yours plus exactly three from the board</b>. The board alone never plays, and neither do one or three of your cards. That's the whole game.");
+}
+function renderOmahaHands(reveal){
+  if(!O || !O.state) return;
+  for(const s of O.state){
+    const el = $("cards-"+s.p.id); if(!el) continue;
+    const showFace = s.p.id==="you" || reveal;
+    el.innerHTML = s.hand.map(c=> cardHTML(c,{ back:!showFace })).join("");
+    const seatEl = $("seat-"+s.p.id); if(seatEl) seatEl.classList.toggle("folded", !!s.folded);
+    setBetBadge(s.p.id, s.roundBet || 0);
+  }
+  paintBoard(O.board);
+}
+function omahaAlive(){ return O.state.filter(s=>!s.folded); }
+async function startOmahaHand(){
+  const seq = ++handSeq;
+  paintWinBanner(null); paintBoard([]);
+  setControls("");
+  players.forEach(p=>{ if(p.stack<=0) p.stack = 500; });
+  O.deck = buildPlainDeck(); O.pot = 0; O.board = []; O.raises = 0;
+  O.state = players.map(p=>({ p, hand:[], folded:false, bet:0, roundBet:0, status:"" }));
+  seatsEl.innerHTML = players.map((p,i)=>seatShell(p,{button: i===O.button})).join("");
+  players.forEach(p=>{ setStatus(p.id,""); setBetBadge(p.id,0); });
+  const n = O.state.length;
+  const sbIdx = n === 2 ? O.button : (O.button+1)%n;
+  const bbIdx = n === 2 ? (O.button+1)%n : (O.button+2)%n;
+  const postBlind = (s, amt, lbl)=>{ const pay = Math.min(amt, s.p.stack); s.p.stack -= pay; s.bet += pay; s.roundBet += pay; O.pot += pay; setStatus(s.p.id, lbl); };
+  postBlind(O.state[sbIdx], 5, "Small blind 5");
+  postBlind(O.state[bbIdx], 10, "Big blind 10");
+  O.currentBet = 10;
+  for(let k=0;k<4;k++) for(const s of O.state) s.hand.push(O.deck.pop());
+  refreshPlates(); setPot(O.pot);
+  log("Omaha dealt — blinds 5/10, four hole cards each, " + O.state[sbIdx].p.name + " small, " + O.state[bbIdx].p.name + " big.");
+  renderOmahaHands(false);
+  clickSound(440);
+  const streets = ["preflop","flop","turn","river"];
+  for(let si=0; si<streets.length; si++){
+    const street = streets[si];
+    if(si>0){
+      const cnt = si===1 ? 3 : 1;
+      for(let k=0;k<cnt;k++) O.board.push(O.deck.pop());
+      O.state.forEach(s=>{ s.roundBet=0; }); O.currentBet=0; O.raises=0;
+      setCenter(street==="flop" ? "The flop" : street==="turn" ? "The turn" : "The river", "Community cards are on the board — exactly 2 of yours + 3 from the board.");
+      renderOmahaHands(false);
+      log("The " + street + " is out.");
+    } else setCenter("Preflop", "Betting starts left of the big blind.");
+    await omahaBettingRound(seq, street);
+    if(seq!==handSeq || !O) return;
+    if(await checkOmahaLoneWinner(seq)) return;
+  }
+  omahaShowdown(seq);
+}
+async function omahaBettingRound(seq, street){
+  O.phase = "bet";
+  const n = O.state.length;
+  let idx = street==="preflop" ? (n===2 ? O.button : (O.button+3)%n) : (O.button+1)%n;
+  const needAct = new Set(omahaAlive().filter(s=>s.p.stack>0).map(s=>s.p.id));
+  let guard = 0;
+  while(needAct.size>0 && guard++<60){
+    if(seq!==handSeq || !O) return;
+    const s = O.state[idx]; idx = (idx+1)%n;
+    if(s.folded || !needAct.has(s.p.id)) continue;
+    if(omahaAlive().length<=1) break;
+    setTurn(s.p, street==="preflop" ? "Preflop betting." : "Betting on the " + street + ".");
+    if(s.p.id==="you") await humanOmahaBet(seq, s, street);
+    else { hideTurnTimer(); await sleep(700 + Math.random()*600); if(seq!==handSeq || !O) return; aiOmahaBet(s, street); }
+    if(seq!==handSeq || !O) return;
+    needAct.delete(s.p.id);
+    if(s._raised){ omahaAlive().forEach(o=>{ if(o.p.id!==s.p.id && o.p.stack>0) needAct.add(o.p.id); }); s._raised=false; }
+    renderOmahaHands(false);
+  }
+  O.phase = "between";
+  players.forEach(p=> setBetBadge(p.id, 0));
+  O.state.forEach(s=>{ s.bet = 0; });
+}
+function humanOmahaBet(seq, s, street){
+  return new Promise(res=>{
+    const toCall = O.currentBet - s.roundBet;
+    const canRaise = O.raises<3 && s.p.stack > toCall;
+    if(mode==="apprentice" && tipsOn) setTip(omahaCoachHTML(s.hand, O.board, toCall));
+    let html = `<button class="btn fold" id="act-fold">Fold</button>`;
+    html += toCall>0 ? `<button class="btn primary" id="act-call">Call ${fmt(toCall)}</button>` : `<button class="btn primary" id="act-call">Check</button>`;
+    if(canRaise) [50,100,200].forEach(amt=>{ const need = toCall + amt; if(s.p.stack>=need) html += `<button class="btn" data-raise="${amt}">Raise +${amt}</button>`; });
+    const evTxt = O.board.length>=3 ? evaluateOmaha(s.hand, O.board).name : (omahaHasPair(s.hand) ? "A pair in hand" : "Four hole cards");
+    html += `<span class="ctl-note">${street==="preflop"?"Preflop":("On the "+street)} · your hand: <b>${evTxt}</b> · pot ${fmt(O.pot)}</span>`;
+    setControls(html);
+    let settled = false;
+    const done = ()=>{ if(settled) return; settled = true; clearTimeout(tmo); hideTurnTimer(); setControls(""); res(); };
+    showTurnTimer(TURN_MS, "Your betting turn");
+    const tmo = setTimeout(()=>{
+      if(settled) return;
+      if(seq !== handSeq){ done(); return; }
+      if(toCall > 0){ s.folded = true; setStatus(s.p.id, "Folded"); log("<b>You</b> ran out of time — auto-folded."); showNotice("Time ran out — you were folded."); }
+      else { setStatus(s.p.id, "Checked"); log("<b>You</b> ran out of time — auto-checked."); showNotice("Time ran out — auto-checked."); }
+      done();
+    }, TURN_MS);
+    wireBtn("act-fold", ()=>{ s.folded=true; setStatus(s.p.id,"Folded"); log("<b>You</b> folded."); done(); });
+    wireBtn("act-call", ()=>{
+      const pay = Math.min(toCall, s.p.stack); s.p.stack-=pay; s.roundBet+=pay; s.bet+=pay; O.pot+=pay;
+      setStatus(s.p.id, toCall>0? "Called" : "Checked"); refreshPlates(); setPot(O.pot); done();
+    });
+    document.querySelectorAll("[data-raise]").forEach(b=> b.addEventListener("click", ()=>{
+      clickSound(520);
+      const amt = +b.dataset.raise; const need = toCall + amt;
+      s.p.stack-=need; s.roundBet+=need; s.bet+=need; O.pot+=need;
+      O.currentBet = s.roundBet; O.raises++; s._raised = true;
+      setStatus(s.p.id, "Raised to "+fmt(s.roundBet)); refreshPlates(); setPot(O.pot);
+      log(`<b>You</b> raised to ${fmt(s.roundBet)}.`);
+      done();
+    }));
+  });
+}
+function aiOmahaBet(s, street){
+  const toCall = O.currentBet - s.roundBet;
+  const strength = omahaStrength(s.hand, O.board) + Math.random()*1.4;
+  const pay = (amt)=>{ const p=Math.min(amt, s.p.stack); s.p.stack-=p; s.roundBet+=p; s.bet+=p; O.pot+=p; };
+  if(toCall>0 && strength<2.4 && toCall > s.p.stack*0.12 && Math.random()<0.75){
+    s.folded=true; setStatus(s.p.id,"Folded"); log(`<b>${s.p.name}</b> folded.`);
+  } else if(O.raises<3 && s.p.stack>toCall && strength>=6.2 && Math.random()<0.55){
+    const amt = [50,100,200][Math.floor(Math.random()*3)]; const need = toCall+amt;
+    if(s.p.stack>=need){ pay(need); O.currentBet=s.roundBet; O.raises++; s._raised=true; setStatus(s.p.id,"Raised to "+fmt(s.roundBet)); log(`<b>${s.p.name}</b> raised to ${fmt(s.roundBet)}.`); }
+    else { pay(toCall); setStatus(s.p.id, toCall>0?"Called":"Checked"); }
+  } else {
+    pay(toCall); setStatus(s.p.id, toCall>0?"Called":"Checked");
+    if(toCall>0) log(`<b>${s.p.name}</b> called ${fmt(toCall)}.`);
+  }
+  refreshPlates(); setPot(O.pot);
+}
+async function checkOmahaLoneWinner(seq){
+  const alive = omahaAlive();
+  if(alive.length>1) return false;
+  const w = alive[0];
+  w.p.stack += O.pot;
+  w.p.handsWon = (w.p.handsWon || 0) + 1; w.p.chipsWon = (w.p.chipsWon || 0) + O.pot;
+  renderOmahaHands(true);
+  setTurn(w.p, "Everyone else folded.");
+  $("tb-who").textContent = w.p.id==="you" ? "You win the hand" : w.p.name + " wins the hand";
+  setCenter(w.p.name + " takes it", `Wins the ${fmt(O.pot)} pot — no showdown needed.`);
+  paintWinBanner(`${w.p.name} won ${fmt(O.pot)} chips — everyone else folded`);
+  log(`<b>${w.p.name}</b> won ${fmt(O.pot)} chips — everyone else folded.`, true);
+  refreshPlates(); setPot(0); endOmahaHand();
+  return true;
+}
+function omahaShowdown(seq){
+  O.phase = "showdown";
+  renderOmahaHands(true);
+  const alive = omahaAlive();
+  let best=null;
+  const scored = alive.map(s=>{ const ev=evaluateOmaha(s.hand, O.board); setStatus(s.p.id, ev.name); if(!best||cmpEval(ev,best.ev)>0) best={s,ev}; return {s,ev}; });
+  const winners = scored.filter(x=>cmpEval(x.ev,best.ev)===0);
+  const share = Math.floor(O.pot / winners.length);
+  winners.forEach(w=>{ w.s.p.stack += share; w.s.p.handsWon = (w.s.p.handsWon || 0) + 1; w.s.p.chipsWon = (w.s.p.chipsWon || 0) + share; });
+  const names = winners.map(w=>w.s.p.name).join(" & ");
+  setTurn(winners[0].s.p, "Showdown.");
+  $("tb-who").textContent = winners.length>1 ? "Split pot" : (winners[0].s.p.id==="you" ? "You win the hand" : winners[0].s.p.name + " wins the hand");
+  setCenter(names + (winners.length>1 || winners[0].s.p.id==="you" ? " win" : " wins"), `${best.ev.name} takes ${fmt(O.pot)}.`);
+  paintWinBanner(`${names} won ${fmt(O.pot)} chips with ${best.ev.name}`);
+  log(`<b>${names}</b> won ${fmt(O.pot)} chips with <b>${best.ev.name}</b>.`, true);
+  refreshPlates(); setPot(0); O.pot=0;
+  endOmahaHand();
+}
+function endOmahaHand(){
+  hideTurnTimer();
+  if(O) O.phase="idle";
+  setControls(`<button class="btn primary" id="btn-deal">Deal the next hand</button>
+    ${byId("you").stack<100?`<button class="btn" id="btn-rebuy">Top up to 1,000</button>`:""}`);
+  wireBtn("btn-deal", startOmahaHand);
+  wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetOmahaTable(); });
+}
+
 /* ================= BLACKJACK ================= */
 const BJ_SEATS = ["don","you","layton"];
 let bjShoe = [];
@@ -1942,14 +2272,16 @@ function paintGameSegs(){
   $("seg-draw").classList.toggle("on", game==="draw");
   $("seg-classic").classList.toggle("on", game==="classic");
   $("seg-holdem").classList.toggle("on", game==="holdem");
+  $("seg-omaha").classList.toggle("on", game==="omaha");
   $("seg-bj").classList.toggle("on", game==="bj");
 }
 function setGame(g){
   game = g; handSeq++;
   paintGameSegs();
-  if(isDrawGame(g)){ B=null; H=null; resetDrawTable(); }
-  else if(g==="holdem"){ D=null; B=null; resetHoldemTable(); }
-  else { D=null; H=null; resetBJTable(); }
+  if(isDrawGame(g)){ B=null; H=null; O=null; resetDrawTable(); }
+  else if(g==="holdem"){ D=null; B=null; O=null; resetHoldemTable(); }
+  else if(g==="omaha"){ D=null; B=null; H=null; resetOmahaTable(); }
+  else { D=null; H=null; O=null; resetBJTable(); }
   log("Switched the table to <b>" + GAME_NAMES[g] + "</b>.");
 }function setMode(m){
   mode = m;
@@ -1964,6 +2296,7 @@ function setGame(g){
 $("seg-draw").addEventListener("click", ()=>{ clickSound(500); setGame("draw"); });
 $("seg-classic").addEventListener("click", ()=>{ clickSound(500); setGame("classic"); });
 $("seg-holdem").addEventListener("click", ()=>{ clickSound(500); setGame("holdem"); });
+$("seg-omaha").addEventListener("click", ()=>{ clickSound(500); setGame("omaha"); });
 $("seg-bj").addEventListener("click", ()=>{ clickSound(500); setGame("bj"); });
 $("seg-appr").addEventListener("click", ()=>{ clickSound(500); setMode("apprentice"); });
 $("seg-exp").addEventListener("click", ()=>{ clickSound(500); setMode("expert"); });
@@ -2072,7 +2405,7 @@ const mp = {
   heartbeatTimer: null,    // host: host-alive heartbeat interval
   lastHeartbeat: 0, heartbeatSeen: false, hostQuietShown: false,   // guest: host liveness
   guestWatchTimer: null, guestHelloTimer: null, guestSeated: false, guestPromptTimer: null, returnedNotice: false,
-  helloRetryTimer: null, joining: false, holdemButton: -1, _coachKey: null, _reactAt: {},
+  helloRetryTimer: null, joining: false, holdemButton: -1, omahaButton: -1, _coachKey: null, _reactAt: {},
 };
 /* --- relay transport helpers --- */
 function mpChannelName(code){ return "poker-room-" + code; }
@@ -2187,6 +2520,7 @@ function mpRejoinLink(){
 let MD = null;             // host draw hand state
 let MB = null;             // host blackjack hand state
 let MH = null;             // host hold'em hand state
+let MO = null;             // host omaha hand state
 const AI_DEFS = [
   { name:"Don",    themeText:"crimson with gold trim and diamonds" },
   { name:"Thomas", themeText:"orange sunset stripes with black trim" },
@@ -2640,6 +2974,7 @@ function mpSeatsForHand(){
   // roster humans in seat order + optional AI fill, for the CURRENT hand states
   if(isDrawGame(game) && MD) return MD.state.map(s=>s.seat);
   if(game === "holdem" && MH) return MH.state.map(s=>s.seat);
+  if(game === "omaha" && MO) return MO.state.map(s=>s.seat);
   if(game === "bj" && MB) return MB.order.map(pid=> MB.seats[pid].seat);
   // no hand on the table: in deal-only mode the host is the House, not a seat
   const disp = (mp.phase === "lobby" || mp.phase === "done") ? mp.hostMode : mp.activeHostMode;
@@ -2647,7 +2982,7 @@ function mpSeatsForHand(){
 }
 function mpBuildSnap(forPid){
   const seats = mpSeatsForHand();
-  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "bj" && MB);
+  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "omaha" && MO) || (game === "bj" && MB);
   const snapSeats = seats.map(seat=>{
     const rseat = mp.roster.find(x=>x.pid === seat.pid);
     const base = { pid: seat.pid, name: seat.name, short: seat.short, theme: seat.theme, stack: seat.stack,
@@ -2671,6 +3006,14 @@ function mpBuildSnap(forPid){
         else if(MH.reveal && !st.folded) base.cards = st.hand;              // showdown reveal
       }
     }
+    if(game === "omaha" && MO){
+      const st = MO.state.find(s=>s.seat.pid === seat.pid);
+      if(st){
+        base.bet = st.roundBet; base.folded = st.folded; base.status = st.status || ""; base.cardCount = st.hand.length;
+        if(seat.pid === forPid) base.cards = st.hand;                       // own hole cards only
+        else if(MO.reveal && !st.folded) base.cards = st.hand;              // showdown reveal
+      }
+    }
     if(game === "bj" && MB){
       const st = MB.seats[seat.pid];
       if(st){
@@ -2688,8 +3031,8 @@ function mpBuildSnap(forPid){
     t: "state", game, phase: mp.phase,
     hostMode: dispMode,
     house: (dispMode === "deal" && hostSeat) ? { pid: hostSeat.pid, name: hostSeat.name, theme: hostSeat.theme } : null,
-    pot: isDrawGame(game) && MD ? MD.pot : (game === "holdem" && MH ? MH.pot : 0),
-    board: game === "holdem" && MH ? MH.board : [],
+    pot: isDrawGame(game) && MD ? MD.pot : (game === "holdem" && MH ? MH.pot : (game === "omaha" && MO ? MO.pot : 0)),
+    board: game === "holdem" && MH ? MH.board : (game === "omaha" && MO ? MO.board : []),
     activePid: mp.activeSeatPid || null,
     activeTheme: activeSeat ? activeSeat.theme : null,
     activeName: activeSeat ? activeSeat.name : null,
@@ -2866,7 +3209,7 @@ function mpAutoDealCancel(sync){
 function mpHostDealNow(){
   mpAutoDealCancel(false);
   mp.gateOkSince = 0;
-  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else mpStartBJ();
+  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else mpStartBJ();
 }function mpAutoDealTick(){
   if(mp.role !== "host"){ mp.gateOkSince = 0; return; }
   if(mp.phase !== "lobby" && mp.phase !== "done"){ mp.gateOkSince = 0; mpAutoDealCancel(true); return; }
@@ -2899,7 +3242,7 @@ function mpRenderHostControls(){
     // the label ALWAYS matches the gate's verdict + reason (incl. AWAY)
     const dealLabel = cdSec != null
       ? `Dealing in ${cdSec}… — tap to deal now`
-      : gate.ok ? `${other}${isDrawGame(game) ? " — ante 10" : game === "holdem" ? " — blinds 5/10" : ""}`
+      : gate.ok ? `${other}${isDrawGame(game) ? " — ante 10" : (game === "holdem" || game === "omaha") ? " — blinds 5/10" : ""}`
       : gate.reason === "away" ? mpAwayLabel(gate.awayNames)
       : gate.reason === "players" ? `Waiting for players — ${gate.players} of 2 seated`
       : `Waiting for ready — ${gate.readyCount} of ${gate.needCount} ready`;
@@ -3033,6 +3376,7 @@ function mpPaintDrawCards(){
    (e.g. the 3/2 game's 54-card jokers text) never survives a switch. */
 function gameIntroTip(g){
   if(g === "holdem") return "Hold'em in one breath: <b>two cards of your own, five shared on the board</b>, best five-card hand wins. Pairs and big cards play before the flop; after it, the coach reads your made hand off the board for you.";
+  if(g === "omaha") return "Omaha in one breath: <b>four cards of your own, five shared on the board</b> — but your hand is <b>exactly two of yours plus exactly three from the board</b>. The board alone never plays, and neither do one or three of your cards. The coach reads your real (exactly 2+3) hand for you.";
   if(g === "bj") return "Blackjack in one sentence: <b>get closer to 21 than the dealer without going over</b>. The dealer’s face-up card is your crystal ball — the coach reads it for you on every decision while Apprentice mode is on.";
   const V = DRAW_VARIANTS[g] || DRAW_VARIANTS.draw;
   return V.tip;
@@ -3057,6 +3401,8 @@ function mpOffTurnCoach(snap, isHost){
   mp._coachKey = key;
   if(snap.game === "holdem"){
     setTip("<b>Your hand so far:</b> " + holdemCoachHTML(mySeat.cards, snap.board || [], 0));
+  } else if(snap.game === "omaha"){
+    setTip("<b>Your hand so far:</b> " + omahaCoachHTML(mySeat.cards, snap.board || [], 0));
   } else if(isDrawGame(snap.game)){
     const ev = evaluateFor(mySeat.cards);
     const sugg = suggestFor(mySeat.cards);
@@ -3085,13 +3431,18 @@ function mpBuildPromptUI(kind, ctx, respond){
   const mySeat = snap ? snap.seats.find(s=>s.pid === mp.myPid) : null;
   const myCards = mySeat && mySeat.cards ? mySeat.cards : [];
   if(kind === "bet"){
-    if(ctx && ctx.game === "holdem"){
-      if(mode === "apprentice" && tipsOn) setTip(holdemCoachHTML(myCards, (snap && snap.board) || [], ctx.toCall));
+    if(ctx && (ctx.game === "holdem" || ctx.game === "omaha")){
+      const isOm = ctx.game === "omaha";
+      const boardNow = (snap && snap.board) || [];
+      if(mode === "apprentice" && tipsOn) setTip(isOm ? omahaCoachHTML(myCards, boardNow, ctx.toCall) : holdemCoachHTML(myCards, boardNow, ctx.toCall));
       let hhtml = `<button class="btn fold" id="mp-fold">Fold</button>`;
       hhtml += ctx.toCall > 0 ? `<button class="btn primary" id="mp-call">Call ${fmt(ctx.toCall)}</button>` : `<button class="btn primary" id="mp-call">Check</button>`;
       if(ctx.raises < 3) [50, 100, 200].forEach(amt=>{ if(ctx.stack >= ctx.toCall + amt) hhtml += `<button class="btn" data-mpraise="${amt}">Raise +${amt}</button>`; });
-      const hev = (snap && snap.board && snap.board.length >= 3 && myCards.length === 2) ? evaluate7(myCards.concat(snap.board)).name : (myCards.length === 2 && myCards[0].r === myCards[1].r ? "Pocket pair" : "Two hole cards");
-      hhtml += `<span class="ctl-note">Live Hold'em · pot ${fmt(ctx.pot)} · your hand: <b>${hev}</b> — this shows only on your screen.</span>`;
+      let hev;
+      if(boardNow.length >= 3 && myCards.length === (isOm ? 4 : 2)) hev = (isOm ? evaluateOmaha(myCards, boardNow) : evaluate7(myCards.concat(boardNow))).name;
+      else if(isOm) hev = omahaHasPair(myCards) ? "A pair in hand" : "Four hole cards";
+      else hev = (myCards.length === 2 && myCards[0].r === myCards[1].r ? "Pocket pair" : "Two hole cards");
+      hhtml += `<span class="ctl-note">Live ${isOm ? "Omaha" : "Hold'em"} · pot ${fmt(ctx.pot)} · your hand: <b>${hev}</b> — this shows only on your screen.</span>`;
       setControls(hhtml);
       wireBtn("mp-fold", ()=> respond({ type: "fold" }));
       wireBtn("mp-call", ()=> respond({ type: "call" }));
@@ -3173,9 +3524,10 @@ function mpBuildPromptUI(kind, ctx, respond){
 }
 function mpAIAction(seat, kind, ctx){
   if(kind === "bet"){
-    if(ctx && ctx.game === "holdem"){
-      const st = MH.state.find(s=>s.seat.pid === seat.pid);
-      const strength = holdemStrength(st.hand, MH.board) + Math.random() * 1.4;
+    if(ctx && (ctx.game === "holdem" || ctx.game === "omaha")){
+      const HS = ctx.game === "omaha" ? MO : MH;
+      const st = HS.state.find(s=>s.seat.pid === seat.pid);
+      const strength = (ctx.game === "omaha" ? omahaStrength(st.hand, HS.board) : holdemStrength(st.hand, HS.board)) + Math.random() * 1.4;
       if(ctx.toCall > 0 && strength < 2.4 && ctx.toCall > seat.stack * 0.12 && Math.random() < 0.75) return { type: "fold" };
       if(ctx.raises < 3 && strength >= 6.2 && Math.random() < 0.55){
         const amt = [50, 100, 200][Math.floor(Math.random() * 3)];
@@ -3330,9 +3682,11 @@ function mpResetTableMP(){
   hideTurnTimer();
   mp.cdEndsAt = 0; mp.cdShownSec = null; mp.gateOkSince = 0;
   mp.winBanner = null; paintWinBanner(null); mpResetReady();
-  MD = null; MB = null; MH = null; mp.phase = "lobby"; mp.activeSeatPid = null;
+  MD = null; MB = null; MH = null; MO = null; mp.phase = "lobby"; mp.activeSeatPid = null;
   const info = game === "holdem"
     ? ["Texas Hold'em — live room", "Blinds 5/10 · two hole cards · flop, turn, river · best 5 of 7 · the host deals."]
+    : game === "omaha"
+    ? ["Omaha — live room", "Blinds 5/10 · four hole cards · exactly 2 of yours + exactly 3 from the board · the host deals."]
     : isDrawGame(game)
     ? [drawVariant().name + " — live room", drawVariant().wilds ? "Jokers & deuces wild · two draws — up to 3, then up to 2 · the host deals." : "No wilds · one draw — up to 5 · the host deals."]
     : ["Blackjack — live room", "Dealer stands on 17 · blackjack pays 3:2 · the host deals."];
@@ -3611,6 +3965,123 @@ function mpHoldemShowdown(){
   mp.winBanner = `${names} won ${fmt(MH.pot)} chips with ${best.ev.name}`;
   mp._lastLog = mpLogBoth(`<b>${names}</b> won ${fmt(MH.pot)} chips with <b>${best.ev.name}</b>.`, true);
   MH.pot = 0; mpSeatStackSync(); mpResetReady(); mpSync();
+}
+
+/* ----- Omaha (host authority) -----
+   mpStartHoldem's sibling: identical blinds/button/streets/prompt flow,
+   four hole cards per seat, and evaluateOmaha (exactly 2 + exactly 3)
+   at showdown. Snapshot privacy is the Hold'em block in mpBuildSnap:
+   an opponent's four cards ride as a count, never as cards. */
+async function mpStartOmaha(){
+  if(!mpReadyGate().ok){ mp._lastLog = mpLogBoth("Deal held — every seated player has to tap <b>I’m Ready</b> first."); mpSync(); return; }
+  const seq = ++mp.seq; handSeq++;
+  mp.winBanner = null;
+  mp.activeHostMode = mp.hostMode;   // the mode is locked in for this hand
+  mp.roster.forEach(r=>{ if(r.stack <= 0) r.stack = 500; });
+  const seats = mpTableSeats(4);
+  seats.forEach(s=>{ if(s.stack <= 0) s.stack = 500; });
+  if(seats.length < 2){
+    mp.phase = "lobby";
+    mp._lastLog = mpLogBoth("Not enough players to deal — invite a friend, or turn <b>Fill empty seats with AI</b> on.");
+    mpSync();
+    return;
+  }
+  mp.omahaButton = (mp.omahaButton + 1) % seats.length;
+  const btn = mp.omahaButton;
+  MO = { pot: 0, deck: buildPlainDeck(), board: [], currentBet: 0, raises: 0, reveal: false, button: btn,
+         state: seats.map(seat=>({ seat, hand: [], folded: false, bet: 0, roundBet: 0, status: "" })) };
+  const n = MO.state.length;
+  const post = (st, amt, label)=>{ const pay = Math.min(amt, st.seat.stack); st.seat.stack -= pay; st.bet += pay; st.roundBet += pay; MO.pot += pay; st.status = label; };
+  post(MO.state[n === 2 ? btn : (btn + 1) % n], 5, "Small blind 5");
+  post(MO.state[n === 2 ? (btn + 1) % n : (btn + 2) % n], 10, "Big blind 10");
+  MO.currentBet = 10;
+  for(let k = 0; k < 4; k++) for(const st of MO.state) st.hand.push(MO.deck.pop());
+  mp.phase = "bet1";
+  mp._lastLog = mpLogBoth("Live Omaha dealt — blinds 5/10, four hole cards each.");
+  setCenter("Preflop", "Betting starts left of the big blind.");
+  mpSync();
+  const streets = ["preflop", "flop", "turn", "river"];
+  for(let si = 0; si < streets.length; si++){
+    if(si > 0){
+      const cnt = si === 1 ? 3 : 1;
+      for(let k = 0; k < cnt; k++) MO.board.push(MO.deck.pop());
+      MO.state.forEach(s=>{ s.roundBet = 0; s.status = ""; }); MO.currentBet = 0; MO.raises = 0;
+      mp.phase = streets[si];
+      setCenter(si === 1 ? "The flop" : si === 2 ? "The turn" : "The river", "Community cards are on the board — exactly 2 of yours + exactly 3 from the board.");
+      mp._lastLog = mpLogBoth("The " + streets[si] + " is out.");
+      mpSync();
+    }
+    await mpOmahaBettingRound(seq, streets[si]);
+    if(seq !== mp.seq || !MO) return;
+    if(mpOmahaLoneWinner()) return;
+  }
+  mpOmahaShowdown();
+}
+async function mpOmahaBettingRound(seq, street){
+  const n = MO.state.length;
+  const alive = ()=> MO.state.filter(s=>!s.folded);
+  let idx = street === "preflop" ? (n === 2 ? MO.button : (MO.button + 3) % n) : (MO.button + 1) % n;
+  const needAct = new Set(alive().filter(s=>s.seat.stack > 0).map(s=>s.seat.pid));
+  let guard = 0;
+  while(needAct.size > 0 && guard++ < 60){
+    if(seq !== mp.seq || !MO) return;
+    const st = MO.state[idx]; idx = (idx + 1) % n;
+    if(st.folded || !needAct.has(st.seat.pid)) continue;
+    if(alive().length <= 1) break;
+    mp.activeSeatPid = st.seat.pid;
+    $("tb-what").textContent = street === "preflop" ? "Preflop betting." : "Betting on the " + street + ".";
+    mpSync();
+    const toCall = MO.currentBet - st.roundBet;
+    const act = await mpPrompt(st.seat, "bet", { toCall, raises: MO.raises, stack: st.seat.stack, pot: MO.pot, phaseLabel: street, game: "omaha" });
+    if(seq !== mp.seq || !MO) return;
+    needAct.delete(st.seat.pid);
+    if(act.type === "fold"){ st.folded = true; st.status = "Folded"; mp._lastLog = mpLogBoth(`<b>${st.seat.name}</b> folded.`); }
+    else {
+      let payAmt = Math.min(toCall, st.seat.stack);
+      if(act.type === "raise"){
+        const want = toCall + (act.amt || 50);
+        if(st.seat.stack >= want && MO.raises < 3) payAmt = want;
+      }
+      st.seat.stack -= payAmt; st.roundBet += payAmt; st.bet += payAmt; MO.pot += payAmt;
+      if(act.type === "raise" && payAmt > toCall){ MO.currentBet = st.roundBet; MO.raises++; st.status = "Raised to " + fmt(st.roundBet); mp._lastLog = mpLogBoth(`<b>${st.seat.name}</b> raised to ${fmt(st.roundBet)}.`);
+        alive().forEach(o=>{ if(o.seat.pid !== st.seat.pid && o.seat.stack > 0) needAct.add(o.seat.pid); });
+      } else st.status = toCall > 0 ? "Called" : "Checked";
+    }
+    mpSync();
+  }
+  mp.activeSeatPid = null;
+  MO.state.forEach(s=>{ s.bet = 0; });
+}
+function mpOmahaLoneWinner(){
+  const alive = MO.state.filter(s=>!s.folded);
+  if(alive.length > 1) return false;
+  const w = alive[0];
+  w.seat.stack += MO.pot;
+  w.seat.handsWon = (w.seat.handsWon || 0) + 1; w.seat.chipsWon = (w.seat.chipsWon || 0) + MO.pot;
+  MO.reveal = true;
+  mp.phase = "done"; mp.activeSeatPid = null;   // hand over: nobody is "on turn" — the banner shows the result, not a turn
+  setCenter(w.seat.name + " takes it", `Wins the ${fmt(MO.pot)} pot — no showdown needed.`);
+  $("tb-what").textContent = "Everyone else folded.";
+  mp.winBanner = `${w.seat.name} won ${fmt(MO.pot)} chips — everyone else folded`;
+  mp._lastLog = mpLogBoth(`<b>${w.seat.name}</b> won ${fmt(MO.pot)} chips — everyone else folded.`, true);
+  MO.pot = 0; mpSeatStackSync(); mpResetReady(); mpSync();
+  return true;
+}
+function mpOmahaShowdown(){
+  MO.reveal = true;
+  const alive = MO.state.filter(s=>!s.folded);
+  let best = null;
+  const scored = alive.map(st=>{ const ev = evaluateOmaha(st.hand, MO.board); st.status = ev.name; if(!best || cmpEval(ev, best.ev) > 0) best = { st, ev }; return { st, ev }; });
+  const winners = scored.filter(x=> cmpEval(x.ev, best.ev) === 0);
+  const share = Math.floor(MO.pot / winners.length);
+  winners.forEach(w=>{ w.st.seat.stack += share; w.st.seat.handsWon = (w.st.seat.handsWon || 0) + 1; w.st.seat.chipsWon = (w.st.seat.chipsWon || 0) + share; });
+  const names = winners.map(w=>w.st.seat.name).join(" & ");
+  mp.phase = "done"; mp.activeSeatPid = null;   // hand over: nobody is "on turn" — the banner shows the result, not a turn
+  setCenter(names + (winners.length > 1 ? " split it" : " wins"), `${best.ev.name} takes ${fmt(MO.pot)}.`);
+  $("tb-what").textContent = "Showdown.";
+  mp.winBanner = `${names} won ${fmt(MO.pot)} chips with ${best.ev.name}`;
+  mp._lastLog = mpLogBoth(`<b>${names}</b> won ${fmt(MO.pot)} chips with <b>${best.ev.name}</b>.`, true);
+  MO.pot = 0; mpSeatStackSync(); mpResetReady(); mpSync();
 }
 
 /* ----- Blackjack (host authority) ----- */
