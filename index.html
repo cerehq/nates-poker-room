@@ -265,6 +265,11 @@
         border-color:#0e1c38;
       }
       .card.back::after{ content:""; position:absolute; inset:4px; border:1.5px solid rgba(255,255,255,.5); border-radius:4px; }
+      /* Seven Card Stud: seven cards across a seat — the row runs smaller
+         than the other games so a full board stays readable, portrait too. */
+      .cards.stud-cards{ --card-w:clamp(30px,5.2vw,44px); }
+      .card.holecard{ filter:brightness(.95); box-shadow:0 0 0 2.5px rgba(15,15,20,.55), 2px 2px 0 #c9c9bf, 0 10px 15px rgba(0,0,0,.42), inset 0 0 0 1px rgba(255,255,255,.7); }
+      .card .holetag{ position:absolute; left:50%; transform:translateX(-50%); bottom:3px; background:#141414; color:#fff; font-size:7.5px; font-weight:800; letter-spacing:.09em; padding:1px 5px; border-radius:99px; opacity:.88; }
       .you-cards .card{ cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; }
       .you-cards .card.sel{ transform:translateY(-11px); box-shadow:0 0 0 2.5px var(--danger), 0 10px 14px rgba(0,0,0,.4); }
       .you-cards .card.sugg{ box-shadow:0 0 0 2.5px var(--gold-bright), 0 6px 10px rgba(0,0,0,.35); }
@@ -429,6 +434,7 @@
         .controls .btn{ min-height:44px; padding:10px 14px; font-size:14px; }
         .betpick .bp{ min-height:44px; padding:8px 14px; }
         .ctl-note{ font-size:12.5px; }
+        .cards.stud-cards{ --card-w:clamp(19px,5.4vw,26px); }
         .roomlist .tag{ font-size:9.5px; padding:1px 6px; }
       }
       @media (prefers-reduced-motion: reduce){
@@ -440,7 +446,7 @@
     <header class="topbar">
       <div>
         <h1>Nate&rsquo;s <span class="thin">Poker Room</span></h1>
-        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Five Card Draw &amp; Blackjack. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
+        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Seven Card Stud, Five Card Draw &amp; Blackjack. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
       </div>
       <div class="bar-controls">
         <div class="seg" role="tablist" aria-label="Game">
@@ -448,6 +454,7 @@
           <button id="seg-draw" class="on" type="button">Five Card 3/2 Draw</button>
           <button id="seg-holdem" type="button">Texas Hold'em</button>
           <button id="seg-omaha" type="button">Omaha</button>
+          <button id="seg-stud" type="button">Seven Card Stud</button>
           <button id="seg-classic" type="button">Five Card Draw</button>
           <button id="seg-bj" type="button">Blackjack</button>
         </div>
@@ -838,7 +845,7 @@
        and friendly reloads are NOT winnings and never touch these. */
     function resetSoloStats(){ players.forEach(p=>{ p.handsWon = 0; p.chipsWon = 0; }); }
     const byId = (id) => players.find(p=>p.id===id);
-    let game = "draw";            // "draw" | "classic" | "holdem" | "omaha" | "bj"
+    let game = "draw";            // "draw" | "classic" | "holdem" | "omaha" | "stud" | "bj"
     /* Draw-game variants: the 3/2 signature game (wilds, two draws) and
        classic Five Card Draw (no wilds, one draw of up to 5). Hold'em and
        Blackjack are their own engines. */
@@ -850,7 +857,7 @@
                  sub:"No wilds — a straight 52-card deck · one draw, up to 5 cards.",
                  tip:"Classic draw, the old-school way — <b>no wilds</b>, one draw of up to 5. Made hands are scarcer here, so a pair is a real start. Hit <b>Deal</b> and I’ll size up your hand." },
     };
-    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", bj:"Blackjack" };
+    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", stud:"Seven Card Stud", bj:"Blackjack" };
     function isDrawGame(g){ return g === "draw" || g === "classic"; }
     function drawVariant(){ return DRAW_VARIANTS[game] || DRAW_VARIANTS.draw; }
     function evaluateFor(cards){ return drawVariant().wilds ? evaluate5(cards) : evaluatePlain(cards); }
@@ -994,7 +1001,8 @@
       const lbl = RANKLBL[card.r] || card.r;
       const red = RED[card.s] ? " red":"";
       const wild = isDrawGame(game) && drawVariant().wilds && card.r===2 ? `<span class="wildtag">WILD</span>` : "";
-      return `<div class="card${red} ${opts.cls||""}" ${opts.attrs||""}><span class="r">${lbl}</span><span class="s">${SUITS[card.s]}</span><span class="pip">${SUITS[card.s]}</span>${wild}</div>`;
+      const hole = opts.hole ? `<span class="holetag">HOLE</span>` : "";
+      return `<div class="card${red} ${opts.cls||""}" ${opts.attrs||""}><span class="r">${lbl}</span><span class="s">${SUITS[card.s]}</span><span class="pip">${SUITS[card.s]}</span>${wild}${hole}</div>`;
     }
 
     /* ================= FIVE CARD DRAW — evaluator (jokers + deuces wild) ================= */
@@ -1234,6 +1242,152 @@
       }
       return [main].concat(extras, omahaTrapNotes(hole, board, ev)).join(" ");
     }
+    /* ================= SEVEN CARD STUD — helpers & coach =================
+       A stud hand is always stored in deal order: indices 0-1 are the
+       face-down hole cards, 2-5 are the face-up street cards, 6 is the
+       face-down seventh street. UP cards are public table knowledge —
+       every read of an OPPONENT (first-to-act, AI danger, the coach)
+       goes through studUpCards / studUpScore and nothing else. */
+    const STUD_STREETS = ["third", "fourth", "fifth", "sixth", "seventh"];
+    const STUD_STREET_NAMES = { third:"Third Street", fourth:"Fourth Street", fifth:"Fifth Street", sixth:"Sixth Street", seventh:"Seventh Street" };
+    function studIsDownIdx(i){ return i === 0 || i === 1 || i === 6; }
+    function studUpCards(hand){ return (hand || []).filter((c, i)=> !studIsDownIdx(i)); }
+    function studStreetIdx(phase){ const i = STUD_STREETS.indexOf(phase); return i < 0 ? 0 : i; }
+    /* Best hand from however many cards exist yet: 5+ uses the full
+       best-5-of-N evaluator; under 5 cards the only possible hands are
+       high card / pair / two pair / trips / quads (a flush or a straight
+       needs all five), scored here directly — evalRanks itself assumes
+       exactly five cards (it indexes a second group unconditionally),
+       so it must never be fed a partial hand. Same cat/tie scale. */
+    function studBestNow(cards){
+      if(!cards || !cards.length) return { cat: 0, tie: [], name: "No cards yet" };
+      if(cards.length >= 5) return evaluate7(cards);
+      const counts = {};
+      cards.forEach(c=>{ counts[c.r] = (counts[c.r] || 0) + 1; });
+      const groups = Object.entries(counts).map(([r, c])=>({ r: +r, c })).sort((a, b)=> b.c - a.c || b.r - a.r);
+      const kickers = groups.slice(1).map(g=>g.r).sort((a, b)=> b - a);
+      if(groups[0].c === 4) return { cat: 8, tie: [groups[0].r], name: "Four of a kind" };
+      if(groups[0].c === 3) return { cat: 4, tie: [groups[0].r, ...kickers], name: "Three of a kind" };
+      if(groups[0].c === 2 && groups.length > 1 && groups[1].c === 2){ const pr = [groups[0].r, groups[1].r].sort((a, b)=> b - a); return { cat: 3, tie: [...pr, ...kickers.filter(r=> r !== pr[0] && r !== pr[1])], name: "Two pair" }; }
+      if(groups[0].c === 2) return { cat: 2, tie: [groups[0].r, ...kickers], name: "One pair" };
+      return { cat: 1, tie: cards.map(c=>c.r).sort((a, b)=> b - a), name: "High card" };
+    }
+    function studFourStraight(up){
+      if(!up || up.length !== 4) return false;
+      const ranks = [...new Set(up.map(c=>c.r))];
+      if(ranks.length !== 4) return false;
+      const set = new Set(ranks); if(set.has(14)) set.add(1);
+      for(let hi = 5; hi <= 14; hi++){ let n = 0; for(let r = hi - 4; r <= hi; r++) if(set.has(r)) n++; if(n === 4) return true; }
+      return false;
+    }
+    /* How strong a set of SHOWING cards looks — drives first-to-act on
+       Fourth–Seventh Streets, the AI's danger read, and the coach's
+       warnings. A four-flush or four-straight showing gets a real but
+       sub-pair bump: it looks dangerous because it is. */
+    function studUpScore(up){
+      if(!up || !up.length) return 0;
+      if(up.length === 1) return up[0].r;
+      const ev = studBestNow(up);
+      let s = ev.cat * 100000 + (ev.tie[0] || 0) * 1000 + (ev.tie[1] || 0) * 10 + (ev.tie[2] || 0) * 0.1;
+      if(up.length === 4 && ev.cat === 1){
+        if(up.every(c=>c.s === up[0].s)) s += 50000;
+        else if(studFourStraight(up)) s += 40000;
+      }
+      return s;
+    }
+    function studBoardScore(hand){ return studUpScore(studUpCards(hand)); }
+    /* First to act, returned as a state-array index. Third Street: the
+       LOWEST up-card opens (the bring-in). Fourth–Seventh: the STRONGEST
+       showing board opens. Ties break by order from the button — the
+       scan starts at the button seat and moves forward, so the earliest
+       seat from the button wins a tie. Folded players never count. */
+    function studFirstToAct(state, streetIdx, button){
+      const n = state.length;
+      if(!n) return 0;
+      let bestIdx = -1, bestVal = streetIdx === 0 ? Infinity : -Infinity;
+      for(let k = 0; k < n; k++){
+        const i = (button + k) % n;
+        const s = state[i];
+        if(s.folded) continue;
+        const up = studUpCards(s.hand);
+        const v = streetIdx === 0 ? (up.length ? up[0].r : 99) : studUpScore(up);
+        if(streetIdx === 0 ? v < bestVal : v > bestVal){ bestVal = v; bestIdx = i; }
+      }
+      return bestIdx < 0 ? ((button % n) + n) % n : bestIdx;
+    }
+    /* AI read on its own stud hand: the made-hand value of everything it
+       holds (its down cards are its own), plus a drawing bump for four
+       to a flush or straight while cards are still to come. */
+    function studStrength(hand){
+      const ev = studBestNow(hand);
+      let s = ev.cat + (ev.tie[0] || 0) / 100;
+      if(hand.length < 7 && ev.cat <= 3){
+        const suits = {}; hand.forEach(c=>{ suits[c.s] = (suits[c.s] || 0) + 1; });
+        if(Math.max(...Object.values(suits)) === 4) s += 0.8;
+        const set = new Set(hand.map(c=>c.r)); if(set.has(14)) set.add(1);
+        for(let hi = 5; hi <= 14; hi++){ let n = 0; for(let r = hi - 4; r <= hi; r++) if(set.has(r)) n++; if(n >= 4){ s += 0.5; break; } }
+      }
+      return s;
+    }
+    function studDanger(oppHands){
+      let d = 0;
+      (oppHands || []).forEach(h=>{ d = Math.max(d, studBoardScore(h)); });
+      return d;
+    }
+    /* Stud coach — shared by the solo table, host prompts and guests.
+       myHand is the CALLER's own full hand (down cards included);
+       oppUpList is opponents' UP cards only — the coach never reads a
+       card the table can't see. Street-aware: it names the street,
+       reads your best hand so far, calls out dangerous boards, prices
+       your draws against dead cards, and teaches the stud memory rule
+       (every card you can see is a card nobody can be holding). */
+    function studCoachHTML(myHand, oppUpList, toCall, streetIdx){
+      myHand = myHand || []; oppUpList = (oppUpList || []).filter(u=> u && u.length);
+      if(myHand.length < 3) return "";
+      const si = Math.max(0, Math.min(4, streetIdx || 0));
+      const streetName = STUD_STREET_NAMES[STUD_STREETS[si]];
+      const ev = studBestNow(myHand);
+      const toCome = 7 - myHand.length;
+      const parts = [];
+      if(si === 0){
+        if(ev.cat >= 4) parts.push(`<b>${streetName}</b> and you're already holding <b>${ev.name}</b> between your hole cards and the door card — a powerhouse start. <b>${toCall > 0 ? "Call, and raising is fine" : "Bet it"}</b>.`);
+        else if(ev.cat === 2) parts.push(`<b>${streetName}:</b> a <b>pair</b> to build on. Pairs are the backbone of stud — ${toCall > 0 ? "a <b>call</b> is standard" : "<b>bet</b> it or check and grow it"}.`);
+        else if(myHand.every(c=>c.s === myHand[0].s)) parts.push(`<b>${streetName}:</b> three cards all one suit — a baby <b>flush draw</b>. ${toCall > 0 ? (toCall <= 30 ? "Cheap enough: <b>call</b> and see Fourth Street." : "It's early and it costs — folding to a big price is fine.") : "<b>Check</b> and take the next card free."}`);
+        else { const high = Math.max(...myHand.map(c=>c.r)); parts.push(`<b>${streetName}:</b> nothing made yet — best is <b>${ev.name}</b> (${RANKLBL[high] || high} high). Stud pays patience: ${toCall > 0 ? (toCall <= 30 ? "a small <b>call</b> is fine" : "that price is rich this early — <b>fold</b> is fine") : "<b>check</b> and see Fourth Street"}.`); }
+      } else if(si === 4){
+        if(ev.cat >= 5) parts.push(`<b>Seventh Street</b> is in — your final hand is <b>${ev.name}</b>. That's the hand you take to showdown: <b>${toCall > 0 ? "call, and raising is fine" : "bet it for value"}</b>.`);
+        else if(ev.cat >= 3) parts.push(`<b>Seventh Street:</b> <b>${ev.name}</b> is your final hand. Real, but beatable — ${toCall > 0 ? "call fair prices, be wary of strength" : "bet carefully or check it down"}.`);
+        else if(ev.cat === 2) parts.push(`<b>Seventh Street:</b> one <b>pair</b> is all you made. ${toCall > 0 ? "Only call if it's cheap — a lone pair wins less than you'd hope at a full stud table." : "<b>Check</b> and hope it holds."}`);
+        else parts.push(`<b>Seventh Street:</b> just <b>${ev.name}</b>. ${toCall > 0 ? "Nothing to protect — <b>fold</b> and save the chips." : "<b>Check</b> it back and take the free showdown."}`);
+      } else {
+        if(ev.cat >= 5) parts.push(`On <b>${streetName}</b> you've made <b>${ev.name}</b> — a big hand. <b>${toCall > 0 ? "Call or raise" : "Bet it"}</b> and build the pot.`);
+        else if(ev.cat === 4) parts.push(`On <b>${streetName}</b>: <b>${ev.name}</b> already. Strong — <b>${toCall > 0 ? "call, and raise if it stays cheap" : "bet for value"}</b>.`);
+        else if(ev.cat === 3) parts.push(`On <b>${streetName}</b>: <b>${ev.name}</b>. A real hand with ${toCome} card${toCome === 1 ? "" : "s"} still to come — ${toCall > 0 ? "call fair prices" : "bet it or check, your call"}.`);
+        else if(ev.cat === 2) parts.push(`On <b>${streetName}</b>: a <b>pair</b> so far, ${toCome} to come. ${toCall > 0 ? "Call small, think hard about big — especially if a scarier board is doing the betting." : "Check, or bet it while it's the best you can see."}`);
+        else parts.push(`On <b>${streetName}</b>: <b>${ev.name}</b> so far with ${toCome} card${toCome === 1 ? "" : "s"} to come. ${toCall > 0 ? "Cheap calls only — don't pay real money for a hope." : "Check and take the free card."}`);
+      }
+      if(si > 0 && si < 4 && ev.cat <= 3){
+        const suits = {}; myHand.forEach(c=>{ suits[c.s] = (suits[c.s] || 0) + 1; });
+        const fs = Object.entries(suits).find(([, n])=> n === 4);
+        if(fs){
+          const suit = +fs[0];
+          let dead = 0; oppUpList.forEach(up=> up.forEach(c=>{ if(c.s === suit) dead++; }));
+          parts.push(`You're <b>four to a flush</b> in ${SUITS[suit]} — one more makes it. ${dead ? `<b>${dead}</b> ${SUITS[suit]} ${dead === 1 ? "is" : "are"} already showing on other boards — those outs are <b>dead</b>, they can't come to you.` : "None of your suit is showing elsewhere — your outs are live."}`);
+        }
+      }
+      let worst = null, worstScore = 0;
+      oppUpList.forEach(up=>{ const sc = studUpScore(up); if(sc > worstScore){ worstScore = sc; worst = up; } });
+      if(worst){
+        const wev = studBestNow(worst);
+        if(wev.cat >= 2) parts.push(`Careful: an opponent is showing <b>${wev.name}</b>${wev.tie && wev.tie[0] ? " — " + (RANKLBL[wev.tie[0]] || wev.tie[0]) + "s up" : ""} — and that's only what you can SEE. Their hole cards can only make it scarier.`);
+        else if(worst.length === 4 && worst.every(c=>c.s === worst[0].s)) parts.push(`Watch the board showing <b>four to a flush</b> — if that player's fifth suited card lands (or is already hiding), you're drawing thin.`);
+        else if(studFourStraight(worst)) parts.push(`One board is showing <b>four to a straight</b> — respect real bets from that seat.`);
+      }
+      const visible = myHand.length + oppUpList.reduce((a, u)=> a + u.length, 0);
+      parts.push(`Stud memory: you can see <b>${visible}</b> cards right now — every card you can see is a card <b>nobody can be holding</b>. Count before you chase.`);
+      return parts.join(" ");
+    }
+
     /* No-wilds draw strategy (classic): keep made hands, draw to the pair. */
     function suggestDiscardsPlain(cards){
       const ev = evaluatePlain(cards);
@@ -2044,6 +2198,187 @@ function endOmahaHand(){
   wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetOmahaTable(); });
 }
 
+/* ================= SEVEN CARD STUD ================= */
+let ST = null;   // stud state
+function resetStudTable(){
+  hideTurnTimer(); paintWinBanner(null); resetSoloStats();
+  ST = { phase:"idle", pot:0, deck:[], button: ST ? (ST.button+1)%4 : 0, currentBet:0, raises:0, state:null };
+  seatsEl.innerHTML = players.map(p=>seatShell(p,{button:false})).join("");
+  players.forEach(p=>{ setStatus(p.id,""); setBetBadge(p.id,0); const c=$("cards-"+p.id); if(c) c.innerHTML=""; });
+  setPot(0); refreshPlates(); paintBoard([]);
+  setTurn(null, "Seven Card Stud — ante 10, two down and one up to start, best five of your seven wins.");
+  setControls(`<button class="btn primary" id="btn-deal">Deal a hand — ante 10</button>
+    ${byId("you").stack<100?`<button class="btn" id="btn-rebuy">Top up to 1,000</button>`:""}`);
+  wireBtn("btn-deal", startStudHand);
+  wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetStudTable(); });
+  setCenter("Seven Card Stud", "Ante 10 · two down, one up · a card a street · best 5 of your 7.");
+  if(mode==="apprentice" && tipsOn) setTip("Stud in one breath: <b>two cards down, one up</b> to start, then one more card a street — three more up, and the last one down. Half the table's cards sit face-up for everyone: <b>what you can see is what nobody can hold</b>. I'll read your hand — and the boards you should fear — as we go.");
+}
+function renderStudHands(reveal){
+  if(!ST || !ST.state) return;
+  for(const s of ST.state){
+    const el = $("cards-"+s.p.id); if(!el) continue;
+    el.classList.add("stud-cards");
+    const showAll = s.p.id==="you" || (reveal && !s.folded);
+    el.innerHTML = s.hand.map((c,i)=>{
+      const down = studIsDownIdx(i);
+      if(showAll) return cardHTML(c, { cls: down ? "holecard" : "", hole: down });
+      return down ? cardHTML(c, { back:true }) : cardHTML(c, {});
+    }).join("");
+    const seatEl = $("seat-"+s.p.id); if(seatEl) seatEl.classList.toggle("folded", !!s.folded);
+    setBetBadge(s.p.id, s.roundBet || 0);
+  }
+}
+function studAlive(){ return ST.state.filter(s=>!s.folded); }
+async function startStudHand(){
+  const seq = ++handSeq;
+  paintWinBanner(null); paintBoard([]);
+  setControls("");
+  players.forEach(p=>{ if(p.stack<=0) p.stack = 500; });
+  ST.deck = buildPlainDeck(); ST.pot = 0; ST.currentBet = 0; ST.raises = 0;
+  ST.state = players.map(p=>({ p, hand:[], folded:false, bet:0, roundBet:0, status:"" }));
+  seatsEl.innerHTML = players.map((p,i)=>seatShell(p,{button: i===ST.button})).join("");
+  players.forEach(p=>{ setStatus(p.id,""); setBetBadge(p.id,0); });
+  ST.state.forEach(s=>{ const pay = Math.min(10, s.p.stack); s.p.stack -= pay; s.bet += pay; ST.pot += pay; setStatus(s.p.id, "Ante 10"); });
+  for(let k=0;k<3;k++) for(const s of ST.state) s.hand.push(ST.deck.pop());
+  refreshPlates(); setPot(ST.pot);
+  log("Stud dealt — antes 10 in, two down and one up each.");
+  renderStudHands(false);
+  clickSound(440);
+  for(let si=0; si<STUD_STREETS.length; si++){
+    if(si>0){
+      for(const s of ST.state) if(!s.folded) s.hand.push(ST.deck.pop());
+      ST.state.forEach(s=>{ s.roundBet=0; }); ST.currentBet=0; ST.raises=0;
+      const nm = STUD_STREET_NAMES[STUD_STREETS[si]];
+      setCenter(nm, si===4 ? "The last card comes down — final betting, then showdown." : "A new card is up — the strongest board bets first.");
+      renderStudHands(false);
+      log(nm + " is dealt.");
+    } else setCenter("Third Street", "Two down, one up — the lowest up-card opens the betting.");
+    await studBettingRound(seq, si);
+    if(seq!==handSeq || !ST) return;
+    if(await checkStudLoneWinner(seq)) return;
+  }
+  studShowdown(seq);
+}
+async function studBettingRound(seq, streetIdx){
+  ST.phase = STUD_STREETS[streetIdx];
+  const n = ST.state.length;
+  let idx = studFirstToAct(ST.state, streetIdx, ST.button);
+  const needAct = new Set(studAlive().filter(s=>s.p.stack>0).map(s=>s.p.id));
+  let guard = 0;
+  while(needAct.size>0 && guard++<60){
+    if(seq!==handSeq || !ST) return;
+    const s = ST.state[idx]; idx = (idx+1)%n;
+    if(s.folded || !needAct.has(s.p.id)) continue;
+    if(studAlive().length<=1) break;
+    setTurn(s.p, "Betting on " + STUD_STREET_NAMES[STUD_STREETS[streetIdx]] + ".");
+    if(s.p.id==="you") await humanStudBet(seq, s, streetIdx);
+    else { hideTurnTimer(); await sleep(700 + Math.random()*600); if(seq!==handSeq || !ST) return; aiStudBet(s, streetIdx); }
+    if(seq!==handSeq || !ST) return;
+    needAct.delete(s.p.id);
+    if(s._raised){ studAlive().forEach(o=>{ if(o.p.id!==s.p.id && o.p.stack>0) needAct.add(o.p.id); }); s._raised=false; }
+    renderStudHands(false);
+  }
+  ST.phase = "between";
+  players.forEach(p=> setBetBadge(p.id, 0));
+  ST.state.forEach(s=>{ s.bet = 0; });
+}
+function humanStudBet(seq, s, streetIdx){
+  return new Promise(res=>{
+    const toCall = ST.currentBet - s.roundBet;
+    const canRaise = ST.raises<3 && s.p.stack > toCall;
+    if(mode==="apprentice" && tipsOn) setTip(studCoachHTML(s.hand, ST.state.filter(o=>o.p.id!=="you" && !o.folded).map(o=> studUpCards(o.hand)), toCall, streetIdx));
+    let html = `<button class="btn fold" id="act-fold">Fold</button>`;
+    html += toCall>0 ? `<button class="btn primary" id="act-call">Call ${fmt(toCall)}</button>` : `<button class="btn primary" id="act-call">Check</button>`;
+    if(canRaise) [50,100,200].forEach(amt=>{ const need = toCall + amt; if(s.p.stack>=need) html += `<button class="btn" data-raise="${amt}">Raise +${amt}</button>`; });
+    html += `<span class="ctl-note">${STUD_STREET_NAMES[STUD_STREETS[streetIdx]]} · your hand so far: <b>${studBestNow(s.hand).name}</b> · pot ${fmt(ST.pot)}</span>`;
+    setControls(html);
+    let settled = false;
+    const done = ()=>{ if(settled) return; settled = true; clearTimeout(tmo); hideTurnTimer(); setControls(""); res(); };
+    showTurnTimer(TURN_MS, "Your betting turn");
+    const tmo = setTimeout(()=>{
+      if(settled) return;
+      if(seq !== handSeq){ done(); return; }
+      if(toCall > 0){ s.folded = true; setStatus(s.p.id, "Folded"); log("<b>You</b> ran out of time — auto-folded."); showNotice("Time ran out — you were folded."); }
+      else { setStatus(s.p.id, "Checked"); log("<b>You</b> ran out of time — auto-checked."); showNotice("Time ran out — auto-checked."); }
+      done();
+    }, TURN_MS);
+    wireBtn("act-fold", ()=>{ s.folded=true; setStatus(s.p.id,"Folded"); log("<b>You</b> folded."); done(); });
+    wireBtn("act-call", ()=>{
+      const pay = Math.min(toCall, s.p.stack); s.p.stack-=pay; s.roundBet+=pay; s.bet+=pay; ST.pot+=pay;
+      setStatus(s.p.id, toCall>0? "Called" : "Checked"); refreshPlates(); setPot(ST.pot); done();
+    });
+    document.querySelectorAll("[data-raise]").forEach(b=> b.addEventListener("click", ()=>{
+      clickSound(520);
+      const amt = +b.dataset.raise; const need = toCall + amt;
+      s.p.stack-=need; s.roundBet+=need; s.bet+=need; ST.pot+=need;
+      ST.currentBet = s.roundBet; ST.raises++; s._raised = true;
+      setStatus(s.p.id, "Raised to "+fmt(s.roundBet)); refreshPlates(); setPot(ST.pot);
+      log(`<b>You</b> raised to ${fmt(s.roundBet)}.`);
+      done();
+    }));
+  });
+}
+function aiStudBet(s, streetIdx){
+  const toCall = ST.currentBet - s.roundBet;
+  let strength = studStrength(s.hand) + Math.random()*1.4;
+  const danger = studDanger(ST.state.filter(o=>o.p.id!==s.p.id && !o.folded).map(o=> o.hand));
+  if(danger >= 200000 && studBestNow(s.hand).cat <= 2) strength -= 0.9;   // a pair or better is SHOWING across the table — respect it
+  const pay = (amt)=>{ const p=Math.min(amt, s.p.stack); s.p.stack-=p; s.roundBet+=p; s.bet+=p; ST.pot+=p; };
+  if(toCall>0 && strength<2.4 && toCall > s.p.stack*0.12 && Math.random()<0.75){
+    s.folded=true; setStatus(s.p.id,"Folded"); log(`<b>${s.p.name}</b> folded.`);
+  } else if(ST.raises<3 && s.p.stack>toCall && strength>=6.2 && Math.random()<0.55){
+    const amt = [50,100,200][Math.floor(Math.random()*3)]; const need = toCall+amt;
+    if(s.p.stack>=need){ pay(need); ST.currentBet=s.roundBet; ST.raises++; s._raised=true; setStatus(s.p.id,"Raised to "+fmt(s.roundBet)); log(`<b>${s.p.name}</b> raised to ${fmt(s.roundBet)}.`); }
+    else { pay(toCall); setStatus(s.p.id, toCall>0?"Called":"Checked"); }
+  } else {
+    pay(toCall); setStatus(s.p.id, toCall>0?"Called":"Checked");
+    if(toCall>0) log(`<b>${s.p.name}</b> called ${fmt(toCall)}.`);
+  }
+  refreshPlates(); setPot(ST.pot);
+}
+async function checkStudLoneWinner(seq){
+  const alive = studAlive();
+  if(alive.length>1) return false;
+  const w = alive[0];
+  w.p.stack += ST.pot;
+  w.p.handsWon = (w.p.handsWon || 0) + 1; w.p.chipsWon = (w.p.chipsWon || 0) + ST.pot;
+  renderStudHands(true);
+  setTurn(w.p, "Everyone else folded.");
+  $("tb-who").textContent = w.p.id==="you" ? "You win the hand" : w.p.name + " wins the hand";
+  setCenter(w.p.name + " takes it", `Wins the ${fmt(ST.pot)} pot — no showdown needed.`);
+  paintWinBanner(`${w.p.name} won ${fmt(ST.pot)} chips — everyone else folded`);
+  log(`<b>${w.p.name}</b> won ${fmt(ST.pot)} chips — everyone else folded.`, true);
+  refreshPlates(); setPot(0); endStudHand();
+  return true;
+}
+function studShowdown(seq){
+  ST.phase = "showdown";
+  renderStudHands(true);
+  const alive = studAlive();
+  let best=null;
+  const scored = alive.map(s=>{ const ev=evaluate7(s.hand); setStatus(s.p.id, ev.name); if(!best||cmpEval(ev,best.ev)>0) best={s,ev}; return {s,ev}; });
+  const winners = scored.filter(x=>cmpEval(x.ev,best.ev)===0);
+  const share = Math.floor(ST.pot / winners.length);
+  winners.forEach(w=>{ w.s.p.stack += share; w.s.p.handsWon = (w.s.p.handsWon || 0) + 1; w.s.p.chipsWon = (w.s.p.chipsWon || 0) + share; });
+  const names = winners.map(w=>w.s.p.name).join(" & ");
+  setTurn(winners[0].s.p, "Showdown.");
+  $("tb-who").textContent = winners.length>1 ? "Split pot" : (winners[0].s.p.id==="you" ? "You win the hand" : winners[0].s.p.name + " wins the hand");
+  setCenter(names + (winners.length>1 || winners[0].s.p.id==="you" ? " win" : " wins"), `${best.ev.name} takes ${fmt(ST.pot)}.`);
+  paintWinBanner(`${names} won ${fmt(ST.pot)} chips with ${best.ev.name}`);
+  log(`<b>${names}</b> won ${fmt(ST.pot)} chips with <b>${best.ev.name}</b>.`, true);
+  refreshPlates(); setPot(0); ST.pot=0;
+  endStudHand();
+}
+function endStudHand(){
+  hideTurnTimer();
+  if(ST) ST.phase="idle";
+  setControls(`<button class="btn primary" id="btn-deal">Deal the next hand</button>
+    ${byId("you").stack<100?`<button class="btn" id="btn-rebuy">Top up to 1,000</button>`:""}`);
+  wireBtn("btn-deal", startStudHand);
+  wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetStudTable(); });
+}
+
 /* ================= BLACKJACK ================= */
 const BJ_SEATS = ["don","you","layton"];
 let bjShoe = [];
@@ -2273,15 +2608,17 @@ function paintGameSegs(){
   $("seg-classic").classList.toggle("on", game==="classic");
   $("seg-holdem").classList.toggle("on", game==="holdem");
   $("seg-omaha").classList.toggle("on", game==="omaha");
+  $("seg-stud").classList.toggle("on", game==="stud");
   $("seg-bj").classList.toggle("on", game==="bj");
 }
 function setGame(g){
   game = g; handSeq++;
   paintGameSegs();
-  if(isDrawGame(g)){ B=null; H=null; O=null; resetDrawTable(); }
-  else if(g==="holdem"){ D=null; B=null; O=null; resetHoldemTable(); }
-  else if(g==="omaha"){ D=null; B=null; H=null; resetOmahaTable(); }
-  else { D=null; H=null; O=null; resetBJTable(); }
+  if(isDrawGame(g)){ B=null; H=null; O=null; ST=null; resetDrawTable(); }
+  else if(g==="holdem"){ D=null; B=null; O=null; ST=null; resetHoldemTable(); }
+  else if(g==="omaha"){ D=null; B=null; H=null; ST=null; resetOmahaTable(); }
+  else if(g==="stud"){ D=null; B=null; H=null; O=null; resetStudTable(); }
+  else { D=null; H=null; O=null; ST=null; resetBJTable(); }
   log("Switched the table to <b>" + GAME_NAMES[g] + "</b>.");
 }function setMode(m){
   mode = m;
@@ -2297,6 +2634,7 @@ $("seg-draw").addEventListener("click", ()=>{ clickSound(500); setGame("draw"); 
 $("seg-classic").addEventListener("click", ()=>{ clickSound(500); setGame("classic"); });
 $("seg-holdem").addEventListener("click", ()=>{ clickSound(500); setGame("holdem"); });
 $("seg-omaha").addEventListener("click", ()=>{ clickSound(500); setGame("omaha"); });
+$("seg-stud").addEventListener("click", ()=>{ clickSound(500); setGame("stud"); });
 $("seg-bj").addEventListener("click", ()=>{ clickSound(500); setGame("bj"); });
 $("seg-appr").addEventListener("click", ()=>{ clickSound(500); setMode("apprentice"); });
 $("seg-exp").addEventListener("click", ()=>{ clickSound(500); setMode("expert"); });
@@ -2405,7 +2743,7 @@ const mp = {
   heartbeatTimer: null,    // host: host-alive heartbeat interval
   lastHeartbeat: 0, heartbeatSeen: false, hostQuietShown: false,   // guest: host liveness
   guestWatchTimer: null, guestHelloTimer: null, guestSeated: false, guestPromptTimer: null, returnedNotice: false,
-  helloRetryTimer: null, joining: false, holdemButton: -1, omahaButton: -1, _coachKey: null, _reactAt: {},
+  helloRetryTimer: null, joining: false, holdemButton: -1, omahaButton: -1, studButton: -1, _coachKey: null, _reactAt: {},
 };
 /* --- relay transport helpers --- */
 function mpChannelName(code){ return "poker-room-" + code; }
@@ -2521,6 +2859,7 @@ let MD = null;             // host draw hand state
 let MB = null;             // host blackjack hand state
 let MH = null;             // host hold'em hand state
 let MO = null;             // host omaha hand state
+let MS = null;             // host stud hand state
 const AI_DEFS = [
   { name:"Don",    themeText:"crimson with gold trim and diamonds" },
   { name:"Thomas", themeText:"orange sunset stripes with black trim" },
@@ -2801,7 +3140,7 @@ function mpLeave(silent){
   mp.guestSeated = false; mp.heartbeatSeen = false; mp.lastHeartbeat = 0; mp.hostQuietShown = false; mp.claiming = false;
   mpTeardownChannel();
   mp.conns.clear();
-  mp.roster = []; mp.snap = null; mp.drawUI = null; MD = null; MB = null; MH = null;
+  mp.roster = []; mp.snap = null; mp.drawUI = null; MD = null; MB = null; MH = null; MO = null; MS = null;
   mpStopHelloRetry(); mp.joining = false;
   const _jg = $("join-go"); if(_jg){ _jg.disabled = false; _jg.textContent = "Join Table"; }
   mp.myToken = null; mp.pendingInvite = null; mp.pendingRejoin = null;
@@ -2975,6 +3314,7 @@ function mpSeatsForHand(){
   if(isDrawGame(game) && MD) return MD.state.map(s=>s.seat);
   if(game === "holdem" && MH) return MH.state.map(s=>s.seat);
   if(game === "omaha" && MO) return MO.state.map(s=>s.seat);
+  if(game === "stud" && MS) return MS.state.map(s=>s.seat);
   if(game === "bj" && MB) return MB.order.map(pid=> MB.seats[pid].seat);
   // no hand on the table: in deal-only mode the host is the House, not a seat
   const disp = (mp.phase === "lobby" || mp.phase === "done") ? mp.hostMode : mp.activeHostMode;
@@ -2982,7 +3322,7 @@ function mpSeatsForHand(){
 }
 function mpBuildSnap(forPid){
   const seats = mpSeatsForHand();
-  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "omaha" && MO) || (game === "bj" && MB);
+  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "omaha" && MO) || (game === "stud" && MS) || (game === "bj" && MB);
   const snapSeats = seats.map(seat=>{
     const rseat = mp.roster.find(x=>x.pid === seat.pid);
     const base = { pid: seat.pid, name: seat.name, short: seat.short, theme: seat.theme, stack: seat.stack,
@@ -3014,6 +3354,20 @@ function mpBuildSnap(forPid){
         else if(MO.reveal && !st.folded) base.cards = st.hand;              // showdown reveal
       }
     }
+    if(game === "stud" && MS){
+      const st = MS.state.find(s=>s.seat.pid === seat.pid);
+      if(st){
+        base.bet = st.roundBet; base.folded = st.folded; base.status = st.status || ""; base.cardCount = st.hand.length;
+        /* Stud privacy is split per card: the UP cards (deal indices
+           2-5) are public and ride in upCards for EVERY viewer; the
+           DOWN cards (0, 1 and seventh street's 6) are private — the
+           full hand appears only in the seat's own copy, or at
+           showdown reveal for players still in. */
+        base.upCards = studUpCards(st.hand);
+        if(seat.pid === forPid) base.cards = st.hand;                       // own cards: down + up
+        else if(MS.reveal && !st.folded) base.cards = st.hand;              // showdown reveal
+      }
+    }
     if(game === "bj" && MB){
       const st = MB.seats[seat.pid];
       if(st){
@@ -3031,7 +3385,7 @@ function mpBuildSnap(forPid){
     t: "state", game, phase: mp.phase,
     hostMode: dispMode,
     house: (dispMode === "deal" && hostSeat) ? { pid: hostSeat.pid, name: hostSeat.name, theme: hostSeat.theme } : null,
-    pot: isDrawGame(game) && MD ? MD.pot : (game === "holdem" && MH ? MH.pot : (game === "omaha" && MO ? MO.pot : 0)),
+    pot: isDrawGame(game) && MD ? MD.pot : (game === "holdem" && MH ? MH.pot : (game === "omaha" && MO ? MO.pot : (game === "stud" && MS ? MS.pot : 0))),
     board: game === "holdem" && MH ? MH.board : (game === "omaha" && MO ? MO.board : []),
     activePid: mp.activeSeatPid || null,
     activeTheme: activeSeat ? activeSeat.theme : null,
@@ -3110,13 +3464,22 @@ function mpRenderSnap(snap, isHost){
     const pos = posFor(i);
     const isMine = s.pid === mp.myPid;
     let cardsHtml = "";
-    if(s.cards) cardsHtml = s.cards.map(c=>cardHTML(c, {})).join("");
+    if(snap.game === "stud" && (s.cards || s.upCards)){
+      /* Stud: deal order on the felt — down slots (indices 0, 1, 6) and
+         up slots (2-5) interleaved exactly as dealt. With the full hand
+         (own seat, or showdown reveal) the down cards show face-up,
+         marked HOLE; otherwise down slots are backs and only the
+         public up cards show. */
+      if(s.cards) cardsHtml = s.cards.map((c, ci)=> cardHTML(c, { cls: studIsDownIdx(ci) ? "holecard" : "", hole: studIsDownIdx(ci) })).join("");
+      else { let ui = 0; const ups = s.upCards || []; for(let k = 0; k < s.cardCount; k++) cardsHtml += studIsDownIdx(k) ? cardHTML(null, { back: true }) : cardHTML(ups[ui++], {}); }
+    }
+    else if(s.cards) cardsHtml = s.cards.map(c=>cardHTML(c, {})).join("");
     else for(let k = 0; k < s.cardCount; k++) cardsHtml += cardHTML(null, { back: true });
     let status = s.status || "";
     if(snap.game === "bj" && s.handTotal && !status) status = (s.handTotal.soft ? "Soft " : "") + s.handTotal.total;
     html += `<div class="seat ${pos}${s.folded || s.bust ? " folded" : ""}" id="seat-${s.pid}">
       <div class="seat-inner">
-        <div class="cards ${isMine ? "you-cards" : ""}" id="cards-mp-${s.pid}">${cardsHtml}</div>
+        <div class="cards ${isMine ? "you-cards" : ""}${snap.game === "stud" ? " stud-cards" : ""}" id="cards-mp-${s.pid}">${cardsHtml}</div>
         <div><span class="plate">${chipSVG(s.theme, 26, mpEsc(s.short || ""))}
           <span class="nm">${mpEsc(s.name)}${isMine ? " (you)" : ""}${s.kind === "ai" ? '<span class="aibadge">AI</span>' : ""}${s.away ? '<span class="aibadge">AWAY</span>' : ""}${s.ready && !s.away ? '<span class="aibadge readybadge">READY</span>' : ""}</span>
           <span class="stk">${fmt(s.stack)} chips</span>
@@ -3209,7 +3572,7 @@ function mpAutoDealCancel(sync){
 function mpHostDealNow(){
   mpAutoDealCancel(false);
   mp.gateOkSince = 0;
-  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else mpStartBJ();
+  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else if(game === "stud") mpStartStud(); else mpStartBJ();
 }function mpAutoDealTick(){
   if(mp.role !== "host"){ mp.gateOkSince = 0; return; }
   if(mp.phase !== "lobby" && mp.phase !== "done"){ mp.gateOkSince = 0; mpAutoDealCancel(true); return; }
@@ -3242,7 +3605,7 @@ function mpRenderHostControls(){
     // the label ALWAYS matches the gate's verdict + reason (incl. AWAY)
     const dealLabel = cdSec != null
       ? `Dealing in ${cdSec}… — tap to deal now`
-      : gate.ok ? `${other}${isDrawGame(game) ? " — ante 10" : (game === "holdem" || game === "omaha") ? " — blinds 5/10" : ""}`
+      : gate.ok ? `${other}${(isDrawGame(game) || game === "stud") ? " — ante 10" : (game === "holdem" || game === "omaha") ? " — blinds 5/10" : ""}`
       : gate.reason === "away" ? mpAwayLabel(gate.awayNames)
       : gate.reason === "players" ? `Waiting for players — ${gate.players} of 2 seated`
       : `Waiting for ready — ${gate.readyCount} of ${gate.needCount} ready`;
@@ -3377,6 +3740,7 @@ function mpPaintDrawCards(){
 function gameIntroTip(g){
   if(g === "holdem") return "Hold'em in one breath: <b>two cards of your own, five shared on the board</b>, best five-card hand wins. Pairs and big cards play before the flop; after it, the coach reads your made hand off the board for you.";
   if(g === "omaha") return "Omaha in one breath: <b>four cards of your own, five shared on the board</b> — but your hand is <b>exactly two of yours plus exactly three from the board</b>. The board alone never plays, and neither do one or three of your cards. The coach reads your real (exactly 2+3) hand for you.";
+  if(g === "stud") return "Stud in one breath: <b>two cards down, one up</b> to start, then one more card a street — three more up, and the last one down. Best five of your seven wins. Half the table's cards sit face-up for everyone: <b>what you can see is what nobody can hold</b> — the coach counts the visible cards with you.";
   if(g === "bj") return "Blackjack in one sentence: <b>get closer to 21 than the dealer without going over</b>. The dealer’s face-up card is your crystal ball — the coach reads it for you on every decision while Apprentice mode is on.";
   const V = DRAW_VARIANTS[g] || DRAW_VARIANTS.draw;
   return V.tip;
@@ -3403,6 +3767,11 @@ function mpOffTurnCoach(snap, isHost){
     setTip("<b>Your hand so far:</b> " + holdemCoachHTML(mySeat.cards, snap.board || [], 0));
   } else if(snap.game === "omaha"){
     setTip("<b>Your hand so far:</b> " + omahaCoachHTML(mySeat.cards, snap.board || [], 0));
+  } else if(snap.game === "stud"){
+    /* Off-turn stud read: my own full hand from my snapshot copy, the
+       opponents' boards from their PUBLIC upCards — nothing else. */
+    const oppUps = snap.seats.filter(s=>s.pid !== mp.myPid).map(s=> s.upCards || []);
+    setTip("<b>Your hand so far:</b> " + studCoachHTML(mySeat.cards, oppUps, 0, studStreetIdx(snap.phase)));
   } else if(isDrawGame(snap.game)){
     const ev = evaluateFor(mySeat.cards);
     const sugg = suggestFor(mySeat.cards);
@@ -3431,18 +3800,28 @@ function mpBuildPromptUI(kind, ctx, respond){
   const mySeat = snap ? snap.seats.find(s=>s.pid === mp.myPid) : null;
   const myCards = mySeat && mySeat.cards ? mySeat.cards : [];
   if(kind === "bet"){
-    if(ctx && (ctx.game === "holdem" || ctx.game === "omaha")){
+    if(ctx && (ctx.game === "holdem" || ctx.game === "omaha" || ctx.game === "stud")){
       const isOm = ctx.game === "omaha";
+      const isStud = ctx.game === "stud";
       const boardNow = (snap && snap.board) || [];
-      if(mode === "apprentice" && tipsOn) setTip(isOm ? omahaCoachHTML(myCards, boardNow, ctx.toCall) : holdemCoachHTML(myCards, boardNow, ctx.toCall));
+      if(mode === "apprentice" && tipsOn){
+        if(isStud){
+          /* the coach reads MY full hand and the opponents' PUBLIC up
+             cards from my snapshot — their down cards never reach me */
+          const oppUps = snap ? snap.seats.filter(s=>s.pid !== mp.myPid).map(s=> s.upCards || []) : [];
+          setTip(studCoachHTML(myCards, oppUps, ctx.toCall, ctx.street != null ? ctx.street : studStreetIdx(ctx.phaseLabel)));
+        }
+        else setTip(isOm ? omahaCoachHTML(myCards, boardNow, ctx.toCall) : holdemCoachHTML(myCards, boardNow, ctx.toCall));
+      }
       let hhtml = `<button class="btn fold" id="mp-fold">Fold</button>`;
       hhtml += ctx.toCall > 0 ? `<button class="btn primary" id="mp-call">Call ${fmt(ctx.toCall)}</button>` : `<button class="btn primary" id="mp-call">Check</button>`;
       if(ctx.raises < 3) [50, 100, 200].forEach(amt=>{ if(ctx.stack >= ctx.toCall + amt) hhtml += `<button class="btn" data-mpraise="${amt}">Raise +${amt}</button>`; });
       let hev;
-      if(boardNow.length >= 3 && myCards.length === (isOm ? 4 : 2)) hev = (isOm ? evaluateOmaha(myCards, boardNow) : evaluate7(myCards.concat(boardNow))).name;
+      if(isStud) hev = myCards.length >= 3 ? studBestNow(myCards).name + " so far" : "Your stud hand";
+      else if(boardNow.length >= 3 && myCards.length === (isOm ? 4 : 2)) hev = (isOm ? evaluateOmaha(myCards, boardNow) : evaluate7(myCards.concat(boardNow))).name;
       else if(isOm) hev = omahaHasPair(myCards) ? "A pair in hand" : "Four hole cards";
       else hev = (myCards.length === 2 && myCards[0].r === myCards[1].r ? "Pocket pair" : "Two hole cards");
-      hhtml += `<span class="ctl-note">Live ${isOm ? "Omaha" : "Hold'em"} · pot ${fmt(ctx.pot)} · your hand: <b>${hev}</b> — this shows only on your screen.</span>`;
+      hhtml += `<span class="ctl-note">Live ${isStud ? "Seven Card Stud" : isOm ? "Omaha" : "Hold'em"} · pot ${fmt(ctx.pot)} · your hand: <b>${hev}</b> — this shows only on your screen.</span>`;
       setControls(hhtml);
       wireBtn("mp-fold", ()=> respond({ type: "fold" }));
       wireBtn("mp-call", ()=> respond({ type: "call" }));
@@ -3524,6 +3903,18 @@ function mpBuildPromptUI(kind, ctx, respond){
 }
 function mpAIAction(seat, kind, ctx){
   if(kind === "bet"){
+    if(ctx && ctx.game === "stud"){
+      const st = MS.state.find(s=>s.seat.pid === seat.pid);
+      let strength = studStrength(st.hand) + Math.random() * 1.4;
+      const danger = studDanger(MS.state.filter(o=>o.seat.pid !== seat.pid && !o.folded).map(o=> o.hand));
+      if(danger >= 200000 && studBestNow(st.hand).cat <= 2) strength -= 0.9;   // a pair or better is SHOWING — respect it
+      if(ctx.toCall > 0 && strength < 2.4 && ctx.toCall > seat.stack * 0.12 && Math.random() < 0.75) return { type: "fold" };
+      if(ctx.raises < 3 && strength >= 6.2 && Math.random() < 0.55){
+        const amt = [50, 100, 200][Math.floor(Math.random() * 3)];
+        if(seat.stack >= ctx.toCall + amt) return { type: "raise", amt };
+      }
+      return { type: "call" };
+    }
     if(ctx && (ctx.game === "holdem" || ctx.game === "omaha")){
       const HS = ctx.game === "omaha" ? MO : MH;
       const st = HS.state.find(s=>s.seat.pid === seat.pid);
@@ -3682,11 +4073,13 @@ function mpResetTableMP(){
   hideTurnTimer();
   mp.cdEndsAt = 0; mp.cdShownSec = null; mp.gateOkSince = 0;
   mp.winBanner = null; paintWinBanner(null); mpResetReady();
-  MD = null; MB = null; MH = null; MO = null; mp.phase = "lobby"; mp.activeSeatPid = null;
+  MD = null; MB = null; MH = null; MO = null; MS = null; mp.phase = "lobby"; mp.activeSeatPid = null;
   const info = game === "holdem"
     ? ["Texas Hold'em — live room", "Blinds 5/10 · two hole cards · flop, turn, river · best 5 of 7 · the host deals."]
     : game === "omaha"
     ? ["Omaha — live room", "Blinds 5/10 · four hole cards · exactly 2 of yours + exactly 3 from the board · the host deals."]
+    : game === "stud"
+    ? ["Seven Card Stud — live room", "Ante 10 · two down, one up · a card a street · best 5 of your 7 · the host deals."]
     : isDrawGame(game)
     ? [drawVariant().name + " — live room", drawVariant().wilds ? "Jokers & deuces wild · two draws — up to 3, then up to 2 · the host deals." : "No wilds · one draw — up to 5 · the host deals."]
     : ["Blackjack — live room", "Dealer stands on 17 · blackjack pays 3:2 · the host deals."];
@@ -4082,6 +4475,120 @@ function mpOmahaShowdown(){
   mp.winBanner = `${names} won ${fmt(MO.pot)} chips with ${best.ev.name}`;
   mp._lastLog = mpLogBoth(`<b>${names}</b> won ${fmt(MO.pot)} chips with <b>${best.ev.name}</b>.`, true);
   MO.pot = 0; mpSeatStackSync(); mpResetReady(); mpSync();
+}
+
+/* ----- Seven Card Stud (host authority) -----
+   mpStartOmaha's sibling, with stud's own shape: everyone antes 10,
+   cards arrive one street at a time (down, down, UP, then up/up/up,
+   last one down), and who acts first changes by street — lowest
+   up-card on Third Street, strongest showing board after that.
+   There is no community board; privacy lives per-card in mpBuildSnap
+   (up cards public in upCards, down cards only in the owner's copy). */
+async function mpStartStud(){
+  if(!mpReadyGate().ok){ mp._lastLog = mpLogBoth("Deal held — every seated player has to tap <b>I’m Ready</b> first."); mpSync(); return; }
+  const seq = ++mp.seq; handSeq++;
+  mp.winBanner = null;
+  mp.activeHostMode = mp.hostMode;   // the mode is locked in for this hand
+  mp.roster.forEach(r=>{ if(r.stack <= 0) r.stack = 500; });
+  const seats = mpTableSeats(4);
+  seats.forEach(s=>{ if(s.stack <= 0) s.stack = 500; });
+  if(seats.length < 2){
+    mp.phase = "lobby";
+    mp._lastLog = mpLogBoth("Not enough players to deal — invite a friend, or turn <b>Fill empty seats with AI</b> on.");
+    mpSync();
+    return;
+  }
+  mp.studButton = (mp.studButton + 1) % seats.length;
+  const btn = mp.studButton;
+  MS = { pot: 0, deck: buildPlainDeck(), currentBet: 0, raises: 0, reveal: false, button: btn,
+         state: seats.map(seat=>({ seat, hand: [], folded: false, bet: 0, roundBet: 0, status: "" })) };
+  MS.state.forEach(st=>{ const pay = Math.min(10, st.seat.stack); st.seat.stack -= pay; st.bet += pay; MS.pot += pay; st.status = "Ante 10"; });
+  for(let k = 0; k < 3; k++) for(const st of MS.state) st.hand.push(MS.deck.pop());
+  mp.phase = "third";
+  mp._lastLog = mpLogBoth("Live Stud dealt — antes 10 in, two down and one up each.");
+  setCenter("Third Street", "Two down, one up — the lowest up-card opens the betting.");
+  mpSync();
+  for(let si = 0; si < STUD_STREETS.length; si++){
+    if(si > 0){
+      for(const st of MS.state) if(!st.folded) st.hand.push(MS.deck.pop());
+      MS.state.forEach(s=>{ s.roundBet = 0; s.status = ""; }); MS.currentBet = 0; MS.raises = 0;
+      mp.phase = STUD_STREETS[si];
+      const nm = STUD_STREET_NAMES[STUD_STREETS[si]];
+      setCenter(nm, si === 4 ? "The last card comes down — final betting, then showdown." : "A new card is up — the strongest board bets first.");
+      mp._lastLog = mpLogBoth(nm + " is dealt.");
+      mpSync();
+    }
+    await mpStudBettingRound(seq, si);
+    if(seq !== mp.seq || !MS) return;
+    if(mpStudLoneWinner()) return;
+  }
+  mpStudShowdown();
+}
+async function mpStudBettingRound(seq, streetIdx){
+  const n = MS.state.length;
+  const alive = ()=> MS.state.filter(s=>!s.folded);
+  let idx = studFirstToAct(MS.state, streetIdx, MS.button);
+  const needAct = new Set(alive().filter(s=>s.seat.stack > 0).map(s=>s.seat.pid));
+  let guard = 0;
+  while(needAct.size > 0 && guard++ < 60){
+    if(seq !== mp.seq || !MS) return;
+    const st = MS.state[idx]; idx = (idx + 1) % n;
+    if(st.folded || !needAct.has(st.seat.pid)) continue;
+    if(alive().length <= 1) break;
+    mp.activeSeatPid = st.seat.pid;
+    $("tb-what").textContent = "Betting on " + STUD_STREET_NAMES[STUD_STREETS[streetIdx]] + ".";
+    mpSync();
+    const toCall = MS.currentBet - st.roundBet;
+    const act = await mpPrompt(st.seat, "bet", { toCall, raises: MS.raises, stack: st.seat.stack, pot: MS.pot, phaseLabel: STUD_STREETS[streetIdx], game: "stud", street: streetIdx });
+    if(seq !== mp.seq || !MS) return;
+    needAct.delete(st.seat.pid);
+    if(act.type === "fold"){ st.folded = true; st.status = "Folded"; mp._lastLog = mpLogBoth(`<b>${st.seat.name}</b> folded.`); }
+    else {
+      let payAmt = Math.min(toCall, st.seat.stack);
+      if(act.type === "raise"){
+        const want = toCall + (act.amt || 50);
+        if(st.seat.stack >= want && MS.raises < 3) payAmt = want;
+      }
+      st.seat.stack -= payAmt; st.roundBet += payAmt; st.bet += payAmt; MS.pot += payAmt;
+      if(act.type === "raise" && payAmt > toCall){ MS.currentBet = st.roundBet; MS.raises++; st.status = "Raised to " + fmt(st.roundBet); mp._lastLog = mpLogBoth(`<b>${st.seat.name}</b> raised to ${fmt(st.roundBet)}.`);
+        alive().forEach(o=>{ if(o.seat.pid !== st.seat.pid && o.seat.stack > 0) needAct.add(o.seat.pid); });
+      } else st.status = toCall > 0 ? "Called" : "Checked";
+    }
+    mpSync();
+  }
+  mp.activeSeatPid = null;
+  MS.state.forEach(s=>{ s.bet = 0; });
+}
+function mpStudLoneWinner(){
+  const alive = MS.state.filter(s=>!s.folded);
+  if(alive.length > 1) return false;
+  const w = alive[0];
+  w.seat.stack += MS.pot;
+  w.seat.handsWon = (w.seat.handsWon || 0) + 1; w.seat.chipsWon = (w.seat.chipsWon || 0) + MS.pot;
+  MS.reveal = true;
+  mp.phase = "done"; mp.activeSeatPid = null;   // hand over: nobody is "on turn" — the banner shows the result, not a turn
+  setCenter(w.seat.name + " takes it", `Wins the ${fmt(MS.pot)} pot — no showdown needed.`);
+  $("tb-what").textContent = "Everyone else folded.";
+  mp.winBanner = `${w.seat.name} won ${fmt(MS.pot)} chips — everyone else folded`;
+  mp._lastLog = mpLogBoth(`<b>${w.seat.name}</b> won ${fmt(MS.pot)} chips — everyone else folded.`, true);
+  MS.pot = 0; mpSeatStackSync(); mpResetReady(); mpSync();
+  return true;
+}
+function mpStudShowdown(){
+  MS.reveal = true;
+  const alive = MS.state.filter(s=>!s.folded);
+  let best = null;
+  const scored = alive.map(st=>{ const ev = evaluate7(st.hand); st.status = ev.name; if(!best || cmpEval(ev, best.ev) > 0) best = { st, ev }; return { st, ev }; });
+  const winners = scored.filter(x=> cmpEval(x.ev, best.ev) === 0);
+  const share = Math.floor(MS.pot / winners.length);
+  winners.forEach(w=>{ w.st.seat.stack += share; w.st.seat.handsWon = (w.st.seat.handsWon || 0) + 1; w.st.seat.chipsWon = (w.st.seat.chipsWon || 0) + share; });
+  const names = winners.map(w=>w.st.seat.name).join(" & ");
+  mp.phase = "done"; mp.activeSeatPid = null;   // hand over: nobody is "on turn" — the banner shows the result, not a turn
+  setCenter(names + (winners.length > 1 ? " split it" : " wins"), `${best.ev.name} takes ${fmt(MS.pot)}.`);
+  $("tb-what").textContent = "Showdown.";
+  mp.winBanner = `${names} won ${fmt(MS.pot)} chips with ${best.ev.name}`;
+  mp._lastLog = mpLogBoth(`<b>${names}</b> won ${fmt(MS.pot)} chips with <b>${best.ev.name}</b>.`, true);
+  MS.pot = 0; mpSeatStackSync(); mpResetReady(); mpSync();
 }
 
 /* ----- Blackjack (host authority) ----- */
