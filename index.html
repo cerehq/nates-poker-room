@@ -218,6 +218,7 @@
       .seat.pos-top{ left:50%; top:-34px; transform:translateX(-50%); }
       .seat.pos-right{ right:-8px; top:44%; transform:translateY(-50%); }
       .seat.pos-dealer{ left:50%; top:-34px; transform:translateX(-50%); }
+      .seat.pos-housecorner{ right:-2px; top:-46px; }
       .seat .cards{ display:flex; justify-content:center; gap:3px; min-height:calc(var(--card-w)*1.42); align-items:flex-start; flex-wrap:nowrap; }
       .seat-inner{ display:flex; flex-direction:column; align-items:center; gap:5px; }
       .plate{
@@ -268,6 +269,22 @@
       /* Seven Card Stud: seven cards across a seat — the row runs smaller
          than the other games so a full board stays readable, portrait too. */
       .cards.stud-cards{ --card-w:clamp(30px,5.2vw,44px); }
+      /* Spades: a full hand is 13 cards (17 in cutthroat) — the row runs
+         smaller still, and an opponent's backs fan over each other so the
+         count reads without the row running off the felt. */
+      .cards.spades-cards{ --card-w:clamp(21px,3.6vw,32px); }
+      .cards.fan .card + .card{ margin-left:calc(var(--card-w) * -0.52); }
+      .you-cards .card.dim{ opacity:.35; filter:grayscale(.6) brightness(.8); cursor:not-allowed; }
+      .you-cards .card.legal{ cursor:pointer; }
+      /* the current trick, in the table center: one labeled slot per player */
+      .trickslot{ display:flex; flex-direction:column; align-items:center; gap:2px; }
+      .trickslot .tsname{ font-size:10px; font-weight:700; letter-spacing:.04em; opacity:.9; max-width:64px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+      .card.trickempty{ background:rgba(255,255,255,.07); border:1.5px dashed rgba(255,255,255,.4); box-shadow:none; animation:none; }
+      /* hand-end Spades score breakdown, under the felt */
+      .scorepanel{ margin:14px auto 0; max-width:560px; background:var(--panel); border:1.5px solid var(--line); border-radius:14px; padding:12px 16px; font-size:14px; line-height:1.55; text-align:left; }
+      .scorepanel .sp-title{ font-weight:800; margin-bottom:3px; }
+      .betpick.spbids{ flex-wrap:wrap; justify-content:center; max-width:540px; }
+      .betpick.spbids .bp.nil{ border-color:var(--gold); color:var(--gold); font-weight:800; }
       .card.holecard{ filter:brightness(.95); box-shadow:0 0 0 2.5px rgba(15,15,20,.55), 2px 2px 0 #c9c9bf, 0 10px 15px rgba(0,0,0,.42), inset 0 0 0 1px rgba(255,255,255,.7); }
       .card .holetag{ position:absolute; left:50%; transform:translateX(-50%); bottom:3px; background:#141414; color:#fff; font-size:7.5px; font-weight:800; letter-spacing:.09em; padding:1px 5px; border-radius:99px; opacity:.88; }
       .you-cards .card{ cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; }
@@ -435,6 +452,7 @@
         .betpick .bp{ min-height:44px; padding:8px 14px; }
         .ctl-note{ font-size:12.5px; }
         .cards.stud-cards{ --card-w:clamp(19px,5.4vw,26px); }
+        .cards.spades-cards{ --card-w:clamp(15px,4.4vw,22px); }
         .roomlist .tag{ font-size:9.5px; padding:1px 6px; }
       }
       @media (prefers-reduced-motion: reduce){
@@ -446,7 +464,7 @@
     <header class="topbar">
       <div>
         <h1>Nate&rsquo;s <span class="thin">Poker Room</span></h1>
-        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Seven Card Stud, Five Card Draw &amp; Blackjack. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
+        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Seven Card Stud, Five Card Draw, Blackjack &amp; Spades. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
       </div>
       <div class="bar-controls">
         <div class="seg" role="tablist" aria-label="Game">
@@ -457,6 +475,12 @@
           <button id="seg-stud" type="button">Seven Card Stud</button>
           <button id="seg-classic" type="button">Five Card Draw</button>
           <button id="seg-bj" type="button">Blackjack</button>
+          <button id="seg-spades" type="button">Spades</button>
+        </div>
+        <div class="seg" id="spades-variant-seg" style="display:none" aria-label="Spades variant">
+          <span class="seg-label">Spades</span>
+          <button id="seg-sp-teams" class="on" type="button">4P Teams</button>
+          <button id="seg-sp-cut" type="button">3P Cutthroat</button>
         </div>
         <div class="seg" aria-label="Skill mode">
           <span class="seg-label">Mode</span>
@@ -520,6 +544,8 @@
             </div>
           </div>
         </div>
+
+        <div class="scorepanel" id="score-panel" style="display:none"></div>
 
         <div class="controls" id="controls"></div>
         <div class="reactions" id="reactions" aria-label="Seat reactions">
@@ -655,6 +681,19 @@
               <tr><td>One pair</td><td>Two matching ranks</td></tr>
               <tr><td>High card</td><td>Best card wins</td></tr>
             </table>
+          </details>
+        </div>
+
+        <div class="panel">
+          <details class="rules">
+            <summary>House rules — Spades</summary>
+            <ul>
+              <li><b>Two ways to play</b> (pick with the Spades toggle up top): <b>4P Teams</b> — partners sit across, 13 cards each, first team to <b>500</b>; <b>3P Cutthroat</b> — everyone for themselves, the 2♣ sits out so it's 17 cards each, first to <b>300</b>.</li>
+              <li><b>Bidding:</b> everyone bids how many tricks they'll take, or <b>Nil</b> — a promise to take none (+100 if you pull it off, −100 if you don't). Partners' bids add up into one team contract.</li>
+              <li><b>Play:</b> follow the led suit if you can. Highest card of the led suit takes the trick unless a <b>spade</b> lands — highest spade wins. Spades can't be <b>led</b> until they're broken (or they're all you have left).</li>
+              <li><b>Scoring:</b> make your bid for <b>10 × bid + 1 per extra trick</b>. Those extra tricks are <b>bags</b> — every 10 bags costs <b>−100</b>. Miss your bid and you're <b>set</b>: −10 × bid.</li>
+              <li><b>No chips in Spades</b> — it's a points race. Your seat shows your match score.</li>
+            </ul>
           </details>
         </div>
 
@@ -857,7 +896,12 @@
                  sub:"No wilds — a straight 52-card deck · one draw, up to 5 cards.",
                  tip:"Classic draw, the old-school way — <b>no wilds</b>, one draw of up to 5. Made hands are scarcer here, so a pair is a real start. Hit <b>Deal</b> and I’ll size up your hand." },
     };
-    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", stud:"Seven Card Stud", bj:"Blackjack" };
+    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", stud:"Seven Card Stud", bj:"Blackjack", spades:"Spades" };
+    /* Spades variant: "teams" = 4P partnership (partners across, 13 cards,
+       match to 500); "cut" = 3P cutthroat (2♣ removed, 17 cards each,
+       every player for themselves, match to 300). The host picks it in a
+       live room; the snapshot carries it like the game selection. */
+    let spadesVariant = "teams";
     function isDrawGame(g){ return g === "draw" || g === "classic"; }
     function drawVariant(){ return DRAW_VARIANTS[game] || DRAW_VARIANTS.draw; }
     function evaluateFor(cards){ return drawVariant().wilds ? evaluate5(cards) : evaluatePlain(cards); }
@@ -909,7 +953,7 @@
       else { el.textContent = ""; el.classList.remove("on"); }
     }
     /* ================= turn timer, notices, tap binding ================= */
-    const TURN_MS = 90000, DRAW_MS = 120000, AWAY_MS = 5000;
+    const TURN_MS = 90000, DRAW_MS = 120000, AWAY_MS = 5000, SPADES_MS = 60000;
     function fmtClock(ms){ const s = Math.max(0, Math.ceil(ms/1000)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
     let _ttIv = null;
     /* Turn nudge: if the player whose turn it is hasn't acted in 20s,
@@ -965,6 +1009,8 @@
       if(kind === "draw") return "Time ran out — you were stood pat.";
       if(kind === "bj") return "Time ran out — you stood.";
       if(kind === "bjbet") return "Time ran out — auto-bet 25.";
+      if(kind === "spadesbid") return "Time ran out — the table bid your counted tricks for you.";
+      if(kind === "spadesplay") return "Time ran out — your lowest legal card was played.";
       return "Time ran out — the table moved on.";
     }
     /* One tap = one toggle, in every browser (incl. in-app webviews): fire on
@@ -1386,6 +1432,275 @@
       const visible = myHand.length + oppUpList.reduce((a, u)=> a + u.length, 0);
       parts.push(`Stud memory: you can see <b>${visible}</b> cards right now — every card you can see is a card <b>nobody can be holding</b>. Count before you chase.`);
       return parts.join(" ");
+    }
+
+    /* ================= SPADES — rules core, AI, coach =================
+       Spades is a trick-taking game: points, not chips. Two variants:
+       "teams" — 4 seats, partners across (seat indices 0&2 vs 1&3 in
+       play order), 13 cards each from a full 52, match to 500.
+       "cut" — 3P cutthroat, the 2♣ removed (51 cards, 17 each), every
+       player scores alone, match to 300.
+       The functions in this block are the single source of the rules —
+       both engines (solo SP, host MSP) and both coaches read through
+       them, so a rule can't drift between the solo and live tables. */
+    function spadesUnitOf(variant, seatIdx){ return variant === "teams" ? seatIdx % 2 : seatIdx; }
+function spadesTargetFor(variant){ return variant === "cut" ? 300 : 500; }
+    function spadesMaxBidFor(variant){ return variant === "cut" ? 17 : 13; }
+    function spadesHandSizeFor(variant){ return variant === "cut" ? 17 : 13; }
+    function buildSpadesDeck(variant){
+      const d = [];
+      for(let s = 0; s < 4; s++) for(let r = 2; r <= 14; r++){
+        if(variant === "cut" && r === 2 && s === 3) continue;   // the 2♣ sits out of cutthroat
+        d.push({ r, s });
+      }
+      return shuffle(d);
+    }
+    function spadesCardKey(c){ return c.r + "-" + c.s; }
+    function spadesCardName(c){ return (RANKLBL[c.r] || c.r) + SUITS[c.s]; }
+    /* Display order for a hand: suits grouped ♣ ♦ ♥ ♠, high ranks first. */
+    const SPADES_SUIT_ORDER = [3, 2, 1, 0];
+    function spadesSortHand(hand){
+      return (hand || []).slice().sort((a, b)=> (SPADES_SUIT_ORDER.indexOf(a.s) - SPADES_SUIT_ORDER.indexOf(b.s)) || (b.r - a.r));
+    }
+    /* The legal plays. Leading: spades can't be led until broken (a
+       spade has been played on an earlier trick) — unless spades are
+       all you have left. Following: you must follow the led suit if
+       you hold any of it; otherwise anything goes. */
+    function spadesLegalCards(hand, ledSuit, spadesBroken, leading){
+      if(leading){
+        if(spadesBroken) return hand.slice();
+        const nonSpades = hand.filter(c=> c.s !== 0);
+        return nonSpades.length ? nonSpades : hand.slice();
+      }
+      const follow = hand.filter(c=> c.s === ledSuit);
+      return follow.length ? follow : hand.slice();
+    }
+    /* Would `card`, played on this trick, beat the current winner? */
+    function spadesBeats(card, winCard, ledSuit){
+      if(card.s === winCard.s) return card.r > winCard.r;
+      if(card.s === 0 && winCard.s !== 0) return true;   // a spade trumps any non-spade
+      return false;
+    }
+    /* Index (into the trick array) of the card currently/last winning:
+       highest spade if any spade was played, else the highest card of
+       the led suit. trick entries are { seat, card } in play order. */
+    function spadesTrickWinner(trick){
+      let win = 0;
+      for(let i = 1; i < trick.length; i++) if(spadesBeats(trick[i].card, trick[win].card, trick[0].card.s)) win = i;
+      return win;
+    }
+    /* The counted hand: aces are sure tricks; a king with company in
+       its suit usually takes one; a queen with two guards sometimes
+       does; trump length and a long side suit are worth a little more.
+       This count is the AI's bid, the timeout/AWAY default bid, and
+       the number the coach says out loud. */
+    function spadesBidRead(hand, variant){
+      const bySuit = [[], [], [], []];
+      (hand || []).forEach(c=> bySuit[c.s].push(c.r));
+      let est = 0, aces = 0, protKings = 0, queens = 0;
+      for(let s = 0; s < 4; s++){
+        const rs = bySuit[s], len = rs.length;
+        if(rs.includes(14)) aces++;
+        if(rs.includes(13) && len >= 2) protKings++;
+        if(rs.includes(12) && len >= 3) queens++;
+        rs.forEach(r=>{
+          if(r === 14) est += 1;
+          else if(r === 13 && len >= 2) est += 1;
+          else if(r === 12 && len >= 3) est += 0.5;
+        });
+        if(s !== 0 && len >= 6) est += (len - 5) * 0.5;   // a long side suit runs late
+      }
+      const spades = bySuit[0].length;
+      if(spades > 3) est += (spades - 3) * 0.5;            // extra trump length
+      const bid = Math.max(1, Math.min(spadesMaxBidFor(variant), Math.round(est)));
+      const spadeHonor = bySuit[0].some(r=> r >= 12);
+      const nilWorthy = est < 1 && aces === 0 && spades <= 3 && !spadeHonor;
+      return { est, bid, aces, protKings, queens, spades, nilWorthy };
+    }
+    function spadesAIBid(hand, variant){ return spadesBidRead(hand, variant).bid; }
+    function spadesLowest(cards){ return cards.slice().sort((a, b)=> a.r - b.r)[0]; }
+    function spadesHighest(cards){ return cards.slice().sort((a, b)=> b.r - a.r)[0]; }
+    /* AI card play. view: { hand, ledSuit (null when leading), trick:
+       [{seat, card}] in play order, mySeat, partnerSeat (-1 in
+       cutthroat), bids: [per-seat bid, 0 = Nil], spadesBroken }.
+       Heuristics, in order: a Nil bidder stays under the winner and
+       sheds big losers; protect a partner's Nil (overtake their card
+       if it's winning); never overtake a partner's winning trick;
+       win as cheaply as possible when it's an opponent's trick; dump
+       low when beaten. Leads come low from the longest suit. */
+    function spadesAIPlay(view){
+      const hand = view.hand;
+      const leading = view.ledSuit == null;
+      const legal = spadesLegalCards(hand, view.ledSuit, view.spadesBroken, leading);
+      if(!legal.length) return hand[0];
+      const trick = view.trick || [];
+      const winIdx = trick.length ? spadesTrickWinner(trick) : -1;
+      const winSeat = winIdx >= 0 ? trick[winIdx].seat : -1;
+      const winCard = winIdx >= 0 ? trick[winIdx].card : null;
+      const partnerSeat = view.partnerSeat != null ? view.partnerSeat : -1;
+      const partnerWinning = winSeat >= 0 && winSeat === partnerSeat;
+      const partnerNil = partnerSeat >= 0 && view.bids && view.bids[partnerSeat] === 0;
+      if(view.bids && view.bids[view.mySeat] === 0){
+        // I am the Nil bidder: never take a trick I can avoid.
+        if(leading) return spadesLowest(legal);
+        const unders = legal.filter(c=> !spadesBeats(c, winCard, view.ledSuit));
+        if(unders.length) return spadesHighest(unders);   // shed the biggest card that still loses
+        return spadesLowest(legal);                        // forced to win — do it as cheaply as possible
+      }
+      if(leading){
+        // low from my longest legal suit (gentle when partner is Nil — same card, same reason)
+        const bySuit = {};
+        legal.forEach(c=>{ (bySuit[c.s] = bySuit[c.s] || []).push(c); });
+        let bestSuit = legal[0].s, bestLen = -1;
+        for(const s in bySuit) if(bySuit[s].length > bestLen){ bestLen = bySuit[s].length; bestSuit = +s; }
+        return spadesLowest(bySuit[bestSuit]);
+      }
+      if(partnerWinning){
+        if(partnerNil){
+          const beaters = legal.filter(c=> spadesBeats(c, winCard, view.ledSuit));
+          if(beaters.length) return spadesLowest(beaters);   // rescue the Nil: take the trick off partner
+          return spadesLowest(legal);
+        }
+        return spadesLowest(legal);   // partner has it — shed low, never overtake your own side
+      }
+      const beaters = legal.filter(c=> spadesBeats(c, winCard, view.ledSuit));
+      if(beaters.length) return spadesLowest(beaters);       // win it as cheaply as possible
+      const nonSpade = legal.filter(c=> c.s !== 0);
+      return spadesLowest(nonSpade.length ? nonSpade : legal);   // beaten — dump low, save the trump
+    }
+    /* Scoring — THE rulebook for both engines. seatData: [{ name, bid,
+       tricks }] in seat order (bid 0 = Nil). scores/bags come in per
+       scoring UNIT (teams: unit u = seats u and u+2; cutthroat: one
+       unit per seat) and go back out updated.
+       Per unit: contract = sum of the NON-Nil bids. Tricks that count
+       toward the contract = the unit's tricks MINUS any Nil bidder's
+       tricks. Made (counted >= contract): +10 × contract, plus every
+       trick over the contract — including the Nil player's tricks —
+       as bags (1 pt each, tracked toward the 10-bag −100). Set:
+       −10 × contract. A Nil scores on its own: +100 for zero tricks,
+       −100 for any trick, added to the unit. A unit whose members ALL
+       bid Nil has no contract at all — no make/set, no bags, just the
+       two Nils. Bags: every full 10 costs −100, applied as they land. */
+    function spadesUnitsFor(seatData, variant){
+      if(variant === "cut") return seatData.map((s, i)=> ({ name: s.name, seats: [i] }));
+      return [ { name: seatData[0].name + " & " + seatData[2].name, seats: [0, 2] },
+               { name: seatData[1].name + " & " + seatData[3].name, seats: [1, 3] } ];
+    }
+    function spadesScoreHand(seatData, variant, scoresIn, bagsIn){
+      const units = spadesUnitsFor(seatData, variant);
+      const target = spadesTargetFor(variant);
+      const scores = (scoresIn || []).slice(), bags = (bagsIn || []).slice();
+      while(scores.length < units.length){ scores.push(0); bags.push(0); }
+      const results = units.map((u, ui)=>{
+        const members = u.seats.map(i=> seatData[i]);
+        const nils = members.filter(m=> m.bid === 0);
+        const nonNil = members.filter(m=> m.bid > 0);
+        const totalTricks = members.reduce((a, m)=> a + m.tricks, 0);
+        const lines = [];
+        const logs = [];
+        let pts = 0, bagsAdded = 0;
+        if(nonNil.length === 0){
+          lines.push(members.length > 1
+            ? `${u.name} — both partners bid Nil, so there's no contract to make or miss.`
+            : `${u.name} — a Nil bid, so there's no contract to make or miss.`);
+        } else {
+          const contract = nonNil.reduce((a, m)=> a + m.bid, 0);
+          const nilTricks = nils.reduce((a, m)=> a + m.tricks, 0);
+          const counted = totalTricks - nilTricks;
+          const bidTxt = members.map(m=> m.bid === 0 ? "Nil" : m.bid).join(" + ");
+          if(counted >= contract){
+            const over = totalTricks - contract;
+            pts += 10 * contract + over; bagsAdded = over;
+            lines.push(`${u.name} — bid ${bidTxt} = ${contract}, took ${totalTricks}: <b>+${10 * contract + over}</b> (${10 * contract} for the bid${over ? `, ${over} bag${over === 1 ? "" : "s"}` : ""}).`);
+          } else {
+            pts -= 10 * contract;
+            lines.push(`${u.name} — bid ${bidTxt} = ${contract}, took ${counted} that count${nilTricks ? " (the Nil player's tricks don't)" : ""}: <b>SET −${10 * contract}</b>.`);
+            logs.push(`<b>${u.name}</b> were <b>set</b> — bid ${contract}, took ${counted}: −${10 * contract}.`);
+          }
+        }
+        nils.forEach(m=>{
+          if(m.tricks === 0){ pts += 100; lines.push(`Nil — ${m.name} took no tricks at all: <b>+100</b>.`); logs.push(`<b>${m.name}</b> made their <b>Nil</b> — +100.`); }
+          else { pts -= 100; lines.push(`Nil — ${m.name} took ${m.tricks} trick${m.tricks === 1 ? "" : "s"}: <b>−100</b> (busted).`); logs.push(`<b>${m.name}</b>'s Nil is <b>busted</b> — they took ${m.tricks} trick${m.tricks === 1 ? "" : "s"}: −100.`); }
+        });
+        scores[ui] += pts;
+        bags[ui] += bagsAdded;
+        let penalty = 0;
+        while(bags[ui] >= 10){ bags[ui] -= 10; scores[ui] -= 100; penalty += 100; }
+        if(penalty){ lines.push(`Bag penalty — ${u.name}: the bag count hit 10, <b>−${penalty}</b>.`); logs.push(`<b>${u.name}</b> hit 10 bags — <b>−${penalty}</b> penalty.`); }
+        return { name: u.name, seats: u.seats, pts, bagsAdded, penalty, lines, logs, totalTricks };
+      });
+      let handWin = -1, best = 0;
+      results.forEach((r, i)=>{ if(r.pts > best){ best = r.pts; handWin = i; } });
+      let matchWin = [];
+      if(scores.some(s=> s >= target)){
+        const top = Math.max(...scores.filter(s=> s >= target));
+        matchWin = scores.map((s, i)=> (s >= target && s === top) ? i : -1).filter(i=> i >= 0);
+      }
+      return { units, results, scores, bags, handWin, matchWin, target, logLines: results.flatMap(r=> r.logs) };
+    }
+    /* Bid coach: counts the hand out loud — the same count the AI
+       bids — and flags an honest Nil when the hand is truly weak. */
+    function spadesBidCoachHTML(hand, variant){
+      const read = spadesBidRead(hand, variant);
+      const bits = [];
+      if(read.aces) bits.push(`<b>${read.aces} ace${read.aces > 1 ? "s" : ""}</b> (sure tricks)`);
+      if(read.protKings) bits.push(`<b>${read.protKings} protected king${read.protKings > 1 ? "s" : ""}</b> (a king with company usually takes one)`);
+      if(read.queens) bits.push(`a guarded queen that might sneak one`);
+      if(read.spades >= 4) bits.push(`<b>${read.spades} spades</b> — trump length is worth extra tricks`);
+      else if(read.spades > 0) bits.push(`${read.spades} spade${read.spades > 1 ? "s" : ""}`);
+      const parts = [];
+      parts.push(`Count your sure tricks out loud: ${bits.length ? bits.join("; ") : "no aces, no protected kings — very little that's sure"}. That counts to about <b>${read.bid}</b> — the coach's bid is <b>${read.bid}</b>. Bid what you count: overtricks are worth 1 (and pile up as bags), but a set costs 10 a trick.`);
+      if(read.nilWorthy) parts.push(`And honestly — no aces, no protected kings, short spades: this is one of the rare hands where <b>Nil</b> (+100 if you take absolutely nothing) is a real play. One stray high card in the wrong suit is all it takes to bust it, so only call it if you can shed everything.`);
+      if(variant !== "cut") parts.push(`Your partner's bid adds to yours — the team has to make the <b>combined</b> number.`);
+      return parts.join(" ");
+    }
+    /* Play coach. view: { hand, legalKeys (Set of card keys), ledSuit,
+       spadesBroken, leading, trick: [{name, card}], myBid, partnerName,
+       partnerBid, partnerCardWinning }. Names must arrive display-safe
+       (the MP caller escapes them; solo names are table constants). */
+    function spadesPlayCoachHTML(view){
+      const parts = [];
+      const suitWord = (s)=> ["spades", "hearts", "diamonds", "clubs"][s];
+      const cap1 = (s)=> s.charAt(0).toUpperCase() + s.slice(1);
+      if(view.leading){
+        parts.push(view.spadesBroken
+          ? "You lead this trick — spades are broken, so anything in your hand can go."
+          : "You lead this trick. Spades aren't broken yet, so you can't lead one — unless spades are all you have left.");
+        if(view.partnerBid === 0 && view.partnerName) parts.push(`Your partner <b>${view.partnerName}</b> is on <b>Nil</b> — lead low and gentle, nothing that drags them into winning a trick.`);
+        if(view.myBid === 0) parts.push("You're on <b>Nil</b> — lead your lowest card and stay out of the way.");
+        return parts.join(" ");
+      }
+      const led = view.ledSuit;
+      const iHoldLed = view.hand.some(c=> c.s === led);
+      if(iHoldLed && view.legalKeys.size < view.hand.length) parts.push(`<b>${cap1(suitWord(led))} were led</b> — you must follow suit if you can. The dimmed cards are illegal this trick.`);
+      else if(!iHoldLed) parts.push(`You're out of ${suitWord(led)} — anything goes now, including a spade to steal the trick.`);
+      if(view.myBid === 0){
+        parts.push(`You're on <b>Nil</b>: one trick busts it. Stay under the winning card whenever you can — and when you're void in the led suit, shed your biggest side card while it still can't win.`);
+      } else if(view.partnerCardWinning){
+        if(view.partnerBid === 0) parts.push(`<b>Careful — ${view.partnerName}'s card is winning this trick, and they're on Nil.</b> If you can overtake it, do it — a Nil dies one trick at a time.`);
+        else parts.push(`<b>${view.partnerName} is winning this trick</b> — play low and let your partner have it. Don't spend a winner overtaking your own side.`);
+      } else if(view.trick && view.trick.length){
+        const w = view.trick[spadesTrickWinner(view.trick)];
+        const canBeat = view.hand.some(c=> view.legalKeys.has(spadesCardKey(c)) && spadesBeats(c, w.card, led));
+        parts.push(canBeat
+          ? `${w.name}'s <b>${spadesCardName(w.card)}</b> is winning — you hold a card that beats it, if you want the trick.`
+          : `${w.name}'s <b>${spadesCardName(w.card)}</b> is winning and you can't beat it — dump your lowest and save your strength for a trick you can take.`);
+      }
+      return parts.join(" ");
+    }
+    /* Trick display for the table center: one labeled slot per seat,
+       in seat order, with the card played this trick (or an empty
+       slot). Names must arrive display-safe (see coach note above). */
+    function spadesTrickHTML(slots){
+      if(!slots || !slots.length) return "";
+      return `<span class="blbl">Trick</span>` + slots.map(s=> `<span class="trickslot">${s.card ? cardHTML(s.card, {}) : `<span class="card trickempty"></span>`}<span class="tsname">${s.name}</span></span>`).join("");
+    }
+    /* The hand-end breakdown panel under the felt (solo fills it
+       directly; MP carries the lines in the snapshot). */
+    function paintScorePanel(lines){
+      const el = $("score-panel"); if(!el) return;
+      if(lines && lines.length){ el.innerHTML = lines.map(l=> `<div>${l}</div>`).join(""); el.style.display = ""; }
+      else { el.innerHTML = ""; el.style.display = "none"; }
     }
 
     /* No-wilds draw strategy (classic): keep made hands, draw to the pair. */
@@ -2379,6 +2694,242 @@ function endStudHand(){
   wireBtn("btn-rebuy", ()=>{ byId("you").stack=1000; log("<b>You</b> topped up to 1,000."); resetStudTable(); });
 }
 
+/* ================= SPADES (solo) =================
+   Points, not chips: seats show match score, the pot box stays dark,
+   and there's no top-up. SP holds the match (scores/bags/dealer run
+   across hands until a match ends; the next deal then resets them).
+   All rules — legality, trick winner, AI, scoring — come from the
+   shared Spades core in the first script block. */
+let SP = null;   // spades state (solo)
+function spadesSoloPlayers(){ return spadesVariant === "cut" ? players.filter(p=> p.id !== "thomas") : players.slice(); }
+function spadesSoloUnit(seatIdx){ return SP.variant === "teams" ? seatIdx % 2 : seatIdx; }
+function spadesStatusLine(st, phase){
+  if(phase === "bid" && st.bid == null) return "Bidding…";
+  if(st.bid == null) return "";
+  return (st.bid === 0 ? "Bid Nil" : "Bid " + st.bid) + " · Tricks " + st.tricks;
+}
+function spadesScoreLineSolo(){
+  if(!SP || !SP.state) return "";
+  const units = spadesUnitsFor(SP.state.map(s=> ({ name: s.p.name })), SP.variant);
+  return units.map((u, i)=> `${u.name} ${SP.scores[i]}`).join(" · ") + ` — first to ${spadesTargetFor(SP.variant)}`;
+}
+function paintSpadesSoloPlates(){
+  if(!SP) return;
+  const ps = spadesSoloPlayers();
+  ps.forEach((p, i)=>{
+    const el = document.querySelector("#seat-" + p.id + " .stk");
+    if(el) el.textContent = "Score " + SP.scores[spadesSoloUnit(i)];
+  });
+  const youIdx = ps.findIndex(p=> p.id === "you");
+  if(youIdx >= 0) $("bank-amt").textContent = fmt(SP.scores[spadesSoloUnit(youIdx)]);
+}
+function resetSpadesTable(){
+  hideTurnTimer(); paintWinBanner(null); resetSoloStats(); paintScorePanel(null);
+  const teams = spadesVariant === "teams";
+  SP = { variant: spadesVariant, phase: "idle", dealer: -1, scores: teams ? [0, 0] : [0, 0, 0], bags: teams ? [0, 0] : [0, 0, 0], matchOver: false, state: null, trick: [], spadesBroken: false, playUI: null, leader: 0 };
+  const ps = spadesSoloPlayers();
+  seatsEl.innerHTML = ps.map(p=> seatShell(p, { button: false })).join("");
+  ps.forEach(p=>{ setStatus(p.id, ""); setBetBadge(p.id, 0); const c = $("cards-" + p.id); if(c) c.innerHTML = ""; });
+  setPot(0); paintBoard([]); refreshPlates(); paintSpadesSoloPlates();
+  setTurn(null, teams ? "Spades — 4P Teams: partners across, bid your tricks together, first to 500." : "Spades — 3P Cutthroat: everyone for themselves, first to 300.");
+  setControls(`<button class="btn primary" id="btn-deal">Deal a hand — ${teams ? "4P Teams" : "3P Cutthroat"}</button>`);
+  wireBtn("btn-deal", startSpadesHand);
+  setCenter("Spades — " + (teams ? "4P Teams" : "3P Cutthroat"), teams ? "Partners across · 13 cards each · bid your tricks · spades are trump · first to 500." : "Everyone for themselves · 17 cards each (the 2♣ sits out) · spades are trump · first to 300.");
+  if(mode === "apprentice" && tipsOn) setTip("Spades in one breath: <b>bid</b> how many tricks you'll take, then play them out — <b>follow suit</b> if you can, and remember <b>spades are trump</b> but can't be led until they're broken. Make your number for <b>10 points a trick</b> plus a point a bag; miss it and you're set. And <b>Nil</b> — promising to take nothing at all — is worth ±100. I'll count your hand with you.");
+}
+function paintSpadesTrickSolo(){
+  const b = $("board"); if(!b || !SP || !SP.state) return;
+  const slots = SP.state.map((st, i)=>{
+    const t = SP.trick.find(x=> x.idx === i);
+    return { name: st.p.name, card: t ? t.card : null };
+  });
+  b.innerHTML = spadesTrickHTML(slots);
+}
+function renderSpadesHands(){
+  if(!SP || !SP.state) return;
+  for(const st of SP.state){
+    const el = $("cards-" + st.p.id); if(!el) continue;
+    el.classList.add("spades-cards");
+    if(st.p.id === "you"){
+      const ui = SP.playUI;
+      el.innerHTML = spadesSortHand(st.hand).map(c=>{
+        const key = spadesCardKey(c);
+        if(ui) return cardHTML(c, { cls: ui.legal.has(key) ? "legal" : "dim", attrs: ui.legal.has(key) ? `data-spplay="${key}"` : "" });
+        return cardHTML(c, {});
+      }).join("");
+      if(ui) el.querySelectorAll("[data-spplay]").forEach(cardEl=> bindTap(cardEl, ()=>{
+        if(!SP || !SP.playUI) return;
+        const card = st.hand.find(c=> spadesCardKey(c) === cardEl.dataset.spplay);
+        if(card) SP.playUI.pick(card);
+      }));
+    } else {
+      el.classList.add("fan");
+      el.innerHTML = st.hand.map(()=> cardHTML(null, { back: true })).join("");
+    }
+    setStatus(st.p.id, spadesStatusLine(st, SP.phase));
+  }
+  paintSpadesTrickSolo();
+  paintSpadesSoloPlates();
+}
+function humanSpadesBid(seq, st){
+  return new Promise(res=>{
+    const maxBid = spadesMaxBidFor(SP.variant);
+    const defBid = spadesBidRead(st.hand, SP.variant).bid;
+    if(mode === "apprentice" && tipsOn) setTip(spadesBidCoachHTML(st.hand, SP.variant));
+    let html = `<span class="betpick spbids"><button class="bp nil" data-spbid="0">Nil</button>`;
+    for(let b = 1; b <= maxBid; b++) html += `<button class="bp" data-spbid="${b}">${b}</button>`;
+    html += `</span><span class="ctl-note">Your bid — how many tricks will you take? <b>Nil</b> means none at all, for ±100.</span>`;
+    setControls(html);
+    let settled = false;
+    const done = (v)=>{ if(settled) return; settled = true; clearTimeout(tmo); hideTurnTimer(); setControls(""); res(v); };
+    showTurnTimer(SPADES_MS, "Your bid");
+    const tmo = setTimeout(()=>{
+      if(seq === handSeq){ showNotice("Time ran out — the table bid your counted tricks for you."); log("<b>You</b> ran out of time — bid " + defBid + " (your counted tricks)."); }
+      done(defBid);
+    }, SPADES_MS);
+    document.querySelectorAll("[data-spbid]").forEach(b=> b.addEventListener("click", ()=>{ clickSound(600); done(+b.dataset.spbid); }));
+  });
+}
+function humanSpadesPlay(seq, st, ledSuit){
+  return new Promise(res=>{
+    const leading = ledSuit == null;
+    const legal = spadesLegalCards(st.hand, ledSuit, SP.spadesBroken, leading);
+    const legalKeys = new Set(legal.map(spadesCardKey));
+    if(mode === "apprentice" && tipsOn){
+      const n = SP.state.length;
+      const partnerIdx = SP.variant === "teams" ? 2 % n : -1;   // you always sit at seat 0 solo
+      let partnerCardWinning = false, partnerBid = null, partnerName = null;
+      if(partnerIdx >= 0){
+        partnerBid = SP.state[partnerIdx].bid; partnerName = SP.state[partnerIdx].p.name;
+        if(SP.trick.length){ const w = spadesTrickWinner(SP.trick.map(x=> ({ seat: x.idx, card: x.card }))); partnerCardWinning = SP.trick[w].idx === partnerIdx; }
+      }
+      setTip(spadesPlayCoachHTML({ hand: st.hand, legalKeys, ledSuit, spadesBroken: SP.spadesBroken, leading,
+        trick: SP.trick.map(x=> ({ name: SP.state[x.idx].p.name, card: x.card })),
+        myBid: st.bid, partnerName, partnerBid, partnerCardWinning }));
+    }
+    setControls(`<span class="ctl-note">${leading ? "Your lead" : "Your play"} — tap a card to play it. Dimmed cards can't be played this trick.</span>`);
+    let settled = false;
+    const done = (card)=>{ if(settled) return; settled = true; clearTimeout(tmo); hideTurnTimer(); SP.playUI = null; setControls(""); res(card); };
+    SP.playUI = { legal: legalKeys, pick: (card)=> done(card) };
+    renderSpadesHands();
+    showTurnTimer(SPADES_MS, "Your play");
+    const tmo = setTimeout(()=>{
+      if(seq === handSeq) showNotice("Time ran out — your lowest legal card was played.");
+      done(spadesLowest(legal));
+    }, SPADES_MS);
+  });
+}
+async function startSpadesHand(){
+  const seq = ++handSeq;
+  paintWinBanner(null); paintScorePanel(null); paintBoard([]);
+  setControls("");
+  const ps = spadesSoloPlayers();
+  const n = ps.length;
+  if(SP.matchOver){ SP.scores = SP.scores.map(()=> 0); SP.bags = SP.bags.map(()=> 0); SP.matchOver = false; log("New match — scores reset to zero."); }
+  SP.dealer = (SP.dealer + 1) % n;
+  const deck = buildSpadesDeck(SP.variant);
+  SP.state = ps.map(p=> ({ p, hand: [], bid: null, tricks: 0 }));
+  const size = spadesHandSizeFor(SP.variant);
+  for(let k = 0; k < size; k++) for(const st of SP.state) st.hand.push(deck.pop());
+  SP.trick = []; SP.spadesBroken = false; SP.phase = "bid";
+  seatsEl.innerHTML = ps.map((p, i)=> seatShell(p, { button: i === SP.dealer })).join("");
+  ps.forEach(p=>{ setStatus(p.id, ""); setBetBadge(p.id, 0); });
+  renderSpadesHands();
+  clickSound(440);
+  log(`Spades dealt — ${size} cards each. <b>${ps[SP.dealer].name}</b> dealt; bidding starts on their left.`);
+  setCenter("Spades — bidding", spadesScoreLineSolo());
+  for(let k = 1; k <= n; k++){
+    if(seq !== handSeq || !SP) return;
+    const st = SP.state[(SP.dealer + k) % n];
+    setTurn(st.p, "Bidding.");
+    if(st.p.id === "you") st.bid = await humanSpadesBid(seq, st);
+    else { hideTurnTimer(); await sleep(600 + Math.random() * 500); if(seq !== handSeq || !SP) return; st.bid = spadesAIBid(st.hand, SP.variant); }
+    if(seq !== handSeq || !SP) return;
+    log(st.bid === 0 ? `<b>${st.p.name}</b> bids <b>Nil</b>.` : `<b>${st.p.name}</b> bids ${st.bid}.`);
+    renderSpadesHands();
+  }
+  SP.phase = "play";
+  let leader = (SP.dealer + 1) % n;
+  for(let t = 0; t < size; t++){
+    if(seq !== handSeq || !SP) return;
+    SP.trick = []; SP.leader = leader;
+    renderSpadesHands();
+    for(let k = 0; k < n; k++){
+      if(seq !== handSeq || !SP) return;
+      const idx = (leader + k) % n;
+      const st = SP.state[idx];
+      const ledSuit = SP.trick.length ? SP.trick[0].card.s : null;
+      setTurn(st.p, `Trick ${t + 1} of ${size}.`);
+      setCenter(`Trick ${t + 1} of ${size}`, spadesScoreLineSolo() + (SP.spadesBroken ? " · spades are broken" : ""));
+      let card;
+      if(st.p.id === "you") card = await humanSpadesPlay(seq, st, ledSuit);
+      else {
+        hideTurnTimer();
+        await sleep(650 + Math.random() * 550);
+        if(seq !== handSeq || !SP) return;
+        card = spadesAIPlay({ hand: st.hand, ledSuit, trick: SP.trick.map(x=> ({ seat: x.idx, card: x.card })), mySeat: idx,
+          partnerSeat: SP.variant === "teams" ? (idx + 2) % n : -1, bids: SP.state.map(s=> s.bid), spadesBroken: SP.spadesBroken });
+      }
+      if(seq !== handSeq || !SP) return;
+      st.hand.splice(st.hand.findIndex(c=> spadesCardKey(c) === spadesCardKey(card)), 1);
+      SP.trick.push({ idx, card });
+      if(card.s === 0 && !SP.spadesBroken){ SP.spadesBroken = true; log("Spades are <b>broken</b>."); }
+      renderSpadesHands();
+    }
+    const winPos = spadesTrickWinner(SP.trick.map(x=> ({ seat: x.idx, card: x.card })));
+    const winIdx = SP.trick[winPos].idx;
+    SP.state[winIdx].tricks++;
+    leader = winIdx;
+    setCenter(`${SP.state[winIdx].p.name} takes trick ${t + 1}`, spadesScoreLineSolo());
+    renderSpadesHands();
+    await sleep(950);
+    if(seq !== handSeq || !SP) return;
+    SP.trick = [];
+    renderSpadesHands();
+  }
+  finishSpadesHandSolo(seq);
+}
+function finishSpadesHandSolo(seq){
+  if(seq !== handSeq || !SP) return;
+  SP.phase = "done";
+  const seatData = SP.state.map(s=> ({ name: s.p.name, bid: s.bid, tricks: s.tricks }));
+  const out = spadesScoreHand(seatData, SP.variant, SP.scores, SP.bags);
+  SP.scores = out.scores; SP.bags = out.bags;
+  if(out.handWin >= 0){
+    const pts = out.results[out.handWin].pts;
+    out.units[out.handWin].seats.forEach(i=>{ const p = SP.state[i].p; p.handsWon = (p.handsWon || 0) + 1; p.chipsWon = (p.chipsWon || 0) + Math.max(0, pts); });
+  }
+  const lines = [`<span class="sp-title">Hand over — the count:</span>`];
+  out.results.forEach(r=> r.lines.forEach(l=> lines.push(l)));
+  lines.push(`Match: ${out.units.map((u, i)=> `${u.name} <b>${SP.scores[i]}</b> (bags ${SP.bags[i]})`).join(" · ")} — first to ${out.target}.`);
+  const winFirst = (wi)=> [wi, ...out.units.map((_, i)=> i).filter(i=> i !== wi)];
+  let banner;
+  if(out.matchWin.length){
+    SP.matchOver = true;
+    const names = out.matchWin.map(i=> out.units[i].name).join(" & ");
+    banner = `${names} won the match ${winFirst(out.matchWin[0]).map(i=> SP.scores[i]).join("–")}`;
+    lines.push(`<b>${names} win the match!</b> Deal again to start a fresh one.`);
+  } else if(out.handWin >= 0){
+    banner = `${out.units[out.handWin].name} won the hand +${out.results[out.handWin].pts} · ${winFirst(out.handWin).map(i=> SP.scores[i]).join("–")}`;
+  } else {
+    banner = `Hand over · ${out.units.map((u, i)=> `${u.name} ${SP.scores[i]}`).join(" · ")}`;
+  }
+  paintScorePanel(lines);
+  paintWinBanner(banner);
+  out.logLines.forEach(l=> log(l));
+  log(`<b>${banner}</b>`, true);
+  setCenter(out.matchWin.length ? "Match over" : "Hand over", spadesScoreLineSolo());
+  setTurn(null, out.matchWin.length ? "Match over." : "Hand over — deal the next when you're ready.");
+  renderSpadesHands();
+  endSpadesHand();
+}
+function endSpadesHand(){
+  hideTurnTimer();
+  if(SP) SP.phase = "done";
+  setControls(`<button class="btn primary" id="btn-deal">${SP && SP.matchOver ? "Deal — new match" : "Deal the next hand"}</button>`);
+  wireBtn("btn-deal", startSpadesHand);
+}
+
 /* ================= BLACKJACK ================= */
 const BJ_SEATS = ["don","you","layton"];
 let bjShoe = [];
@@ -2610,15 +3161,47 @@ function paintGameSegs(){
   $("seg-omaha").classList.toggle("on", game==="omaha");
   $("seg-stud").classList.toggle("on", game==="stud");
   $("seg-bj").classList.toggle("on", game==="bj");
+  $("seg-spades").classList.toggle("on", game==="spades");
+  const vseg = $("spades-variant-seg");
+  if(vseg) vseg.style.display = game === "spades" ? "" : "none";
+  paintSpadesVariantSegs();
+}
+function paintSpadesVariantSegs(){
+  const t = $("seg-sp-teams"), c = $("seg-sp-cut");
+  if(t) t.classList.toggle("on", spadesVariant === "teams");
+  if(c) c.classList.toggle("on", spadesVariant === "cut");
+}
+/* The Spades variant toggle: solo it just resets the table; in a live
+   room the HOST picks (guests follow the snapshot, like the game
+   itself) and it can only change between hands. */
+function setSpadesVariant(v){
+  if(v !== "teams" && v !== "cut") return;
+  if(typeof mp !== "undefined" && mp.role === "guest"){
+    log("The <b>host</b> picks the Spades variant in a live room — your table follows theirs.");
+    paintSpadesVariantSegs();
+    return;
+  }
+  if(typeof mp !== "undefined" && mp.role === "host"){
+    if(mp.phase !== "lobby" && mp.phase !== "done"){ log("Finish this hand first — the Spades variant switches between hands."); return; }
+    if(spadesVariant === v) return;
+    spadesVariant = v; paintSpadesVariantSegs();
+    if(game === "spades"){ mpResetTableMP(); log("Live room Spades variant: <b>" + (v === "teams" ? "4P Teams" : "3P Cutthroat") + "</b>."); }
+    return;
+  }
+  if(spadesVariant === v) return;
+  spadesVariant = v; paintSpadesVariantSegs();
+  if(game === "spades"){ handSeq++; resetSpadesTable(); }
+  log("Spades variant: <b>" + (v === "teams" ? "4P Teams" : "3P Cutthroat") + "</b>.");
 }
 function setGame(g){
   game = g; handSeq++;
   paintGameSegs();
-  if(isDrawGame(g)){ B=null; H=null; O=null; ST=null; resetDrawTable(); }
-  else if(g==="holdem"){ D=null; B=null; O=null; ST=null; resetHoldemTable(); }
-  else if(g==="omaha"){ D=null; B=null; H=null; ST=null; resetOmahaTable(); }
-  else if(g==="stud"){ D=null; B=null; H=null; O=null; resetStudTable(); }
-  else { D=null; H=null; O=null; ST=null; resetBJTable(); }
+  if(isDrawGame(g)){ B=null; H=null; O=null; ST=null; SP=null; resetDrawTable(); }
+  else if(g==="holdem"){ D=null; B=null; O=null; ST=null; SP=null; resetHoldemTable(); }
+  else if(g==="omaha"){ D=null; B=null; H=null; ST=null; SP=null; resetOmahaTable(); }
+  else if(g==="stud"){ D=null; B=null; H=null; O=null; SP=null; resetStudTable(); }
+  else if(g==="spades"){ D=null; B=null; H=null; O=null; ST=null; resetSpadesTable(); }
+  else { D=null; H=null; O=null; ST=null; SP=null; resetBJTable(); }
   log("Switched the table to <b>" + GAME_NAMES[g] + "</b>.");
 }function setMode(m){
   mode = m;
@@ -2636,6 +3219,9 @@ $("seg-holdem").addEventListener("click", ()=>{ clickSound(500); setGame("holdem
 $("seg-omaha").addEventListener("click", ()=>{ clickSound(500); setGame("omaha"); });
 $("seg-stud").addEventListener("click", ()=>{ clickSound(500); setGame("stud"); });
 $("seg-bj").addEventListener("click", ()=>{ clickSound(500); setGame("bj"); });
+$("seg-spades").addEventListener("click", ()=>{ clickSound(500); setGame("spades"); });
+$("seg-sp-teams").addEventListener("click", ()=>{ clickSound(500); setSpadesVariant("teams"); });
+$("seg-sp-cut").addEventListener("click", ()=>{ clickSound(500); setSpadesVariant("cut"); });
 $("seg-appr").addEventListener("click", ()=>{ clickSound(500); setMode("apprentice"); });
 $("seg-exp").addEventListener("click", ()=>{ clickSound(500); setMode("expert"); });
 $("tips-toggle").addEventListener("change", (e)=>{
@@ -2727,6 +3313,7 @@ const mp = {
   snap: null,              // guest: last snapshot received
   guestPrompt: null,       // guest: current promptId awaiting answer
   drawUI: null,            // open draw prompt's selection state {sel, cap, sugg, cards} — lives outside the card DOM so snapshot re-renders can't kill it
+  spadesUI: null,          // open spades-play prompt's state {legal:Set of card keys, cards, respond} — same outside-the-DOM pattern as drawUI
   invites: new Map(),      // host: inviteId -> {id, name, seatPid}
   pendingInvite: null, pendingRejoin: null,   // guest: tokens from the link they opened
   urlRoom: null, urlInvite: null, urlRejoin: null,   // parsed from the invite link at load
@@ -2860,6 +3447,7 @@ let MB = null;             // host blackjack hand state
 let MH = null;             // host hold'em hand state
 let MO = null;             // host omaha hand state
 let MS = null;             // host stud hand state
+let MSP = null;            // host spades state (match scores/bags/dealer persist across hands)
 const AI_DEFS = [
   { name:"Don",    themeText:"crimson with gold trim and diamonds" },
   { name:"Thomas", themeText:"orange sunset stripes with black trim" },
@@ -3166,10 +3754,10 @@ function mpRoomEnded(msg){
   setGame(game);
 }
 function mpRenderRoomList(list){
-  const rows = list || mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0 }));
+  const rows = list || mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0 }));
   const houseDealing = mpDisplayHostMode() === "deal";
   $("net-roomlist").innerHTML = rows.map(s=>
-    `<li>${chipSVG(mpSanTheme(s.theme), 24, mpEsc(s.short || ""))}<span><b>${mpEsc(s.name)}</b></span><span class="tag${s.away ? " awaytag" : ""}">${s.away ? "AWAY — SEAT HELD" : s.kind === "host" ? (houseDealing ? "THE HOUSE · DEALER" : "HOST · DEALER") : s.kind === "ai" ? "AI FILL" : "PLAYER"}</span>${s.ready && !s.away && s.kind === "guest" ? `<span class="tag" style="background:#2e9e5b;color:#fff">READY</span>` : ""}${(s.handsWon || s.chipsWon) ? `<span class="tag">Hands ${s.handsWon || 0} · Won ${fmt(s.chipsWon || 0)}</span>` : ""}${mp.role === "host" && s.away && s.pid && s.kind !== "host" ? `<button class="rmseat" type="button" data-remove-seat="${mpEsc(s.pid)}">Free seat</button>` : ""}</li>`).join("");
+    `<li>${chipSVG(mpSanTheme(s.theme), 24, mpEsc(s.short || ""))}<span><b>${mpEsc(s.name)}</b></span><span class="tag${s.away ? " awaytag" : ""}">${s.away ? "AWAY — SEAT HELD" : s.kind === "host" ? (houseDealing ? "THE HOUSE · DEALER" : "HOST · DEALER") : s.kind === "ai" ? "AI FILL" : "PLAYER"}</span>${s.ready && !s.away && s.kind === "guest" ? `<span class="tag" style="background:#2e9e5b;color:#fff">READY</span>` : ""}${game === "spades" ? ((s.handsWon || s.spadesScore) ? `<span class="tag">Hands ${s.handsWon || 0} · Score ${fmt(s.spadesScore || 0)}</span>` : "") : ((s.handsWon || s.chipsWon) ? `<span class="tag">Hands ${s.handsWon || 0} · Won ${fmt(s.chipsWon || 0)}</span>` : "")}${mp.role === "host" && s.away && s.pid && s.kind !== "host" ? `<button class="rmseat" type="button" data-remove-seat="${mpEsc(s.pid)}">Free seat</button>` : ""}</li>`).join("");
   document.querySelectorAll("[data-remove-seat]").forEach(b=> b.addEventListener("click", ()=> mpFreeSeat(b.dataset.removeSeat)));
 }
 function mpFreeSeat(pid){
@@ -3315,6 +3903,7 @@ function mpSeatsForHand(){
   if(game === "holdem" && MH) return MH.state.map(s=>s.seat);
   if(game === "omaha" && MO) return MO.state.map(s=>s.seat);
   if(game === "stud" && MS) return MS.state.map(s=>s.seat);
+  if(game === "spades" && MSP) return MSP.state.map(s=>s.seat);
   if(game === "bj" && MB) return MB.order.map(pid=> MB.seats[pid].seat);
   // no hand on the table: in deal-only mode the host is the House, not a seat
   const disp = (mp.phase === "lobby" || mp.phase === "done") ? mp.hostMode : mp.activeHostMode;
@@ -3368,6 +3957,19 @@ function mpBuildSnap(forPid){
         else if(MS.reveal && !st.folded) base.cards = st.hand;              // showdown reveal
       }
     }
+    if(game === "spades" && MSP){
+      const st = MSP.state.find(s=>s.seat.pid === seat.pid);
+      if(st){
+        /* Spades privacy: a hand is visible ONLY to its owner —
+           partners included in the hiding. Everyone else gets a
+           count; bid/tricks/score are public table information. */
+        const unit = spadesUnitOf(MSP.variant, MSP.state.indexOf(st));
+        base.bid = st.bid; base.tricks = st.tricks; base.score = MSP.scores[unit];
+        base.status = st.bid == null ? (mp.phase === "bid" ? "Bidding…" : "") : spadesStatusLine(st, mp.phase);
+        base.cardCount = st.hand.length;
+        if(seat.pid === forPid) base.cards = st.hand.slice();
+      }
+    }
     if(game === "bj" && MB){
       const st = MB.seats[seat.pid];
       if(st){
@@ -3398,9 +4000,28 @@ function mpBuildSnap(forPid){
     dealer: (game === "bj" && MB) ? { cards: MB.dealer.map((c, i)=> (i === 1 && !MB.reveal) ? null : c), reveal: MB.reveal,
              shown: MB.dealer.length ? (MB.dealer[0].r === 14 ? 11 : MB.dealer[0].r > 10 ? 10 : MB.dealer[0].r) : null,
              total: MB.reveal && MB.dealer.length ? bjValue(MB.dealer) : null } : null,
-    room: mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: !!s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0 })),
+    room: mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: !!s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0 })),
     lastLog: mp._lastLog || null,
     iAmSeated: seats.some(s=>s.pid === forPid),
+    spadesVariant,
+    spades: (()=> {
+      if(game !== "spades") return null;
+      const variant = MSP ? MSP.variant : spadesVariant;
+      const nUnits = variant === "teams" ? 2 : 3;
+      const scores = MSP ? MSP.scores.slice() : Array.from({ length: nUnits }, ()=> 0);
+      const bags = MSP ? MSP.bags.slice() : Array.from({ length: nUnits }, ()=> 0);
+      const unitNames = MSP ? spadesUnitsFor(MSP.state.map(s=> ({ name: s.seat.name })), variant).map(u=> u.name)
+                            : (variant === "teams" ? ["Team 1", "Team 2"] : snapSeats.map(s=> s.name));
+      // the local match score of the VIEWER's unit (roster fallback
+      // keeps the scoreboard honest between hands too)
+      let seatScores;
+      if(MSP) seatScores = snapSeats.map(s=> s.score != null ? s.score : 0);
+      else seatScores = snapSeats.map(s=>{ const rs = mp.roster.find(x=>x.pid === s.pid); return rs ? (rs.spadesScore || 0) : 0; });
+      return { variant, target: spadesTargetFor(variant), scores, bags, unitNames, seatScores,
+               trick: MSP ? MSP.trick.map(x=> ({ pid: MSP.state[x.idx].seat.pid, name: MSP.state[x.idx].seat.name, card: x.card })) : [],
+               spadesBroken: MSP ? !!MSP.spadesBroken : false,
+               scoreBreak: (MSP && MSP.scoreBreak) ? MSP.scoreBreak : null };
+    })(),
   };
 }
 function mpSync(){
@@ -3431,21 +4052,30 @@ function mpRenderSnap(snap, isHost){
   if(snap.room) snap.room.forEach(s=>{ s.theme = mpSanTheme(s.theme); });
   if(snap.lastLog && !isHost) snap.lastLog = Object.assign({}, snap.lastLog, { msg: mpSanLogHtml(snap.lastLog.msg) });
   mp.snap = snap;
-  if(snap.game !== game){ game = snap.game; paintGameSegs(); mp._coachKey = null; if(mode === "apprentice" && tipsOn && (snap.phase === "lobby" || snap.phase === "done")) setTip(gameIntroTip(snap.game)); }
+  if(snap.game !== game){ game = snap.game; paintGameSegs(); mp._coachKey = null; if(snap.game !== "spades") paintScorePanel(null); if(mode === "apprentice" && tipsOn && (snap.phase === "lobby" || snap.phase === "done")) setTip(gameIntroTip(snap.game)); }
+  if(snap.game === "spades" && snap.spadesVariant && snap.spadesVariant !== spadesVariant){ spadesVariant = snap.spadesVariant; paintSpadesVariantSegs(); }
   // order seats so the viewer's own seat is at the bottom
   const mine = snap.seats.findIndex(s=>s.pid === mp.myPid);
-  const order = snap.seats.map((s, i)=>i);
-  if(mine > 0){ order.splice(mine, 1); order.unshift(mine); }
+  let order = snap.seats.map((s, i)=>i);
+  if(snap.game === "spades" && mine > 0){
+    // ROTATE, never reshuffle: partners must stay across the table
+    // (seat k sits opposite seat k+2) on every screen.
+    order = snap.seats.map((_, k)=> (mine + k) % snap.seats.length);
+  }
+  else if(mine > 0){ order.splice(mine, 1); order.unshift(mine); }
   else if(mine === -1){ /* spectator: keep table order, bottom seat is just a seat */ }
   const posFor = (seatIdx)=>{
     if(snap.game === "bj") return ["pos-you", "pos-left", "pos-right", "pos-top"][order.indexOf(seatIdx)] || "pos-top";
+    if(snap.game === "spades") return (snap.house && snap.seats.length < 4 ? MP_HOUSE_POS : MP_POS)[order.indexOf(seatIdx)] || "pos-top";
     if(snap.house) return MP_HOUSE_POS[order.indexOf(seatIdx)] || "pos-right";
     return MP_POS[order.indexOf(seatIdx)] || "pos-top";
   };
   let html = "";
   if(snap.house && snap.game !== "bj"){
     // The House seat: dealer only — no cards, no stack, never a player.
-    html += `<div class="seat pos-dealer" id="seat-house"><div class="seat-inner">
+    // In 4P Spades all four player spots are taken, so the House label
+    // tucks into the top-right corner instead of the top spot.
+    html += `<div class="seat ${snap.game === "spades" && snap.seats.length >= 4 ? "pos-housecorner" : "pos-dealer"}" id="seat-house"><div class="seat-inner">
       <div class="cards" id="cards-mp-house"></div>
       <div><span class="plate">${chipSVG(snap.house.theme, 26, "H")}
         <span class="nm">The House — dealer</span><span class="aibadge">HOUSE</span>
@@ -3473,16 +4103,16 @@ function mpRenderSnap(snap, isHost){
       if(s.cards) cardsHtml = s.cards.map((c, ci)=> cardHTML(c, { cls: studIsDownIdx(ci) ? "holecard" : "", hole: studIsDownIdx(ci) })).join("");
       else { let ui = 0; const ups = s.upCards || []; for(let k = 0; k < s.cardCount; k++) cardsHtml += studIsDownIdx(k) ? cardHTML(null, { back: true }) : cardHTML(ups[ui++], {}); }
     }
-    else if(s.cards) cardsHtml = s.cards.map(c=>cardHTML(c, {})).join("");
+    else if(s.cards) cardsHtml = (snap.game === "spades" ? spadesSortHand(s.cards) : s.cards).map(c=>cardHTML(c, {})).join("");
     else for(let k = 0; k < s.cardCount; k++) cardsHtml += cardHTML(null, { back: true });
     let status = s.status || "";
     if(snap.game === "bj" && s.handTotal && !status) status = (s.handTotal.soft ? "Soft " : "") + s.handTotal.total;
     html += `<div class="seat ${pos}${s.folded || s.bust ? " folded" : ""}" id="seat-${s.pid}">
       <div class="seat-inner">
-        <div class="cards ${isMine ? "you-cards" : ""}${snap.game === "stud" ? " stud-cards" : ""}" id="cards-mp-${s.pid}">${cardsHtml}</div>
+        <div class="cards ${isMine ? "you-cards" : ""}${snap.game === "stud" ? " stud-cards" : ""}${snap.game === "spades" ? " spades-cards" + (s.cards ? "" : " fan") : ""}" id="cards-mp-${s.pid}">${cardsHtml}</div>
         <div><span class="plate">${chipSVG(s.theme, 26, mpEsc(s.short || ""))}
           <span class="nm">${mpEsc(s.name)}${isMine ? " (you)" : ""}${s.kind === "ai" ? '<span class="aibadge">AI</span>' : ""}${s.away ? '<span class="aibadge">AWAY</span>' : ""}${s.ready && !s.away ? '<span class="aibadge readybadge">READY</span>' : ""}</span>
-          <span class="stk">${fmt(s.stack)} chips</span>
+          <span class="stk">${snap.game === "spades" ? "Score " + fmt(s.score != null ? s.score : 0) : fmt(s.stack) + " chips"}</span>
           ${s.bet > 0 ? `<span class="betbadge">${fmt(s.bet)}</span>` : ""}
         </span><div class="status">${status}</div></div>
       </div></div>`;
@@ -3490,6 +4120,18 @@ function mpRenderSnap(snap, isHost){
   seatsEl.innerHTML = html;
   setPot(snap.pot || 0);
   paintBoard(snap.board || []);
+  if(snap.game === "spades" && snap.spades){
+    // the center of the table is the current trick, one labeled slot
+    // per player, in seat order; the hand-end breakdown rides the
+    // shared score panel under the table
+    const slots = snap.seats.map(s=>{
+      const t = snap.spades.trick.find(x=> x.pid === s.pid);
+      return { name: mpEsc(s.name), card: t ? t.card : null };
+    });
+    $("board").innerHTML = spadesTrickHTML(slots);
+    if(snap.spades.scoreBreak) paintScorePanel(snap.spades.scoreBreak);   // lines are composed host-side with names already escaped; tags are the table's own
+    else paintScorePanel(null);
+  }
   if(snap.center) setCenter(snap.center[0], snap.center[1]);
   paintWinBanner(snap.winBanner || null);
   const activeSeat = (snap.phase !== "done" && snap.activePid) ? snap.seats.find(s=>s.pid === snap.activePid) : null;
@@ -3502,6 +4144,11 @@ function mpRenderSnap(snap, isHost){
   // my stack in the top bar follows the room stack — except the House,
   // which deals only and holds no stack at all
   if(snap.house && snap.house.pid === mp.myPid){ $("bank-amt").textContent = "—"; }
+  else if(snap.game === "spades" && snap.spades){
+    const myIdx = snap.seats.findIndex(s=>s.pid === mp.myPid);
+    if(myIdx >= 0) $("bank-amt").textContent = fmt(snap.spades.seatScores[myIdx] || 0);
+    else { const me = mp.roster.find(s=>s.pid === mp.myPid); if(me) $("bank-amt").textContent = fmt(me.spadesScore || 0); }
+  }
   else {
     const mySeat = snap.seats.find(s=>s.pid === mp.myPid) || mp.roster.find(s=>s.pid === mp.myPid);
     if(mySeat){ $("bank-amt").textContent = fmt(mySeat.stack); }
@@ -3509,6 +4156,7 @@ function mpRenderSnap(snap, isHost){
   // the seats rebuild above just replaced every card node: if MY draw prompt
   // is open, re-deal its selection visuals + tap handlers onto the fresh nodes
   if(mp.drawUI) mpPaintDrawCards();
+  if(mp.spadesUI) mpPaintSpadesCards();
   mpOffTurnCoach(snap, isHost);
   reapplyReactions();   // the rebuild above wiped the seat DOM — repaint any reaction floats still inside their TTL
 }
@@ -3537,6 +4185,15 @@ function mpReadyGate(){
   const readyCount = present.filter(s=>s.ready).length;
   const ok = players >= 2 && present.length > 0 && readyCount === present.length;
   const reason = ok ? "ok" : (players < 2 ? (awayNames.length ? "away" : "players") : "ready");
+  if(ok && game === "spades"){
+    // Spades needs a FULL table (4P teams / 3P cutthroat) — a hand only
+    // makes sense with every seat filled, by present players or AI
+    // fill. Without this the gate would pass heads-up and the deal
+    // would bounce (and auto-deal would retry it in a loop).
+    const need = spadesVariant === "teams" ? 4 : 3;
+    const fillable = aiFillOn() ? need : players;
+    if(Math.min(need, fillable) < need) return { ok: false, players, readyCount, needCount: present.length, awayNames, reason: "players", needTotal: need };
+  }
   return { ok, players, readyCount, needCount: present.length, awayNames, reason };
 }
 function mpAwayLabel(awayNames){
@@ -3572,7 +4229,7 @@ function mpAutoDealCancel(sync){
 function mpHostDealNow(){
   mpAutoDealCancel(false);
   mp.gateOkSince = 0;
-  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else if(game === "stud") mpStartStud(); else mpStartBJ();
+  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else if(game === "stud") mpStartStud(); else if(game === "spades") mpStartSpades(); else mpStartBJ();
 }function mpAutoDealTick(){
   if(mp.role !== "host"){ mp.gateOkSince = 0; return; }
   if(mp.phase !== "lobby" && mp.phase !== "done"){ mp.gateOkSince = 0; mpAutoDealCancel(true); return; }
@@ -3607,7 +4264,7 @@ function mpRenderHostControls(){
       ? `Dealing in ${cdSec}… — tap to deal now`
       : gate.ok ? `${other}${(isDrawGame(game) || game === "stud") ? " — ante 10" : (game === "holdem" || game === "omaha") ? " — blinds 5/10" : ""}`
       : gate.reason === "away" ? mpAwayLabel(gate.awayNames)
-      : gate.reason === "players" ? `Waiting for players — ${gate.players} of 2 seated`
+      : gate.reason === "players" ? `Waiting for players — ${gate.players} of ${gate.needTotal || 2} seated`
       : `Waiting for ready — ${gate.readyCount} of ${gate.needCount} ready`;
     setControls(`<button class="btn primary" id="mp-deal"${gate.ok ? "" : " disabled"}>${dealLabel}</button>
       ${canTopUp ? `<button class="btn" id="mp-topup">Top up to 1,000</button>` : ""}
@@ -3653,6 +4310,8 @@ function mpDefaultAction(kind, ctx){
   if(kind === "draw") return { type: "draw", indices: [] };
   if(kind === "bj") return { type: "stand" };
   if(kind === "bjbet") return { type: "bet", amt: 25 };
+  if(kind === "spadesbid") return { type: "bid", bid: (ctx && ctx.defBid) || 1 };
+  if(kind === "spadesplay") return { type: "play", card: (ctx && ctx.defCard) || null };
   return { type: "stand" };
 }
 async function mpPrompt(seat, kind, ctx){
@@ -3662,7 +4321,7 @@ async function mpPrompt(seat, kind, ctx){
   const def = mpDefaultAction(kind, ctx);
   const rseat = mp.roster.find(x=>x.pid === seat.pid);
   const away = !!(rseat && rseat.away);
-  const ms = away ? AWAY_MS : (kind === "draw" ? DRAW_MS : TURN_MS);
+  const ms = away ? AWAY_MS : (kind === "draw" ? DRAW_MS : ((ctx && ctx.ms) || TURN_MS));
   return new Promise(resolve=>{
     const timer = setTimeout(()=>{
       if(!mp.pending.has(promptId)) return;
@@ -3672,6 +4331,8 @@ async function mpPrompt(seat, kind, ctx){
         else if(kind === "draw") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — stood pat.`);
         else if(kind === "bj") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — stands.`);
         else if(kind === "bjbet") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — auto-bet 25.`);
+        else if(kind === "spadesbid") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — auto-bid ${def.bid} (their counted tricks).`);
+        else if(kind === "spadesplay") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — played their lowest legal card.`);
         mpSync();
       } else {
         mpSendTo(seat.pid, { t: "timeout-note", promptId, text: turnTimeoutText(kind, ctx) });
@@ -3685,17 +4346,17 @@ async function mpPrompt(seat, kind, ctx){
 function mpLocalPrompt(kind, ctx){
   return new Promise(resolve=>{
     let settled = false;
-    const ms = kind === "draw" ? DRAW_MS : TURN_MS;
+    const ms = (ctx && ctx.ms) || (kind === "draw" ? DRAW_MS : TURN_MS);
     showTurnTimer(ms, kind === "draw" ? "Your draw" : "Your turn");
     const timer = setTimeout(()=>{
       if(settled) return; settled = true;
-      hideTurnTimer(); setControls(""); mp.drawUI = null;
+      hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null;
       showNotice(turnTimeoutText(kind, ctx));
       resolve(mpDefaultAction(kind, ctx));
     }, ms);
     mpBuildPromptUI(kind, ctx, (action)=>{
       if(settled) return; settled = true;
-      clearTimeout(timer); hideTurnTimer(); setControls(""); mp.drawUI = null;
+      clearTimeout(timer); hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null;
       resolve(action || mpDefaultAction(kind, ctx));
     });
   });
@@ -3741,6 +4402,7 @@ function gameIntroTip(g){
   if(g === "holdem") return "Hold'em in one breath: <b>two cards of your own, five shared on the board</b>, best five-card hand wins. Pairs and big cards play before the flop; after it, the coach reads your made hand off the board for you.";
   if(g === "omaha") return "Omaha in one breath: <b>four cards of your own, five shared on the board</b> — but your hand is <b>exactly two of yours plus exactly three from the board</b>. The board alone never plays, and neither do one or three of your cards. The coach reads your real (exactly 2+3) hand for you.";
   if(g === "stud") return "Stud in one breath: <b>two cards down, one up</b> to start, then one more card a street — three more up, and the last one down. Best five of your seven wins. Half the table's cards sit face-up for everyone: <b>what you can see is what nobody can hold</b> — the coach counts the visible cards with you.";
+  if(g === "spades") return "Spades in one breath: <b>bid</b> how many tricks you'll take, then play them out — <b>follow suit</b> if you can, and remember <b>spades are trump</b> but can't be led until they're broken. Make your number for <b>10 points a trick</b> plus a point a bag; miss it and you're set. <b>Nil</b> — promising to take nothing at all — is worth ±100. The coach counts your hand with you.";
   if(g === "bj") return "Blackjack in one sentence: <b>get closer to 21 than the dealer without going over</b>. The dealer’s face-up card is your crystal ball — the coach reads it for you on every decision while Apprentice mode is on.";
   const V = DRAW_VARIANTS[g] || DRAW_VARIANTS.draw;
   return V.tip;
@@ -3760,6 +4422,34 @@ function mpOffTurnCoach(snap, isHost){
   if(snap.phase === "lobby" || snap.phase === "done") return;
   const mySeat = snap.seats.find(s=>s.pid === mp.myPid);
   if(!mySeat || !mySeat.cards || !mySeat.cards.length) return;
+  if(snap.game === "spades"){
+    /* Spades off-turn read: my own hand + the PUBLIC trick and bids.
+       Keyed on hand + bid + tricks + the trick itself, so it speaks
+       as the hand develops — a bidding read before I've bid, then a
+       play read (legality, partner state, nil risk) between turns. */
+    if(!snap.spades) return;
+    const tkey = "spades|" + snap.spades.variant + "|" + mySeat.cards.map(spadesCardKey).join(",") + "|" + (mySeat.bid == null ? "-" : mySeat.bid) + "|" + (mySeat.tricks || 0) + "|" + snap.spades.trick.map(t=> t.pid + spadesCardKey(t.card)).join(",") + "|" + snap.phase;
+    if(mp._coachKey === tkey) return;
+    mp._coachKey = tkey;
+    if(snap.phase === "bid" && mySeat.bid == null){ setTip("<b>Your bidding read:</b> " + spadesBidCoachHTML(mySeat.cards, snap.spades.variant)); return; }
+    if(snap.phase === "bid"){ setTip(`Your bid is in: <b>${mySeat.bid === 0 ? "Nil" : mySeat.bid}</b>. Waiting on the rest of the table — ${snap.spades.variant === "teams" ? "remember, your partner's tricks count together with yours." : "every trick from here is yours alone."}`); return; }
+    if(snap.phase === "play"){
+      const ledSuit = snap.spades.trick.length ? snap.spades.trick[0].card.s : null;
+      const legalKeys = new Set(spadesLegalCards(mySeat.cards, ledSuit, snap.spades.spadesBroken, !snap.spades.trick.length).map(spadesCardKey));
+      const myIdx = snap.seats.findIndex(s=> s.pid === mp.myPid);
+      const partnerSeat = snap.spades.variant === "teams" ? snap.seats[(myIdx + 2) % snap.seats.length] : null;
+      let partnerCardWinning = false;
+      if(partnerSeat && snap.spades.trick.length){
+        const w = spadesTrickWinner(snap.spades.trick.map(t=> ({ seat: snap.seats.findIndex(s=> s.pid === t.pid), card: t.card })));
+        partnerCardWinning = snap.spades.trick[w].pid === partnerSeat.pid;
+      }
+      setTip("<b>Your hand so far:</b> " + spadesPlayCoachHTML({ hand: mySeat.cards, legalKeys, ledSuit,
+        spadesBroken: snap.spades.spadesBroken, leading: !snap.spades.trick.length,
+        trick: snap.spades.trick.map(t=> ({ name: mpEsc(t.name), card: t.card })),
+        myBid: mySeat.bid, partnerName: partnerSeat ? mpEsc(partnerSeat.name) : null, partnerBid: partnerSeat ? partnerSeat.bid : null, partnerCardWinning }));
+    }
+    return;
+  }
   const key = snap.game + "|" + mySeat.cards.map(c=> c.joker ? "J" : c.r + "-" + c.s).join(",") + "|" + (snap.board ? snap.board.length : 0) + "|" + snap.phase;
   if(mp._coachKey === key) return;
   mp._coachKey = key;
@@ -3900,8 +4590,63 @@ function mpBuildPromptUI(kind, ctx, respond){
       <span class="ctl-note">Your stack: ${fmt(ctx.stack)} — tap a bet to lock it in.</span>`);
     document.querySelectorAll("[data-mpbet]").forEach(b=> b.addEventListener("click", ()=>{ clickSound(600); respond({ type: "bet", amt: Math.min(+b.dataset.mpbet, ctx.stack) }); }));
   }
+  if(kind === "spadesbid"){
+    const maxBid = spadesMaxBidFor(ctx.variant);
+    if(mode === "apprentice" && tipsOn) setTip(spadesBidCoachHTML(myCards, ctx.variant));
+    let bhtml = `<span class="betpick spbids"><button class="bp nil" data-spbid="0">Nil</button>`;
+    for(let b = 1; b <= maxBid; b++) bhtml += `<button class="bp" data-spbid="${b}">${b}</button>`;
+    bhtml += `</span><span class="ctl-note">Live Spades — your bid: how many tricks will you take? <b>Nil</b> means none at all, for ±100.</span>`;
+    setControls(bhtml);
+    document.querySelectorAll("[data-spbid]").forEach(b=> b.addEventListener("click", ()=>{ clickSound(600); respond({ type: "bid", bid: +b.dataset.spbid }); }));
+  }
+  if(kind === "spadesplay"){
+    const legal = new Set(ctx.legal || []);
+    if(mode === "apprentice" && tipsOn){
+      setTip(spadesPlayCoachHTML({ hand: myCards, legalKeys: legal, ledSuit: ctx.ledSuit, spadesBroken: !!ctx.spadesBroken, leading: ctx.ledSuit == null,
+        trick: (ctx.trick || []).map(t=> ({ name: mpEsc(t.name), card: t.card })),
+        myBid: ctx.myBid, partnerName: ctx.partnerName ? mpEsc(ctx.partnerName) : null, partnerBid: ctx.partnerBid, partnerCardWinning: !!ctx.partnerCardWinning }));
+    }
+    mp.spadesUI = { legal, cards: myCards, respond };
+    setControls(`<span class="ctl-note" style="font-size:14.5px"><b>${ctx.ledSuit == null ? "Your lead" : "Your play"} — tap a card in your hand to play it.</b> Dimmed cards can't be played this trick.</span>
+      <span class="ctl-note">Live Spades${ctx.trickCount ? " · trick " + ctx.trickCount : ""} — your cards and coach show only on your screen.</span>`);
+    mpPaintSpadesCards();
+  }
+}
+/* Same outside-the-DOM pattern as mpPaintDrawCards: a Spades play
+   prompt lives in mp.spadesUI, and this repaint runs after every
+   snapshot re-render while the prompt is open, so the sorted hand,
+   its legal/dim states and its tap handlers survive the seats DOM
+   being rebuilt — the exact failure that once killed guest draws. */
+function mpPaintSpadesCards(){
+  const ui = mp.spadesUI; if(!ui) return;
+  const snap = mp.snap;
+  const mySeat = snap ? snap.seats.find(s=>s.pid === mp.myPid) : null;
+  const myCards = (mySeat && mySeat.cards) || ui.cards || [];
+  if(myCards.length) ui.cards = myCards;
+  const el = $("cards-mp-" + mp.myPid); if(!el) return;
+  el.innerHTML = spadesSortHand(myCards).map(c=>{
+    const key = spadesCardKey(c);
+    const legal = ui.legal.has(key);
+    return cardHTML(c, { cls: legal ? "legal" : "dim", attrs: legal ? `data-spplay="${key}"` : "" });
+  }).join("");
+  el.querySelectorAll("[data-spplay]").forEach(cardEl=> bindTap(cardEl, ()=>{
+    if(mp.spadesUI !== ui) return;
+    const card = (ui.cards || []).find(c=> spadesCardKey(c) === cardEl.dataset.spplay);
+    if(card){ mp.spadesUI = null; ui.respond({ type: "play", card: { r: card.r, s: card.s } }); }
+  }));
 }
 function mpAIAction(seat, kind, ctx){
+  if(kind === "spadesbid"){
+    const st = MSP.state.find(s=>s.seat.pid === seat.pid);
+    return { type: "bid", bid: spadesAIBid(st.hand, MSP.variant) };
+  }
+  if(kind === "spadesplay"){
+    const st = MSP.state.find(s=>s.seat.pid === seat.pid);
+    const idx = MSP.state.indexOf(st);
+    const card = spadesAIPlay({ hand: st.hand, ledSuit: ctx.ledSuit, trick: MSP.trick.map(x=> ({ seat: x.idx, card: x.card })), mySeat: idx,
+      partnerSeat: MSP.variant === "teams" ? (idx + 2) % MSP.state.length : -1, bids: MSP.state.map(s=> s.bid), spadesBroken: MSP.spadesBroken });
+    return { type: "play", card: { r: card.r, s: card.s } };
+  }
   if(kind === "bet"){
     if(ctx && ctx.game === "stud"){
       const st = MS.state.find(s=>s.seat.pid === seat.pid);
@@ -3986,12 +4731,12 @@ function mpGuestOnData(msg){
     if(mp.guestPromptTimer) clearTimeout(mp.guestPromptTimer);
     mp.guestPromptTimer = setTimeout(()=>{
       if(mp.guestPrompt !== msg.promptId) return;
-      mp.guestPrompt = null; mp.drawUI = null; hideTurnTimer();
+      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; hideTurnTimer();
       setControls(`<span class="ctl-note">Time ran out — the host played the safe move for you.</span>`);
       showNotice(turnTimeoutText(msg.kind, msg.ctx));
     }, ms + 2500);
     mpBuildPromptUI(msg.kind, msg.ctx, (action)=>{
-      mp.guestPrompt = null; mp.drawUI = null;
+      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null;
       if(mp.guestPromptTimer){ clearTimeout(mp.guestPromptTimer); mp.guestPromptTimer = null; }
       hideTurnTimer();
       mpToHost({ t: "action", promptId: msg.promptId, action });
@@ -4000,7 +4745,7 @@ function mpGuestOnData(msg){
   }
   if(msg.t === "timeout-note"){
     if(mp.guestPrompt === msg.promptId){
-      mp.guestPrompt = null; mp.drawUI = null;
+      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null;
       if(mp.guestPromptTimer){ clearTimeout(mp.guestPromptTimer); mp.guestPromptTimer = null; }
       hideTurnTimer();
       setControls(`<span class="ctl-note">Time ran out — the host played the safe move for you.</span>`);
@@ -4073,13 +4818,18 @@ function mpResetTableMP(){
   hideTurnTimer();
   mp.cdEndsAt = 0; mp.cdShownSec = null; mp.gateOkSince = 0;
   mp.winBanner = null; paintWinBanner(null); mpResetReady();
-  MD = null; MB = null; MH = null; MO = null; MS = null; mp.phase = "lobby"; mp.activeSeatPid = null;
+  MD = null; MB = null; MH = null; MO = null; MS = null; MSP = null; mp.phase = "lobby"; mp.activeSeatPid = null;
+  paintScorePanel(null);
   const info = game === "holdem"
     ? ["Texas Hold'em — live room", "Blinds 5/10 · two hole cards · flop, turn, river · best 5 of 7 · the host deals."]
     : game === "omaha"
     ? ["Omaha — live room", "Blinds 5/10 · four hole cards · exactly 2 of yours + exactly 3 from the board · the host deals."]
     : game === "stud"
     ? ["Seven Card Stud — live room", "Ante 10 · two down, one up · a card a street · best 5 of your 7 · the host deals."]
+    : game === "spades"
+    ? spadesVariant === "teams"
+      ? ["Spades — 4P Teams · live room", "Partners across · 13 cards each · bid your tricks · spades are trump · first to 500 · the host deals."]
+      : ["Spades — 3P Cutthroat · live room", "Everyone for themselves · 17 cards each (the 2♣ sits out) · spades are trump · first to 300 · the host deals."]
     : isDrawGame(game)
     ? [drawVariant().name + " — live room", drawVariant().wilds ? "Jokers & deuces wild · two draws — up to 3, then up to 2 · the host deals." : "No wilds · one draw — up to 5 · the host deals."]
     : ["Blackjack — live room", "Dealer stands on 17 · blackjack pays 3:2 · the host deals."];
@@ -4090,7 +4840,10 @@ function mpResetTableMP(){
   // Deal-only (the House): the host is NOT a player — excluded from the
   // seats entirely. On the draw table the dealer spot takes the top seat,
   // so a House-dealt draw game seats at most 3 players.
-  const capSeats = mp.hostMode === "deal" ? Math.min(maxSeats, 3) : maxSeats;   // the House dealer seat takes the top spot, so a deal-only table seats at most 3 players (Blackjack already caps at 3)
+  // Spades is the exception: a 4P partnership game NEEDS its 4 players
+  // even with the House dealing (the dealer renders in its own spot),
+  // so Spades always seats its full count.
+  const capSeats = game === "spades" ? maxSeats : (mp.hostMode === "deal" ? Math.min(maxSeats, 3) : maxSeats);   // the House dealer seat takes the top spot, so a deal-only table seats at most 3 players (Blackjack already caps at 3)
   const humans = mp.roster.filter(s=>!s.away && !(mp.hostMode === "deal" && s.pid === mp.myPid)).slice(0, capSeats);
   const seats = humans.map(s=> Object.assign({}, s));
   if(aiFillOn()){
@@ -4102,7 +4855,7 @@ function mpResetTableMP(){
       // AI seat starts at 1,000
       const stack = (mp.aiStacks[def.name] != null) ? mp.aiStacks[def.name] : 1000;
       const ast = mp.aiStats[def.name] || { hands: 0, chips: 0 };
-      seats.push({ pid: "ai-" + def.name.toLowerCase(), name: def.name, short: def.name[0], theme: parseChipPrompt(def.themeText, def.name), stack, kind: "ai", handsWon: ast.hands, chipsWon: ast.chips });
+      seats.push({ pid: "ai-" + def.name.toLowerCase(), name: def.name, short: def.name[0], theme: parseChipPrompt(def.themeText, def.name), stack, kind: "ai", handsWon: ast.hands, chipsWon: ast.chips, spadesScore: ast.spades || 0 });
     }
   }
   return seats;
@@ -4113,9 +4866,9 @@ function mpSeatStackSync(){
   // seats (they keep both across hands, like a seated player does)
   const seats = mpSeatsForHand();
   seats.forEach(seat=>{
-    if(seat.kind === "ai"){ mp.aiStacks[seat.name] = seat.stack; mp.aiStats[seat.name] = { hands: seat.handsWon || 0, chips: seat.chipsWon || 0 }; return; }
+    if(seat.kind === "ai"){ mp.aiStacks[seat.name] = seat.stack; mp.aiStats[seat.name] = { hands: seat.handsWon || 0, chips: seat.chipsWon || 0, spades: seat.spadesScore || 0 }; return; }
     const r = mp.roster.find(x=>x.pid === seat.pid);
-    if(r){ r.stack = seat.stack; r.handsWon = seat.handsWon || 0; r.chipsWon = seat.chipsWon || 0; }
+    if(r){ r.stack = seat.stack; r.handsWon = seat.handsWon || 0; r.chipsWon = seat.chipsWon || 0; if(game === "spades") r.spadesScore = seat.spadesScore || 0; }
   });
 }
 
@@ -4589,6 +5342,144 @@ function mpStudShowdown(){
   mp.winBanner = `${names} won ${fmt(MS.pot)} chips with ${best.ev.name}`;
   mp._lastLog = mpLogBoth(`<b>${names}</b> won ${fmt(MS.pot)} chips with <b>${best.ev.name}</b>.`, true);
   MS.pot = 0; mpSeatStackSync(); mpResetReady(); mpSync();
+}
+
+/* ----- Spades (host authority) -----
+   Score-based, no chips: MSP persists across hands of a match
+   (scores, bags, rotating dealer); a hand's state is MSP.state.
+   Every guest bid/play is re-validated host-side — a bid clamps to
+   0..maxBid, a play must be a card actually in hand AND legal,
+   otherwise the prompt's default (counted bid / lowest legal card)
+   stands in. Trick/scoring rules all come from the shared core. */
+function mpSpadesScoreAndFinish(){
+  const seatData = MSP.state.map(s=> ({ name: s.seat.name, bid: s.bid, tricks: s.tricks }));
+  const out = spadesScoreHand(seatData, MSP.variant, MSP.scores, MSP.bags);
+  MSP.scores = out.scores; MSP.bags = out.bags;
+  if(out.handWin >= 0) out.units[out.handWin].seats.forEach(i=>{ const seat = MSP.state[i].seat; seat.handsWon = (seat.handsWon || 0) + 1; });
+  MSP.state.forEach((st, i)=>{ st.seat.spadesScore = MSP.scores[spadesUnitOf(MSP.variant, i)]; });
+  const winFirst = (wi)=> [wi, ...out.units.map((_, i)=> i).filter(i=> i !== wi)];
+  const escUnits = out.units.map(u=> ({ name: u.name.split(" & ").map(mpEsc).join(" & "), seats: u.seats }));
+  const lines = [`<span class="sp-title">Hand over — the count:</span>`];
+  out.results.forEach(r=> r.lines.forEach(l=> lines.push(l.replace(/<b>(.*?)<\/b>/g, (m, inner)=> "<b>" + inner.split(" & ").map(mpEsc).join(" & ") + "</b>"))));
+  lines.push(`Match: ${escUnits.map((u, i)=> `${u.name} <b>${MSP.scores[i]}</b> (bags ${MSP.bags[i]})`).join(" · ")} — first to ${out.target}.`);
+  let banner;
+  if(out.matchWin.length){
+    MSP.matchOver = true;
+    const names = out.matchWin.map(i=> escUnits[i].name).join(" & ");
+    banner = `${names} won the match ${winFirst(out.matchWin[0]).map(i=> MSP.scores[i]).join("–")}`;
+    lines.push(`<b>${names} win the match!</b> Deal again to start a fresh one.`);
+  } else if(out.handWin >= 0){
+    banner = `${escUnits[out.handWin].name} won the hand +${out.results[out.handWin].pts} · ${winFirst(out.handWin).map(i=> MSP.scores[i]).join("–")}`;
+  } else {
+    banner = `Hand over · ${escUnits.map((u, i)=> `${u.name} ${MSP.scores[i]}`).join(" · ")}`;
+  }
+  MSP.scoreBreak = lines;
+  mp.winBanner = banner;
+  out.logLines.forEach(l=> mpLogBoth(l.replace(/<b>(.*?)<\/b>/g, (m, inner)=> "<b>" + inner.split(" & ").map(mpEsc).join(" & ") + "</b>")));
+  mp._lastLog = mpLogBoth(`<b>${banner}</b>`, true);
+  setCenter(out.matchWin.length ? "Match over" : "Hand over",
+    out.units.map((u, i)=> `${escUnits[i].name} ${MSP.scores[i]}`).join(" · ") + ` — first to ${out.target}`);
+  mpSeatStackSync();
+  mp.phase = "done"; mp.activeSeatPid = null;
+  mpResetReady();
+  mpSync();
+}
+async function mpStartSpades(){
+  if(!mpReadyGate().ok){ mp._lastLog = mpLogBoth("Deal held — every seated player has to tap <b>I’m Ready</b> first."); mpSync(); return; }
+  const seq = ++mp.seq; handSeq++;
+  mp.winBanner = null;
+  mp.activeHostMode = mp.hostMode;   // the mode is locked in for this hand
+  const variant = spadesVariant;
+  const need = variant === "teams" ? 4 : 3;
+  const seats = mpTableSeats(need);
+  if(seats.length < need){
+    mp.phase = "lobby";
+    mp._lastLog = mpLogBoth(`Spades ${variant === "teams" ? "4P Teams needs all 4 seats" : "3P Cutthroat needs all 3 seats"} — you're ${seats.length} short-handed. Invite friends, or turn <b>Fill empty seats with AI</b> on.`);
+    mpSync();
+    return;
+  }
+  if(!MSP || MSP.variant !== variant) MSP = { variant, scores: variant === "teams" ? [0, 0] : [0, 0, 0], bags: variant === "teams" ? [0, 0] : [0, 0, 0], dealer: -1, matchOver: false, scoreBreak: null };
+  if(MSP.matchOver){ MSP.scores = MSP.scores.map(()=> 0); MSP.bags = MSP.bags.map(()=> 0); MSP.matchOver = false; mpLogBoth("New match — scores reset to zero."); }
+  MSP.scoreBreak = null;
+  MSP.dealer = (MSP.dealer + 1) % need;
+  const deck = buildSpadesDeck(variant);
+  MSP.state = seats.map(seat=> ({ seat, hand: [], bid: null, tricks: 0 }));
+  const size = spadesHandSizeFor(variant);
+  for(let k = 0; k < size; k++) for(const st of MSP.state) st.hand.push(deck.pop());
+  MSP.trick = []; MSP.spadesBroken = false;
+  mp.phase = "bid";
+  mp._lastLog = mpLogBoth(`Live Spades dealt — ${size} cards each. <b>${mpEsc(seats[MSP.dealer].name)}</b> dealt; bidding starts on their left.`);
+  setCenter("Spades — bidding", MSP.state.map(s=> mpEsc(s.seat.name)).join(" · ") + ` — first to ${spadesTargetFor(variant)}`);
+  mpSync();
+  // bidding, left of the dealer first
+  for(let k = 1; k <= need; k++){
+    if(seq !== mp.seq || !MSP) return;
+    const idx = (MSP.dealer + k) % need;
+    const st = MSP.state[idx];
+    mp.activeSeatPid = st.seat.pid;
+    $("tb-what").textContent = `${st.seat.name} is bidding.`;
+    mpSync();
+    const read = spadesBidRead(st.hand, variant);
+    const act = await mpPrompt(st.seat, "spadesbid", { variant, maxBid: spadesMaxBidFor(variant), defBid: read.bid, ms: SPADES_MS });
+    if(seq !== mp.seq || !MSP) return;
+    let bid = act && act.type === "bid" ? Math.round(+act.bid) : NaN;
+    if(!Number.isFinite(bid)) bid = read.bid;
+    st.bid = Math.max(0, Math.min(spadesMaxBidFor(variant), bid));
+    mp._lastLog = mpLogBoth(st.bid === 0 ? `<b>${mpEsc(st.seat.name)}</b> bids <b>Nil</b>.` : `<b>${mpEsc(st.seat.name)}</b> bids ${st.bid}.`);
+    mpSync();
+  }
+  // play: leader is left of the dealer for trick 1, then trick winners lead
+  mp.phase = "play";
+  let leader = (MSP.dealer + 1) % need;
+  for(let t = 0; t < size; t++){
+    if(seq !== mp.seq || !MSP) return;
+    MSP.trick = [];
+    for(let k = 0; k < need; k++){
+      if(seq !== mp.seq || !MSP) return;
+      const idx = (leader + k) % need;
+      const st = MSP.state[idx];
+      const ledSuit = MSP.trick.length ? MSP.trick[0].card.s : null;
+      const legal = spadesLegalCards(st.hand, ledSuit, MSP.spadesBroken, ledSuit == null);
+      const defCard = spadesLowest(legal);
+      mp.activeSeatPid = st.seat.pid;
+      $("tb-what").textContent = `${st.seat.name} to play — trick ${t + 1} of ${size}.`;
+      setCenter(`Trick ${t + 1} of ${size}`, MSP.state.map(s=> `${mpEsc(s.seat.name)} ${MSP.scores[spadesUnitOf(variant, MSP.state.indexOf(s))]}`).join(" · ") + (MSP.spadesBroken ? " · spades are broken" : ""));
+      mpSync();
+      const partnerIdx = variant === "teams" ? (idx + 2) % need : -1;
+      let partnerCardWinning = false;
+      if(partnerIdx >= 0 && MSP.trick.length){
+        const w = spadesTrickWinner(MSP.trick.map(x=> ({ seat: x.idx, card: x.card })));
+        partnerCardWinning = MSP.trick[w].idx === partnerIdx;
+      }
+      const act = await mpPrompt(st.seat, "spadesplay", { ledSuit, spadesBroken: MSP.spadesBroken, ms: SPADES_MS,
+        legal: legal.map(spadesCardKey), defCard: { r: defCard.r, s: defCard.s },
+        trick: MSP.trick.map(x=> ({ pid: MSP.state[x.idx].seat.pid, name: MSP.state[x.idx].seat.name, card: x.card })),
+        myBid: st.bid, trickCount: t + 1,
+        partnerName: partnerIdx >= 0 ? MSP.state[partnerIdx].seat.name : null,
+        partnerBid: partnerIdx >= 0 ? MSP.state[partnerIdx].bid : null, partnerCardWinning });
+      if(seq !== mp.seq || !MSP) return;
+      let card = null;
+      if(act && act.type === "play" && act.card){
+        const want = spadesCardKey(act.card);
+        const found = st.hand.find(c=> spadesCardKey(c) === want);
+        if(found && legal.some(c=> spadesCardKey(c) === want)) card = found;
+      }
+      if(!card) card = defCard;   // illegal or missing play: the safe default stands in
+      st.hand.splice(st.hand.findIndex(c=> spadesCardKey(c) === spadesCardKey(card)), 1);
+      MSP.trick.push({ idx, card });
+      if(card.s === 0 && !MSP.spadesBroken){ MSP.spadesBroken = true; mp._lastLog = mpLogBoth("Spades are <b>broken</b>."); }
+      mpSync();
+    }
+    const winPos = spadesTrickWinner(MSP.trick.map(x=> ({ seat: x.idx, card: x.card })));
+    const winIdx = MSP.trick[winPos].idx;
+    MSP.state[winIdx].tricks++;
+    leader = winIdx;
+    mpSync();
+    await sleep(950);
+    if(seq !== mp.seq || !MSP) return;
+    MSP.trick = [];
+  }
+  mpSpadesScoreAndFinish();
 }
 
 /* ----- Blackjack (host authority) ----- */
