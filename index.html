@@ -4140,7 +4140,7 @@ function mpRenderSnap(snap, isHost){
   else if(snap.phase === "done") $("tb-who").textContent = snap.center ? snap.center[0] : "Hand over";   // showdown/result state — never a stale "X's turn"
   if(snap.lastLog && snap.lastLog.id !== mp.lastLogId){ mp.lastLogId = snap.lastLog.id; if(!isHost) log(snap.lastLog.msg, snap.lastLog.win); }
   if(isHost) mpRenderHostControls(); else mpRenderGuestIdle(snap);
-  mpRenderRoomList(snap.room.concat(snap.seats.filter(s=>s.kind === "ai" && !snap.room.some(r=>r.name === s.name)).map(s=>({ name: s.name, kind: "ai", theme: s.theme, short: s.short, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0 }))));
+  mpRenderRoomList(snap.room.concat(snap.seats.filter(s=>s.kind === "ai" && !snap.room.some(r=>r.name === s.name)).map(s=>({ name: s.name, kind: "ai", theme: s.theme, short: s.short, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.score != null ? s.score : (s.spadesScore || 0) }))));
   // my stack in the top bar follows the room stack — except the House,
   // which deals only and holds no stack at all
   if(snap.house && snap.house.pid === mp.myPid){ $("bank-amt").textContent = "—"; }
@@ -5430,6 +5430,11 @@ async function mpStartSpades(){
   }
   // play: leader is left of the dealer for trick 1, then trick winners lead
   mp.phase = "play";
+  // the center line under the trick tracks TRICKS TAKEN per player as
+  // the hand runs — the same st.tricks the seat badges read. (It used
+  // to print MSP.scores, the match score, which only changes at hand
+  // end — so the line sat frozen at the match's starting 0s all hand.)
+  const spadesTrickLine = ()=> MSP.state.map(s=> `${mpEsc(s.seat.name)} ${s.tricks}`).join(" · ") + (MSP.spadesBroken ? " · spades are broken" : "");
   let leader = (MSP.dealer + 1) % need;
   for(let t = 0; t < size; t++){
     if(seq !== mp.seq || !MSP) return;
@@ -5443,7 +5448,7 @@ async function mpStartSpades(){
       const defCard = spadesLowest(legal);
       mp.activeSeatPid = st.seat.pid;
       $("tb-what").textContent = `${st.seat.name} to play — trick ${t + 1} of ${size}.`;
-      setCenter(`Trick ${t + 1} of ${size}`, MSP.state.map(s=> `${mpEsc(s.seat.name)} ${MSP.scores[spadesUnitOf(variant, MSP.state.indexOf(s))]}`).join(" · ") + (MSP.spadesBroken ? " · spades are broken" : ""));
+      setCenter(`Trick ${t + 1} of ${size}`, spadesTrickLine());
       mpSync();
       const partnerIdx = variant === "teams" ? (idx + 2) % need : -1;
       let partnerCardWinning = false;
@@ -5474,6 +5479,7 @@ async function mpStartSpades(){
     const winIdx = MSP.trick[winPos].idx;
     MSP.state[winIdx].tricks++;
     leader = winIdx;
+    setCenter(`Trick ${t + 1} of ${size}`, spadesTrickLine());   // refresh before the pause sync, so the line never lags a trick behind
     mpSync();
     await sleep(950);
     if(seq !== mp.seq || !MSP) return;
