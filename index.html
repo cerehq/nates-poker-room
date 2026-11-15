@@ -770,6 +770,32 @@
             </ul>
           </details>
         </div>
+
+        <div class="panel">
+          <details class="rules">
+            <summary>House rules — Farkle</summary>
+            <ul>
+              <li><b>Six dice.</b> Roll, set aside at least one scoring die, then <b>bank</b> the turn total or roll what's left and press your luck. A roll with <b>nothing</b> scoring is a <b>farkle</b> — the turn's unbanked points are gone.</li>
+              <li><b>Every die you set aside has to score</b> — one dead die in the pick makes the whole pick worth 0.</li>
+              <li><b>On the board:</b> your first bank of the game must reach <b>500</b> in a single turn. Once you're on the board, any total banks.</li>
+              <li><b>Hot dice:</b> set aside all six dice and they all come back — the turn total rides along.</li>
+              <li><b>Three farkles in a row</b> cost <b>1,000</b> off your score (never below 0).</li>
+              <li><b>Winning:</b> first to the target — <b>5,000</b> for a quick game, <b>10,000</b> for the full one (the host picks with the toggle up top). Crossing it opens a <b>final round</b>: everyone else gets one last turn to beat that total and steal the game.</li>
+            </ul>
+            <table class="ranktable">
+              <tr><td>Single 1</td><td>100</td></tr>
+              <tr><td>Single 5</td><td>50</td></tr>
+              <tr><td>Three of a kind</td><td>face × 100 — three 1s pay 1,000</td></tr>
+              <tr><td>Four of a kind</td><td>1,000</td></tr>
+              <tr><td>Five of a kind</td><td>2,000</td></tr>
+              <tr><td>Six of a kind</td><td>3,000</td></tr>
+              <tr><td>Straight 1–6</td><td>1,500</td></tr>
+              <tr><td>Three pairs</td><td>1,500</td></tr>
+              <tr><td>Two triplets</td><td>2,500</td></tr>
+              <tr><td>Four of a kind + a pair</td><td>1,500</td></tr>
+            </table>
+          </details>
+        </div>
       </aside>
     </div>
 
@@ -3246,8 +3272,8 @@ function resetFarkleTable(){
   setTurn(null, `Farkle — first to ${fmt(farkleTarget)}. Roll, set aside the scorers, bank or press your luck — a roll with nothing scoring is a farkle, and the turn's points are gone.`);
   setControls(`<button class="btn primary" id="btn-deal">Start a game — first to ${fmt(farkleTarget)}</button>`);
   wireBtn("btn-deal", startFarkleGame);
-  setCenter("Farkle", `Six dice · 1s are 100, 5s are 50, three of a kind and up · 500 in one turn to get on the board · first to ${fmt(farkleTarget)} — then everyone else gets one last turn to steal it.`);
-  if(mode === "apprentice" && tipsOn) setTip("Farkle in one breath: roll all six and set aside the dice that score — <b>1s are 100, 5s are 50</b>, three of a kind and the big six-dice combos pay more. Then <b>bank</b> the turn total or roll what's left and press on. A roll with <b>nothing</b> scoring is a <b>farkle</b>: the unbanked points vanish. Score with all six and they're <b>hot</b> — they all come back and the points ride along. Your first bank needs <b>500</b>, and three farkles in a row cost <b>1,000</b>.");
+  setCenter("Farkle", `Six dice · 1s are 100, 5s are 50, three of a kind and up · a straight 1–6 pays 1,500 · 500 in one turn to get on the board · first to ${fmt(farkleTarget)} — then everyone else gets one last turn to steal it.`);
+  if(mode === "apprentice" && tipsOn) setTip("Farkle in one breath: roll all six and set aside the dice that score — <b>1s are 100, 5s are 50</b>, three of a kind pays face × 100 (three 1s = 1,000), and the six-dice combos pay big: a <b>straight 1–6</b> or <b>three pairs</b> pays <b>1,500</b>, <b>two triplets</b> <b>2,500</b>, four of a kind <b>1,000</b>, six of a kind <b>3,000</b>. Then <b>bank</b> the turn total or roll what's left and press on. A roll with <b>nothing</b> scoring is a <b>farkle</b>: the unbanked points vanish. Score with all six and they're <b>hot</b> — they all come back and the points ride along. Your first bank needs <b>500</b>, and three farkles in a row cost <b>1,000</b>.");
 }
 function paintFarkleBoardSolo(){
   const b = $("board"); if(!b || !FK || !FK.state) return;
@@ -3294,6 +3320,15 @@ function updateFarkleDecideUI(){
   if(note) note.innerHTML = !st.onBoard && pts > 0 && FK.turnPts + pts < FARKLE_ONBOARD
     ? `You need <b>${fmt(FARKLE_ONBOARD)}</b> in one turn to get on the board — this pick leaves you at ${fmt(FK.turnPts + pts)}, so banking is locked. Roll on.`
     : (pts > 0 && FK.diceLeft - selVals.length === 0 ? `That pick uses every die — rolling on means <b>hot dice</b>: all six come back and the turn total rides.` : "");
+  // same one-tap way back as the live room: a hand-made pick that
+  // isn't the richest legal one gets the best pick offered by name
+  const bestBtn = $("btn-fk-best");
+  if(bestBtn){
+    const b = farkleBestSelection(FK.roll);
+    const isBest = !!b && FK.selUI.sel.size === b.indices.length && b.indices.every(i=> FK.selUI.sel.has(i));
+    bestBtn.style.display = b && !isBest ? "" : "none";
+    if(b && !isBest) bestBtn.textContent = `Take the best pick — ${farkleDescribeSelection(b.dice)} · ${fmt(b.points)}`;
+  }
 }
 function farkleCoachViewSolo(step){
   const st = FK.state[0];
@@ -3329,9 +3364,11 @@ function humanFarkleDecide(seq){
     }, FARKLE_MS);
     FK.selUI = { sel: new Set(best ? best.indices : []) };   // the coach's pick starts lifted — tap dice to change it
     setControls(`<span class="ctl-note" id="fk-selinfo" style="font-size:14.5px"></span>
+      <button class="btn" id="btn-fk-best" style="display:none"></button>
       <button class="btn" id="btn-fk-roll">Roll the rest</button>
       <button class="btn primary" id="btn-fk-bank">Bank</button>
       <span class="ctl-note" id="fk-banknote"></span>`);
+    wireBtn("btn-fk-best", ()=>{ if(!FK || !FK.selUI || !best) return; FK.selUI.sel = new Set(best.indices); paintFarkleBoardSolo(); updateFarkleDecideUI(); });
     wireBtn("btn-fk-roll", ()=>{ if(FK.selUI) finish({ sel: [...FK.selUI.sel], action: "roll" }); });
     wireBtn("btn-fk-bank", ()=>{ if(FK.selUI) finish({ sel: [...FK.selUI.sel], action: "bank" }); });
     showTurnTimer(FARKLE_MS, "Your pick");
@@ -5075,7 +5112,7 @@ function gameIntroTip(g){
   if(g === "omaha") return "Omaha in one breath: <b>four cards of your own, five shared on the board</b> — but your hand is <b>exactly two of yours plus exactly three from the board</b>. The board alone never plays, and neither do one or three of your cards. The coach reads your real (exactly 2+3) hand for you.";
   if(g === "stud") return "Stud in one breath: <b>two cards down, one up</b> to start, then one more card a street — three more up, and the last one down. Best five of your seven wins. Half the table's cards sit face-up for everyone: <b>what you can see is what nobody can hold</b> — the coach counts the visible cards with you.";
   if(g === "spades") return "Spades in one breath: <b>bid</b> how many tricks you'll take, then play them out — <b>follow suit</b> if you can, and remember <b>spades are trump</b> but can't be led until they're broken. Make your number for <b>10 points a trick</b> plus a point a bag; miss it and you're set. <b>Nil</b> — promising to take nothing at all — is worth ±100. The coach counts your hand with you.";
-  if(g === "farkle") return "Farkle in one breath: roll all six and set aside the dice that score — <b>1s are 100, 5s are 50</b>, three of a kind and the big six-dice combos pay more. Then <b>bank</b> the turn total or roll what's left and press on. A roll with <b>nothing</b> scoring is a <b>farkle</b>: the unbanked points vanish. Score with all six and they're <b>hot</b> — they all come back and the points ride along. Your first bank needs <b>500</b>, and three farkles in a row cost <b>1,000</b>.";
+  if(g === "farkle") return "Farkle in one breath: roll all six and set aside the dice that score — <b>1s are 100, 5s are 50</b>, three of a kind pays face × 100 (three 1s = 1,000), and the six-dice combos pay big: a <b>straight 1–6</b> or <b>three pairs</b> pays <b>1,500</b>, <b>two triplets</b> <b>2,500</b>, four of a kind <b>1,000</b>, six of a kind <b>3,000</b>. Then <b>bank</b> the turn total or roll what's left and press on. A roll with <b>nothing</b> scoring is a <b>farkle</b>: the unbanked points vanish. Score with all six and they're <b>hot</b> — they all come back and the points ride along. Your first bank needs <b>500</b>, and three farkles in a row cost <b>1,000</b>.";
   if(g === "bj") return "Blackjack in one sentence: <b>get closer to 21 than the dealer without going over</b>. The dealer’s face-up card is your crystal ball — the coach reads it for you on every decision while Apprentice mode is on.";
   const V = DRAW_VARIANTS[g] || DRAW_VARIANTS.draw;
   return V.tip;
@@ -5321,9 +5358,11 @@ function mpBuildPromptUI(kind, ctx, respond){
       finalRound: !!ctx.finalRound, toBeat: ctx.toBeat, leaderName: ctx.leaderName ? mpEsc(ctx.leaderName) : null }));
     mp.farkleUI = { roll, sel: new Set(best ? best.indices : []), ctx, respond };   // the coach's pick starts lifted — tap dice to change it
     setControls(`<span class="ctl-note" id="mp-fk-info" style="font-size:14.5px"></span>
+      <button class="btn" id="mp-fk-best" style="display:none"></button>
       <button class="btn" id="mp-fk-rollmore">Roll the rest</button>
       <button class="btn primary" id="mp-fk-bank">Bank</button>
       <span class="ctl-note" id="mp-fk-note"></span>`);
+    wireBtn("mp-fk-best", ()=>{ const ui = mp.farkleUI; if(!ui) return; const b = farkleBestSelection(ui.roll); if(!b) return; ui.sel = new Set(b.indices); mpPaintFarkleDice(); });
     wireBtn("mp-fk-rollmore", ()=>{ const ui = mp.farkleUI; if(!ui) return; mp.farkleUI = null; respond({ type: "decide", sel: [...ui.sel], action: "roll" }); });
     wireBtn("mp-fk-bank", ()=>{ const ui = mp.farkleUI; if(!ui) return; mp.farkleUI = null; respond({ type: "decide", sel: [...ui.sel], action: "bank" }); });
     mpPaintFarkleDice();
@@ -5396,6 +5435,18 @@ function mpPaintFarkleDice(){
   if(note) note.innerHTML = !ui.ctx.onBoard && pts > 0 && turnPts + pts < FARKLE_ONBOARD
     ? `You need <b>${fmt(FARKLE_ONBOARD)}</b> in one turn to get on the board — this pick leaves you at ${fmt(turnPts + pts)}, so banking is locked. Roll on.`
     : (pts > 0 && (ui.ctx.diceLeft - selVals.length) === 0 ? `That pick uses every die — rolling on means <b>hot dice</b>: all six come back and the turn total rides.` : "");
+  // the one-tap way back: whenever the hand-made pick isn't the
+  // richest legal one, offer the best pick by name and points. Taps
+  // TOGGLE dice, so a stray tap can shrink the pre-lifted pick (the
+  // Nov 15 straight that got committed as a lone 1) — this restores
+  // it whole, full-table combos included.
+  const bestBtn = $("mp-fk-best");
+  if(bestBtn){
+    const b = farkleBestSelection(ui.roll);
+    const isBest = !!b && ui.sel.size === b.indices.length && b.indices.every(i=> ui.sel.has(i));
+    bestBtn.style.display = b && !isBest ? "" : "none";
+    if(b && !isBest) bestBtn.textContent = `Take the best pick — ${farkleDescribeSelection(b.dice)} · ${fmt(b.points)}`;
+  }
 }
 function mpAIAction(seat, kind, ctx){
   if(kind === "farkleturn"){
@@ -5603,7 +5654,7 @@ function mpResetTableMP(){
       ? ["Spades — 4P Teams · live room", "Partners across · 13 cards each · bid your tricks · spades are trump · first to 500 · the host deals."]
       : ["Spades — 3P Cutthroat · live room", "Everyone for themselves · 17 cards each (the 2♣ sits out) · spades are trump · first to 300 · the host deals."]
     : game === "farkle"
-    ? ["Farkle — live room", "Six dice · 1s are 100, 5s are 50, three of a kind and up · 500 to get on the board · three farkles running cost 1,000 · first to " + fmt(farkleTarget) + ", then one final round · the host deals."]
+    ? ["Farkle — live room", "Six dice · 1s are 100, 5s are 50, three of a kind and up · a straight 1–6 pays 1,500 · 500 to get on the board · three farkles running cost 1,000 · first to " + fmt(farkleTarget) + ", then one final round · the host deals."]
     : isDrawGame(game)
     ? [drawVariant().name + " — live room", drawVariant().wilds ? "Jokers & deuces wild · two draws — up to 3, then up to 2 · the host deals." : "No wilds · one draw — up to 5 · the host deals."]
     : ["Blackjack — live room", "Dealer stands on 17 · blackjack pays 3:2 · the host deals."];
