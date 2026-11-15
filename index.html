@@ -388,6 +388,23 @@
       .you-cards .cah-sub.pickable{ cursor:pointer; }
       .you-cards .cah-sub.pickable:hover{ border-color:var(--gold-bright); }
       .plate .aibadge.czarbadge{ background:#7c3aed; color:#fff; }
+      /* ---------- Pool (8-ball) ---------- */
+      .pool-wrap{ width:100%; }
+      #pool-canvas{ width:100%; height:auto; display:block; border-radius:12px; touch-action:none;
+        box-shadow:0 10px 26px rgba(0,0,0,.5), inset 0 0 0 1px rgba(0,0,0,.35); background:#3a2415; cursor:crosshair; }
+      .pool-legend{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-top:6px; font-size:12.5px; font-weight:700; color:#fff; text-shadow:0 1px 4px rgba(0,0,0,.6); }
+      .pool-legend .pl-dot{ display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:5px; vertical-align:-1px; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55), 0 1px 2px rgba(0,0,0,.5); }
+      .controls input[type=range].pool-power{ accent-color:var(--gold-bright); width:min(170px,38vw); height:28px; }
+      /* the pool table needs the felt's whole middle: widen the center
+         column while Pool is the live game (body class follows the
+         switcher / the room snapshot, like the game segments) */
+      body.game-pool .center-info{ width:min(96%,880px); top:55%; }
+      body.game-pool .center-msg{ font-size:clamp(14px,2.2vw,20px); }
+      body.game-pool .center-sub{ font-size:12px; }
+      @media (max-width:640px){
+        body.game-pool .center-info{ width:97%; top:56%; }
+        body.game-pool .center-sub{ font-size:11px; }
+      }
       .you-cards .card{ cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; }
       .you-cards .card.sel{ transform:translateY(-11px); box-shadow:0 0 0 2.5px var(--danger), 0 10px 14px rgba(0,0,0,.4); }
       .you-cards .card.sugg{ box-shadow:0 0 0 2.5px var(--gold-bright), 0 6px 10px rgba(0,0,0,.35); }
@@ -571,7 +588,7 @@
     <header class="topbar">
       <div>
         <h1>Nate&rsquo;s <span class="thin">Poker Room</span></h1>
-        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Seven Card Stud, Five Card Draw, Blackjack, Spades, Farkle, Uno &amp; Cards Against the Table. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
+        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Seven Card Stud, Five Card Draw, Blackjack, Spades, Farkle, Uno, Cards Against the Table &amp; Pool. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
       </div>
       <div class="bar-controls">
         <div class="seg" role="tablist" aria-label="Game">
@@ -586,6 +603,7 @@
           <button id="seg-farkle" type="button">Farkle</button>
           <button id="seg-uno" type="button">Uno</button>
           <button id="seg-cah" type="button">Cards Against the Table</button>
+          <button id="seg-pool" type="button">Pool · 8-Ball</button>
         </div>
         <div class="seg" id="spades-variant-seg" style="display:none" aria-label="Spades variant">
           <span class="seg-label">Spades</span>
@@ -901,6 +919,22 @@
             </ul>
           </details>
         </div>
+
+        <div class="panel">
+          <details class="rules">
+            <summary>House rules — Pool (8-Ball)</summary>
+            <ul>
+              <li><b>One-on-one.</b> Fifteen balls and a cue ball, racked with the <b>8 in the middle</b>. The break is taken from <b>behind the head string</b>, and the breaker alternates game to game.</li>
+              <li><b>Open table:</b> groups aren't set until someone pockets a ball <b>after</b> the break. A ball on the break just stays down and the breaker shoots on — it doesn't claim solids or stripes.</li>
+              <li><b>Solids</b> are 1–7, <b>stripes</b> 9–15. Pocket one of yours and you shoot again; pocket only your opponent's (or nothing) and the turn passes — their ball stays down either way.</li>
+              <li><b>Fouls:</b> scratch the cue ball, or don't touch any ball at all, and your opponent gets <b>ball in hand anywhere</b> — even after the break. That's this table's one big simplification: no kitchen-only ball in hand.</li>
+              <li><b>The 8 ball:</b> sink it before your group is cleared and you <b>lose</b>. Sink it <b>on the break</b> and it's a <b>re-rack</b> with the same breaker — no win, no loss. Clear your group, then sink the 8 to win — but scratch on the 8 and you lose.</li>
+              <li><b>No call shots</b> at this table — slop counts, and the 8 doesn't need calling either. <b>No spin</b> in this first version: aim and power are the whole shot. Every screen replays the exact same physics from the shot's angle and power, so what the shooter saw is what everybody sees.</li>
+              <li><b>Aiming:</b> drag on the table to aim (the guide shows first contact and where both balls roll — it shows <b>only on the shooter's screen</b>), set power with the slider, tap <b>SHOOT</b>. On a phone, landscape gives you a bigger table.</li>
+              <li><b>No chips in Pool</b> — your seat shows your group and what's left; the room list keeps your games won.</li>
+            </ul>
+          </details>
+        </div>
       </aside>
     </div>
 
@@ -1064,7 +1098,7 @@
                  sub:"No wilds — a straight 52-card deck · one draw, up to 5 cards.",
                  tip:"Classic draw, the old-school way — <b>no wilds</b>, one draw of up to 5. Made hands are scarcer here, so a pair is a real start. Hit <b>Deal</b> and I’ll size up your hand." },
     };
-    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", stud:"Seven Card Stud", bj:"Blackjack", spades:"Spades", farkle:"Farkle", uno:"Uno", cah:"Cards Against the Table" };
+    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", stud:"Seven Card Stud", bj:"Blackjack", spades:"Spades", farkle:"Farkle", uno:"Uno", cah:"Cards Against the Table", pool:"Pool — 8-Ball" };
     /* Spades variant: "teams" = 4P partnership (partners across, 13 cards,
        match to 500); "cut" = 3P cutthroat (2♣ removed, 17 cards each,
        every player for themselves, match to 300). The host picks it in a
@@ -1125,7 +1159,7 @@
       else { el.textContent = ""; el.classList.remove("on"); }
     }
     /* ================= turn timer, notices, tap binding ================= */
-    const TURN_MS = 90000, DRAW_MS = 120000, AWAY_MS = 5000, SPADES_MS = 60000, FARKLE_MS = 60000, UNO_MS = 60000, CAH_MS = 90000;
+    const TURN_MS = 90000, DRAW_MS = 120000, AWAY_MS = 5000, SPADES_MS = 60000, FARKLE_MS = 60000, UNO_MS = 60000, CAH_MS = 90000, POOL_MS = 60000;
     function fmtClock(ms){ const s = Math.max(0, Math.ceil(ms/1000)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
     let _ttIv = null;
     /* Turn nudge: if the player whose turn it is hasn't acted in 20s,
@@ -1187,6 +1221,7 @@
       if(kind === "unoturn") return "Time ran out — the table played your Uno turn for you.";
       if(kind === "cahsubmit") return "Time ran out — the table played a card for you.";
       if(kind === "cahpick") return "Time ran out — the table crowned a winner for you.";
+      if(kind === "poolshot") return "Time ran out — the table took the shot for you.";
       return "Time ran out — the table moved on.";
     }
     /* One tap = one toggle, in every browser (incl. in-app webviews): fire on
@@ -2814,6 +2849,701 @@ function spadesTargetFor(variant){ return variant === "cut" ? 300 : 500; }
       const sorted = idx.filter(i=>!isWild(cards[i])).sort((a,b)=>cards[b].r-cards[a].r);
       const keep = new Set(sorted.slice(0, Math.max(0, 5-3 - cards.filter(isWild).length)).concat(idx.filter(i=>isWild(cards[i]))));
       return discard(idx.filter(i=>!keep.has(i)));
+    }
+
+    /* ================= POOL — 8-BALL (shared core) =================
+       The one non-card game on the shelf, and the one place the table
+       runs a physics sim. THE SHOT IS THE SYNC: a shot is exactly
+       { angle, power, cue } (cue = the ball-in-hand placement, or
+       null). The shooter aims on their own client; the host
+       broadcasts those parameters and EVERY client runs the identical
+       fixed-timestep simulation below, so every screen replays the
+       same shot and lands on the same final state. The host then
+       syncs the authoritative ball positions in the snapshot, so any
+       drift self-heals. Determinism is a hard requirement:
+       poolSimulate uses NO Math.random, no Date, no wall clock —
+       only its inputs and the constants here. (The AI's aim jitter
+       lives OUTSIDE the sim, in poolAIShot, on the host only; the
+       jittered parameters are what get broadcast.)
+       Coordinates: the playfield (cushion nose to cushion nose) is
+       1000 x 500 units; the canvas adds a rail margin around it. */
+    const POOL_W = 1000, POOL_H = 500;
+    const POOL_R = 11.5;                       // ball radius (a real ball on a 100in table, scaled)
+    const POOL_OFF = 40;                       // canvas rail margin around the playfield
+    const POOL_CW = POOL_W + POOL_OFF * 2, POOL_CH = POOL_H + POOL_OFF * 2;   // canvas 1080 x 580
+    const POOL_POCKETS = [ { x: 0, y: 0, c: 1 }, { x: POOL_W / 2, y: 0, c: 0 }, { x: POOL_W, y: 0, c: 1 },
+                           { x: 0, y: POOL_H, c: 1 }, { x: POOL_W / 2, y: POOL_H, c: 0 }, { x: POOL_W, y: POOL_H, c: 1 } ];
+    const POOL_POCKET_NAMES = ["top-left corner", "top side", "top-right corner", "bottom-left corner", "bottom side", "bottom-right corner"];
+    const POOL_POCKET_RC = 27, POOL_POCKET_RS = 24;   // capture radius: corners / sides
+    const POOL_DT = 1 / 960;                   // fixed timestep — the same step live, in replay, and in tests.
+                                               // Fine on purpose: at 240/s a fast cue ball penetrates ~3.5 units
+                                               // before a collision resolves, which rotates the contact normal
+                                               // several degrees and drifts long shots off the pocket line.
+                                               // At 960/s the penetration is under a unit and a true aim drops.
+    const POOL_MAX_STEPS = 960 * 14;           // 14 sim-seconds is plenty for any shot to die out
+    const POOL_FRICTION = 120;                 // constant rolling decel (units/s^2)
+    const POOL_DRAG = 0.32;                    // proportional rolling drag (/s)
+    const POOL_REST_BALL = 0.95;               // ball-ball restitution
+    const POOL_REST_RAIL = 0.76;               // cushion restitution
+    const POOL_STOP = 7;                       // below this speed (units/s) a ball is at rest
+    const POOL_MAX_SPEED = 1080;               // cue-ball speed at power 1.0
+    const POOL_BALL_COLORS = { 1: "#f7c948", 2: "#2563eb", 3: "#dc2626", 4: "#7c3aed", 5: "#f97316", 6: "#16a34a", 7: "#991b1b", 8: "#17171c",
+                               9: "#f7c948", 10: "#2563eb", 11: "#dc2626", 12: "#7c3aed", 13: "#f97316", 14: "#16a34a", 15: "#991b1b" };
+    function poolGroupOf(n){ return n === 0 ? "cue" : n === 8 ? "eight" : n < 8 ? "solid" : "stripe"; }
+    function poolGroupName(g){ return g === "solid" ? "Solids" : g === "stripe" ? "Stripes" : "the 8"; }
+    /* The rack: apex (the 1) on the foot spot pointing at the cue,
+       the 8 in the middle of the third row, the two back corners one
+       solid and one stripe, the rest shuffled between. Positions are
+       indexed row by row: [0] apex, [1,2], [3,4,5] (4 = center),
+       [6..9], [10..14] (10 and 14 = back corners). A test seam
+       (poolRackHook) can hand back a rigged layout instead — same
+       pattern as the Farkle dice hook. */
+    let poolRackHook = null;
+    function poolRackBalls(){
+      if(poolRackHook){ const b = poolRackHook(); if(b && b.length === 16) return b.map(x=> ({ n: x.n, x: x.x, y: x.y, down: !!x.down })); }
+      const gap = 0.6;
+      const dx = (2 * POOL_R + gap) * Math.cos(Math.PI / 6), dy = 2 * POOL_R + gap;
+      const apexX = POOL_W * 0.72, cy = POOL_H / 2;
+      const pos = [];
+      for(let row = 0; row < 5; row++) for(let k = 0; k <= row; k++) pos.push({ x: apexX + row * dx, y: cy + (k - row / 2) * dy });
+      const assign = new Array(15).fill(0);
+      assign[0] = 1; assign[4] = 8;
+      const solids = shuffle([2, 3, 4, 5, 6, 7]), stripes = shuffle([9, 10, 11, 12, 13, 14, 15]);
+      assign[10] = solids.pop(); assign[14] = stripes.pop();          // back corners: one of each
+      const rest = shuffle(solids.concat(stripes));
+      for(let i = 0; i < 15; i++) if(!assign[i]) assign[i] = rest.pop();
+      const balls = [{ n: 0, x: POOL_W * 0.25, y: POOL_H / 2, down: false }];
+      pos.forEach((p, i)=> balls.push({ n: assign[i], x: p.x, y: p.y, down: false }));
+      return balls;
+    }
+    function poolNewCore(){
+      // groups: per player index, null while the table is open.
+      // bih: the CURRENT shooter's placement right — null (none),
+      // "kitchen" (the break: behind the head string), "anywhere".
+      return { balls: poolRackBalls(), groups: [null, null], turn: 0, shotNo: 0, bih: "kitchen", over: false, winner: -1 };
+    }
+    function poolRemaining(core, idx){
+      const g = core.groups[idx]; if(!g) return 7;
+      return core.balls.filter(b=> !b.down && poolGroupOf(b.n) === g).length;
+    }
+    function poolLegalTargets(core, idx){
+      if(core.groups[0] === null) return core.balls.filter(b=> !b.down && b.n !== 0 && b.n !== 8).map(b=> b.n);
+      if(poolRemaining(core, idx) === 0) return [8];
+      const g = core.groups[idx];
+      return core.balls.filter(b=> !b.down && poolGroupOf(b.n) === g).map(b=> b.n);
+    }
+    function poolFrameOf(balls){
+      const f = new Array(16).fill(null);
+      for(const b of balls) f[b.n] = b.down ? null : [b.x, b.y];
+      return f;
+    }
+    /* THE SIM. Pure: same balls + same shot in, same everything out.
+       Returns the final balls, the ordered pocketed list (object
+       balls only), whether the cue dropped, the first ball the cue
+       touched (null = a whiff), and the animation frames (positions
+       at 60fps, indexed by ball number, null = down). */
+    function poolSimulate(ballsIn, shot){
+      const balls = ballsIn.map(b=> ({ n: b.n, x: b.x, y: b.y, vx: 0, vy: 0, down: !!b.down }));
+      const cue = balls.find(b=> b.n === 0);
+      if(shot && shot.cue && cue){ cue.x = shot.cue.x; cue.y = shot.cue.y; }
+      if(cue && cue.down && !(shot && shot.cue)){ cue.x = POOL_W * 0.25; cue.y = POOL_H / 2; }
+      if(cue) cue.down = false;
+      const power = Math.max(0.05, Math.min(1, shot && Number.isFinite(+shot.power) ? +shot.power : 0.65));
+      const angle = shot && Number.isFinite(+shot.angle) ? +shot.angle : 0;
+      const speed = POOL_MAX_SPEED * (0.18 + 0.82 * power);
+      if(cue){ cue.vx = Math.cos(angle) * speed; cue.vy = Math.sin(angle) * speed; }
+      const pocketed = [];
+      let scratched = false, firstContact = null, step = 0;
+      const frames = [poolFrameOf(balls)];
+      while(step < POOL_MAX_STEPS){
+        let moving = false;
+        for(const b of balls){ if(!b.down && (b.vx !== 0 || b.vy !== 0)){ moving = true; break; } }
+        if(!moving && step > 0) break;
+        step++;
+        for(const b of balls){
+          if(b.down || (b.vx === 0 && b.vy === 0)) continue;
+          b.x += b.vx * POOL_DT; b.y += b.vy * POOL_DT;
+          const sp = Math.hypot(b.vx, b.vy);
+          let ns = sp - (POOL_FRICTION + sp * POOL_DRAG) * POOL_DT;
+          if(ns < POOL_STOP) ns = 0;
+          const f = sp > 0 ? ns / sp : 0;
+          b.vx *= f; b.vy *= f;
+        }
+        // pockets capture before cushions bounce — the jaws decide
+        for(const b of balls){
+          if(b.down) continue;
+          for(const pk of POOL_POCKETS){
+            const rr = pk.c ? POOL_POCKET_RC : POOL_POCKET_RS;
+            const ddx = b.x - pk.x, ddy = b.y - pk.y;
+            if(ddx * ddx + ddy * ddy < rr * rr){ b.down = true; b.vx = 0; b.vy = 0; if(b.n === 0) scratched = true; else pocketed.push(b.n); break; }
+          }
+        }
+        for(const b of balls){
+          if(b.down) continue;
+          let nearPocket = false;
+          for(const pk of POOL_POCKETS){
+            const rr = (pk.c ? POOL_POCKET_RC : POOL_POCKET_RS) + POOL_R * 0.9;
+            const ddx = b.x - pk.x, ddy = b.y - pk.y;
+            if(ddx * ddx + ddy * ddy < rr * rr){ nearPocket = true; break; }
+          }
+          if(nearPocket){
+            // in the jaws: no cushion bounce, just never let a ball escape the table
+            if(b.x < -POOL_R * 0.6){ b.x = -POOL_R * 0.6; if(b.vx < 0) b.vx = -b.vx * 0.4; }
+            if(b.x > POOL_W + POOL_R * 0.6){ b.x = POOL_W + POOL_R * 0.6; if(b.vx > 0) b.vx = -b.vx * 0.4; }
+            if(b.y < -POOL_R * 0.6){ b.y = -POOL_R * 0.6; if(b.vy < 0) b.vy = -b.vy * 0.4; }
+            if(b.y > POOL_H + POOL_R * 0.6){ b.y = POOL_H + POOL_R * 0.6; if(b.vy > 0) b.vy = -b.vy * 0.4; }
+            continue;
+          }
+          if(b.x < POOL_R){ b.x = POOL_R; if(b.vx < 0) b.vx = -b.vx * POOL_REST_RAIL; }
+          if(b.x > POOL_W - POOL_R){ b.x = POOL_W - POOL_R; if(b.vx > 0) b.vx = -b.vx * POOL_REST_RAIL; }
+          if(b.y < POOL_R){ b.y = POOL_R; if(b.vy < 0) b.vy = -b.vy * POOL_REST_RAIL; }
+          if(b.y > POOL_H - POOL_R){ b.y = POOL_H - POOL_R; if(b.vy > 0) b.vy = -b.vy * POOL_REST_RAIL; }
+        }
+        for(let i = 0; i < balls.length; i++){
+          const a = balls[i]; if(a.down) continue;
+          for(let j = i + 1; j < balls.length; j++){
+            const c = balls[j]; if(c.down) continue;
+            const ddx = c.x - a.x, ddy = c.y - a.y;
+            const d2 = ddx * ddx + ddy * ddy, min = 2 * POOL_R;
+            if(d2 > 0 && d2 < min * min){
+              const d = Math.sqrt(d2), nx = ddx / d, ny = ddy / d, overlap = (min - d) / 2;
+              a.x -= nx * overlap; a.y -= ny * overlap; c.x += nx * overlap; c.y += ny * overlap;
+              const rvn = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
+              if(rvn < 0){
+                const imp = -(1 + POOL_REST_BALL) * rvn / 2;
+                a.vx -= imp * nx; a.vy -= imp * ny; c.vx += imp * nx; c.vy += imp * ny;
+                if(firstContact === null){ if(a.n === 0) firstContact = c.n; else if(c.n === 0) firstContact = a.n; }
+              }
+            }
+          }
+        }
+        if(step % 16 === 0) frames.push(poolFrameOf(balls));   // 960 steps/s ÷ 16 = 60fps playback frames
+      }
+      frames.push(poolFrameOf(balls));
+      return { balls: balls.map(b=> ({ n: b.n, x: b.x, y: b.y, down: b.down })), frames, pocketed, scratched, firstContact, steps: step };
+    }
+    /* Aim geometry — the same math the sim's collisions produce,
+       run forward from the cue ball: where the cue stops (the ghost
+       ball), which way the object ball leaves, and which way the cue
+       deflects. Powers the aim guide, the coach, and the AI. */
+    function poolAimPredict(balls, angle){
+      const cue = balls.find(b=> b.n === 0 && !b.down);
+      if(!cue) return null;
+      const dx = Math.cos(angle), dy = Math.sin(angle);
+      let best = null;
+      for(const b of balls){
+        if(b.n === 0 || b.down) continue;
+        const rx = b.x - cue.x, ry = b.y - cue.y;
+        const proj = rx * dx + ry * dy;
+        if(proj <= 0) continue;
+        const perp2 = rx * rx + ry * ry - proj * proj, rr = 2 * POOL_R;
+        if(perp2 >= rr * rr) continue;
+        const t = proj - Math.sqrt(rr * rr - perp2);
+        if(t < 0) continue;
+        if(!best || t < best.t) best = { t, ball: b };
+      }
+      let tRail = Infinity;
+      if(dx > 1e-9) tRail = Math.min(tRail, (POOL_W - POOL_R - cue.x) / dx);
+      else if(dx < -1e-9) tRail = Math.min(tRail, (POOL_R - cue.x) / dx);
+      if(dy > 1e-9) tRail = Math.min(tRail, (POOL_H - POOL_R - cue.y) / dy);
+      else if(dy < -1e-9) tRail = Math.min(tRail, (POOL_R - cue.y) / dy);
+      if(!best) return { hit: null, cueX: cue.x, cueY: cue.y, endX: cue.x + dx * Math.max(0, tRail), endY: cue.y + dy * Math.max(0, tRail) };
+      const gx = cue.x + dx * best.t, gy = cue.y + dy * best.t;
+      let ox = best.ball.x - gx, oy = best.ball.y - gy;
+      const ol = Math.hypot(ox, oy) || 1; ox /= ol; oy /= ol;
+      let cx = dx - ox * (dx * ox + dy * oy), cy = dy - oy * (dx * ox + dy * oy);
+      const cl = Math.hypot(cx, cy);
+      if(cl > 1e-6){ cx /= cl; cy /= cl; } else { cx = ox; cy = oy; }   // dead-on: the cue follows through
+      return { hit: best.ball.n, ghost: { x: gx, y: gy }, objDir: { x: ox, y: oy }, cueDir: { x: cx, y: cy }, cueX: cue.x, cueY: cue.y, dist: best.t };
+    }
+    function poolPathClear(balls, x1, y1, x2, y2, ignore){
+      for(const b of balls){
+        if(b.down || (ignore && ignore.includes(b.n))) continue;
+        const vx = x2 - x1, vy = y2 - y1, L2 = vx * vx + vy * vy || 1;
+        let t = ((b.x - x1) * vx + (b.y - y1) * vy) / L2;
+        t = Math.max(0, Math.min(1, t));
+        const px = x1 + vx * t, py = y1 + vy * t;
+        if(Math.hypot(b.x - px, b.y - py) < 2 * POOL_R - 1.5) return false;
+      }
+      return true;
+    }
+    function poolPlacementLegal(core, x, y){
+      if(!Number.isFinite(x) || !Number.isFinite(y)) return false;
+      if(x < POOL_R || x > POOL_W - POOL_R || y < POOL_R || y > POOL_H - POOL_R) return false;
+      if(core.bih === "kitchen" && x > POOL_W * 0.25) return false;   // the break stays behind the head string
+      for(const pk of POOL_POCKETS){
+        const rr = (pk.c ? POOL_POCKET_RC : POOL_POCKET_RS) + 2;
+        const ddx = x - pk.x, ddy = y - pk.y;
+        if(ddx * ddx + ddy * ddy < rr * rr) return false;
+      }
+      for(const b of core.balls){
+        if(b.n === 0 || b.down) continue;
+        if(Math.hypot(b.x - x, b.y - y) < 2 * POOL_R + 0.5) return false;
+      }
+      return true;
+    }
+    /* The shot planner shared by the AI and the coach: every legal
+       target x every pocket, ghost-ball geometry, both paths walked
+       for traffic, cut angle capped at ~80 degrees — scored by cut
+       first, then distance. Returns the plan or null (no clean look). */
+    function poolSuggestShot(core, idx){
+      const balls = core.balls;
+      const cue = balls.find(b=> b.n === 0);
+      const cx = cue && !cue.down ? cue.x : POOL_W * 0.25, cy = cue && !cue.down ? cue.y : POOL_H / 2;
+      let best = null;
+      for(const tn of poolLegalTargets(core, idx)){
+        const tb = balls.find(b=> b.n === tn);
+        if(!tb || tb.down) continue;
+        for(let pi = 0; pi < POOL_POCKETS.length; pi++){
+          const pk = POOL_POCKETS[pi];
+          const odx = pk.x - tb.x, ody = pk.y - tb.y, od = Math.hypot(odx, ody);
+          if(od < 1) continue;
+          const ox = odx / od, oy = ody / od;
+          const gx = tb.x - ox * 2 * POOL_R, gy = tb.y - oy * 2 * POOL_R;
+          if(gx < POOL_R || gx > POOL_W - POOL_R || gy < POOL_R || gy > POOL_H - POOL_R) continue;
+          const cdx = gx - cx, cdy = gy - cy, cd = Math.hypot(cdx, cdy);
+          if(cd < 1) continue;
+          const dot = (cdx / cd) * ox + (cdy / cd) * oy;
+          if(dot < 0.18) continue;
+          const cut = Math.acos(Math.max(-1, Math.min(1, dot))) * 180 / Math.PI;
+          if(!poolPathClear(balls, cx, cy, gx, gy, [0, tn])) continue;
+          if(!poolPathClear(balls, tb.x, tb.y, pk.x, pk.y, [tn])) continue;
+          const score = cut * 1.6 + (cd + od) * 0.055;
+          if(!best || score < best.score)
+            best = { ballN: tn, pocket: pi, angle: Math.atan2(cdy, cdx), ghost: { x: gx, y: gy }, cut, dist: cd + od, score,
+                     power: Math.max(0.34, Math.min(0.9, 0.3 + (cd + od) / 1150)) };
+        }
+      }
+      return best;
+    }
+    function poolAIBallInHand(core, idx){
+      const balls = core.balls;
+      let best = null;
+      for(const tn of poolLegalTargets(core, idx)){
+        const tb = balls.find(b=> b.n === tn);
+        if(!tb || tb.down) continue;
+        for(const pk of POOL_POCKETS){
+          const odx = pk.x - tb.x, ody = pk.y - tb.y, od = Math.hypot(odx, ody);
+          if(od < 1) continue;
+          const ox = odx / od, oy = ody / od;
+          const gx = tb.x - ox * 2 * POOL_R, gy = tb.y - oy * 2 * POOL_R;
+          for(const back of [170, 260, 360]){
+            const px = gx - ox * back, py = gy - oy * back;
+            if(!poolPlacementLegal(core, px, py)) continue;
+            const eff = balls.map(b=> b.n === 0 ? { n: 0, x: px, y: py, down: false } : b);
+            if(!poolPathClear(eff, px, py, gx, gy, [0, tn])) continue;
+            const score = od + back * 0.4;
+            if(!best || score < best.score) best = { x: px, y: py, score };
+          }
+        }
+      }
+      if(best) return { x: best.x, y: best.y };
+      const spots = [{ x: POOL_W * 0.25, y: POOL_H / 2 }, { x: POOL_W * 0.25, y: POOL_H * 0.35 }, { x: POOL_W * 0.25, y: POOL_H * 0.65 }, { x: POOL_W * 0.4, y: POOL_H / 2 }];
+      for(const s of spots) if(poolPlacementLegal(core, s.x, s.y)) return { x: s.x, y: s.y };
+      return { x: POOL_W * 0.25, y: POOL_H / 2 };
+    }
+    /* The AI shooter (also the AWAY/timeout default and the solo
+       opponent): plans with the shared geometry, then humanizes the
+       execution — aim jitter grows with the cut and the distance
+       (about a third of a degree on a sitter, up to ~1.5 degrees on
+       a long thin cut), power wobbles a touch. Beatable on purpose:
+       it takes the makeable ball, never a bank or a kick in v1. */
+    function poolAIShot(core, idx){
+      let cuePos = null;
+      if(core.bih) cuePos = poolAIBallInHand(core, idx);
+      const effBalls = cuePos ? core.balls.map(b=> b.n === 0 ? { n: 0, x: cuePos.x, y: cuePos.y, down: false } : b) : core.balls;
+      const effCore = { balls: effBalls, groups: core.groups, bih: null, shotNo: core.shotNo, turn: idx };
+      if(core.shotNo === 0){
+        const c = effBalls.find(b=> b.n === 0);
+        const apex = effBalls.find(b=> b.n === 1) || effBalls.find(b=> !b.down && b.n !== 0);
+        if(c && apex) return { angle: Math.atan2(apex.y - c.y, apex.x - c.x) + (Math.random() * 2 - 1) * 0.006, power: 1, cue: cuePos };
+      }
+      const plan = poolSuggestShot(effCore, idx);
+      if(plan){
+        const jit = (0.0035 + (plan.cut / 90) * 0.017 + (plan.dist / 1300) * 0.007) * (Math.random() * 2 - 1);
+        return { angle: plan.angle + jit, power: Math.max(0.3, Math.min(0.95, plan.power + (Math.random() * 0.1 - 0.05))), cue: cuePos };
+      }
+      // no clean look: a soft safety — roll up toward the nearest legal ball
+      const c = effBalls.find(b=> b.n === 0);
+      const targets = poolLegalTargets(core, idx).map(n=> effBalls.find(b=> b.n === n)).filter(b=> b && !b.down);
+      if(c && targets.length){
+        targets.sort((a, b)=> Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y));
+        return { angle: Math.atan2(targets[0].y - c.y, targets[0].x - c.x) + (Math.random() * 2 - 1) * 0.01, power: 0.42, cue: cuePos };
+      }
+      return { angle: 0, power: 0.5, cue: cuePos };
+    }
+    /* Host-side validation of a shooter's answer: finite angle,
+       sane power, and — with ball in hand — a legal placement.
+       Anything else returns null and the caller falls back to the
+       AI-heuristic default, the table's usual answer to a bad reply. */
+    function poolValidateShot(core, act){
+      if(!act || act.type !== "shoot") return null;
+      const angle = +act.angle, power = +act.power;
+      if(!Number.isFinite(angle) || !Number.isFinite(power) || power < 0.05 || power > 1) return null;
+      let cue = null;
+      if(core.bih){
+        const c = act.cue;
+        if(!c || !Number.isFinite(+c.x) || !Number.isFinite(+c.y)) return null;
+        if(!poolPlacementLegal(core, +c.x, +c.y)) return null;
+        cue = { x: +c.x, y: +c.y };
+      }
+      return { angle, power, cue };
+    }
+    /* The rules, applied to a finished sim. Mutates core (balls,
+       groups, turn, bih, over/winner) and returns the outcome for
+       the log. Casual 8-ball, v1 — the simplifications (ball in hand
+       ANYWHERE on any foul incl. after the break, the 8 on the break
+       is a re-rack, no call shots) are the house rules in the panel. */
+    function poolApplyShot(core, sim){
+      const me = core.turn, opp = 1 - me;
+      const isBreak = core.shotNo === 0;
+      const wasOpen = core.groups[0] === null;
+      const myGroup = core.groups[me];
+      const onEight = !wasOpen && poolRemaining(core, me) === 0;
+      const pocketed = sim.pocketed.slice();
+      const eight = pocketed.includes(8);
+      const scratch = !!sim.scratched;
+      const noContact = sim.firstContact === null;
+      const foul = scratch || noContact;
+      const out = { pocketed, eight, scratch, noContact, foul, isBreak, assign: null, keepTurn: false, bih: false, rerack: false, reason: "" };
+      core.balls = sim.balls.map(b=> ({ n: b.n, x: b.x, y: b.y, down: !!b.down }));
+      core.shotNo++;
+      if(isBreak && eight){
+        // the 8 on the break: re-rack, same breaker, no harm done
+        out.rerack = true; out.reason = "eight-on-break";
+        core.balls = poolRackBalls(); core.shotNo = 0; core.bih = "kitchen";
+        return out;
+      }
+      if(eight){
+        if(onEight && !scratch){ core.over = true; core.winner = me; out.reason = "eight"; }
+        else if(onEight && scratch){ core.over = true; core.winner = opp; out.reason = "eight-scratch"; }
+        else { core.over = true; core.winner = opp; out.reason = "eight-early"; }
+        return out;
+      }
+      if(wasOpen && !isBreak && pocketed.length && !scratch){
+        const g = poolGroupOf(pocketed[0]);
+        core.groups[me] = g; core.groups[opp] = g === "solid" ? "stripe" : "solid";
+        out.assign = g;
+      }
+      if(foul) out.bih = true;
+      else if(isBreak || wasOpen) out.keepTurn = pocketed.length > 0;
+      else if(onEight) out.keepTurn = false;
+      else out.keepTurn = pocketed.some(n=> poolGroupOf(n) === myGroup);
+      if(!core.over){
+        if(out.keepTurn) core.bih = null;
+        else { core.turn = opp; core.bih = foul ? "anywhere" : null; }
+      }
+      return out;
+    }
+    function poolSeatLine(core, idx){
+      if(!core) return "";
+      if(core.over) return core.winner === idx ? "Won the game" : "Lost the game";
+      if(core.groups[0] === null) return "Open table";
+      const rem = poolRemaining(core, idx);
+      return poolGroupName(core.groups[idx]) + (rem === 0 ? " · on the 8" : ` · ${rem} left`);
+    }
+    /* Log lines for a shot outcome, shared by the solo table and
+       the host (names arrive pre-escaped from the caller). */
+    function poolOutcomeLines(names, idx, out){
+      const me = names[idx], opp = names[1 - idx];
+      const L = [];
+      const others = out.pocketed.filter(n=> n !== 8);
+      if(others.length)
+        L.push({ html: `<b>${me}</b> pockets ${others.map(n=> `the <b>${n}</b>`).join(others.length > 2 ? ", " : " and ")}.`, win: false });
+      if(out.rerack){ L.push({ html: `<b>${me}</b> sinks the <b>8 on the break</b> — re-rack, same breaker.`, win: true }); return L; }
+      if(out.assign) L.push({ html: `<b>${me}</b> takes <b>${out.assign === "solid" ? "solids" : "stripes"}</b> — ${opp} has ${out.assign === "solid" ? "stripes" : "solids"}.`, win: false });
+      if(out.scratch) L.push({ html: `<b>${me}</b> scratches the cue ball — <b>foul</b>. ${opp} gets ball in hand.`, win: false });
+      else if(out.noContact) L.push({ html: `<b>${me}</b> doesn't touch a ball — <b>foul</b>. ${opp} gets ball in hand.`, win: false });
+      if(out.reason === "eight") L.push({ html: `<b>${me}</b> sinks the <b>8</b> and takes the game.`, win: true });
+      if(out.reason === "eight-early") L.push({ html: `<b>${me}</b> sank the <b>8 too soon</b> — that loses the game.`, win: true });
+      if(out.reason === "eight-scratch") L.push({ html: `<b>${me}</b> sank the 8 but <b>scratched</b> with it — that loses the game.`, win: true });
+      if(out.isBreak && others.length && !out.eight) L.push({ html: `Breaker shoots on — the table's still open.`, win: false });
+      return L;
+    }
+    /* The Apprentice coach. view: { core (balls/groups/bih/shotNo),
+       myIdx, oppName, pred (poolAimPredict for the current aim, or
+       null off-aim) }. Names the coach's own shot, reads the aim
+       line for contact trouble and scratch drift, and keeps the
+       group / 8-ball state straight. */
+    function poolCoachHTML(view){
+      const core = view.core, idx = view.myIdx, L = [];
+      const open = core.groups[0] === null;
+      const onEight = !open && poolRemaining(core, idx) === 0;
+      if(view.isBreak) L.push(`<b>Break shot.</b> Full power at the rack — a ball down keeps you shooting, and the 8 on the break just re-racks. Groups aren't set by the break.`);
+      else if(open) L.push(`The table is <b>open</b> — the first ball pocketed now sets the groups. Anything but the 8 is fair game.`);
+      else if(onEight) L.push(`Your group is <b>clear</b> — it's you and the <b>8 ball</b>. Sink it clean; scratch on the 8 and you lose.`);
+      else L.push(`You're <b>${poolGroupName(core.groups[idx]).toLowerCase()}</b> — <b>${poolRemaining(core, idx)}</b> left. ${view.oppName || "Your opponent"} has ${poolRemaining(core, 1 - idx)}.`);
+      if(core.bih) L.push(core.bih === "kitchen" ? `Place the cue ball <b>behind the head string</b> — drag it on the table.` : `<b>Ball in hand</b> — drag the cue ball anywhere you like, then aim.`);
+      const sugCore = { balls: core.balls, groups: core.groups, bih: null, shotNo: core.shotNo, turn: idx };
+      const sug = view.isBreak ? null : poolSuggestShot(sugCore, idx);
+      if(sug) L.push(`The coach's shot: the <b>${sug.ballN}</b> to the <b>${POOL_POCKET_NAMES[sug.pocket]}</b> — ${sug.cut < 12 ? "nearly straight on" : sug.cut < 40 ? "a comfortable cut" : "a thin cut, so mind the cue ball after"}.`);
+      else if(!view.isBreak && !onEight) L.push(`No clean look this visit — play a soft safety: roll the cue up to your ball and leave distance.`);
+      const pred = view.pred;
+      if(pred){
+        if(pred.hit === null) L.push(`That line finds <b>no ball</b> — a whiff is a foul and hands over ball in hand. Swing the aim until the guide touches a ball.`);
+        else {
+          const g = poolGroupOf(pred.hit);
+          if(pred.hit === 8 && !onEight) L.push(`Careful — you're lined up on the <b>8</b>. Sink it now and you <b>lose the game</b>.`);
+          else if(!open && g !== core.groups[idx] && pred.hit !== 8) L.push(`First contact there is the <b>${pred.hit}</b> — one of ${view.oppName || "your opponent"}'s. It can drop, but it won't keep your turn.`);
+          else if(pred.hit !== 8) L.push(`You're lined up on the <b>${pred.hit}</b>${sug && sug.ballN === pred.hit ? " — the coach's ball" : ""}.`);
+          if(pred.ghost && pred.cueDir){
+            for(let pi = 0; pi < POOL_POCKETS.length; pi++){
+              const pk = POOL_POCKETS[pi];
+              const rx = pk.x - pred.ghost.x, ry = pk.y - pred.ghost.y;
+              const t = rx * pred.cueDir.x + ry * pred.cueDir.y;
+              if(t < 10 || t > 340) continue;
+              const perp = Math.abs(rx * pred.cueDir.y - ry * pred.cueDir.x);
+              if(perp < POOL_POCKET_RC + 9){ L.push(`Watch the cue ball after contact — it's drifting toward the <b>${POOL_POCKET_NAMES[pi]}</b>. Ease the power or change the angle.`); break; }
+            }
+          }
+        }
+      }
+      return L.join("<br>");
+    }
+    /* ---------- canvas rendering + shot replay ----------
+       One painter for live play, replays and the aim guide. Frames
+       are flat position arrays indexed by ball number (null = down),
+       exactly what poolSimulate records. */
+    function poolCanvasHTML(){ return `<div class="pool-wrap"><canvas id="pool-canvas" width="${POOL_CW}" height="${POOL_CH}"></canvas></div>`; }
+    function poolRR(g, x, y, w, h, r){
+      g.beginPath();
+      g.moveTo(x + r, y);
+      g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+      g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r);
+      g.closePath();
+    }
+    function poolDrawTable(cv, balls, opts){
+      if(!cv) return;
+      let g = null;
+      try{ g = cv.getContext("2d"); }catch(e){ g = null; }
+      if(!g) return;
+      const O = POOL_OFF;
+      g.clearRect(0, 0, POOL_CW, POOL_CH);
+      // rail, cushion, felt
+      poolRR(g, 1, 1, POOL_CW - 2, POOL_CH - 2, 30); g.fillStyle = "#4b2e1c"; g.fill();
+      poolRR(g, O - 17, O - 17, POOL_W + 34, POOL_H + 34, 20); g.fillStyle = "#175733"; g.fill();
+      const grad = g.createRadialGradient(O + POOL_W / 2, O + POOL_H * 0.36, 60, O + POOL_W / 2, O + POOL_H / 2, POOL_W * 0.72);
+      grad.addColorStop(0, "#35a065"); grad.addColorStop(1, "#1d6a3e");
+      g.fillStyle = grad; g.fillRect(O, O, POOL_W, POOL_H);
+      // head string + spots
+      g.strokeStyle = "rgba(255,255,255,.16)"; g.lineWidth = 1.5; g.setLineDash([6, 6]);
+      g.beginPath(); g.moveTo(O + POOL_W * 0.25, O + 6); g.lineTo(O + POOL_W * 0.25, O + POOL_H - 6); g.stroke();
+      g.setLineDash([]);
+      g.fillStyle = "rgba(255,255,255,.35)";
+      g.beginPath(); g.arc(O + POOL_W * 0.72, O + POOL_H / 2, 3.5, 0, 7); g.fill();
+      g.beginPath(); g.arc(O + POOL_W * 0.25, O + POOL_H / 2, 3, 0, 7); g.fill();
+      // rail diamonds
+      g.fillStyle = "#e8dcc0";
+      [0.125, 0.375, 0.625, 0.875].forEach(f=>{
+        g.save(); g.translate(O + POOL_W * f, O - 25); g.rotate(Math.PI / 4); g.fillRect(-3.4, -3.4, 6.8, 6.8); g.restore();
+        g.save(); g.translate(O + POOL_W * f, O + POOL_H + 25); g.rotate(Math.PI / 4); g.fillRect(-3.4, -3.4, 6.8, 6.8); g.restore();
+      });
+      [0.25, 0.5, 0.75].forEach(f=>{
+        g.save(); g.translate(O - 25, O + POOL_H * f); g.rotate(Math.PI / 4); g.fillRect(-3.4, -3.4, 6.8, 6.8); g.restore();
+        g.save(); g.translate(O + POOL_W + 25, O + POOL_H * f); g.rotate(Math.PI / 4); g.fillRect(-3.4, -3.4, 6.8, 6.8); g.restore();
+      });
+      // pockets
+      for(const pk of POOL_POCKETS){
+        const px = O + pk.x, py = O + pk.y, pr = pk.c ? 30 : 27;
+        g.beginPath(); g.arc(px, py, pr + 3, 0, 7); g.fillStyle = "#241407"; g.fill();
+        g.beginPath(); g.arc(px, py, pr, 0, 7); g.fillStyle = "#060606"; g.fill();
+      }
+      // the aim guide — shooter's screen only, while aiming
+      if(opts && opts.pred){
+        const pred = opts.pred;
+        const cue = balls.find(b=> b.n === 0 && !b.down);
+        if(cue){
+          const cx = O + cue.x, cy = O + cue.y;
+          g.strokeStyle = "rgba(255,255,255,.75)"; g.lineWidth = 1.6; g.setLineDash([7, 6]);
+          g.beginPath(); g.moveTo(cx, cy);
+          if(pred.hit !== null && pred.ghost) g.lineTo(O + pred.ghost.x, O + pred.ghost.y);
+          else g.lineTo(O + pred.endX, O + pred.endY);
+          g.stroke(); g.setLineDash([]);
+          if(pred.hit !== null && pred.ghost){
+            g.beginPath(); g.arc(O + pred.ghost.x, O + pred.ghost.y, POOL_R, 0, 7);
+            g.strokeStyle = "rgba(255,255,255,.9)"; g.lineWidth = 1.6; g.stroke();
+            const tb = balls.find(b=> b.n === pred.hit);
+            if(tb){
+              g.strokeStyle = "#ffd34d"; g.lineWidth = 2.4;
+              g.beginPath(); g.moveTo(O + tb.x, O + tb.y);
+              g.lineTo(O + tb.x + pred.objDir.x * 105, O + tb.y + pred.objDir.y * 105); g.stroke();
+            }
+            g.strokeStyle = "rgba(255,255,255,.45)"; g.lineWidth = 1.6;
+            g.beginPath(); g.moveTo(O + pred.ghost.x, O + pred.ghost.y);
+            g.lineTo(O + pred.ghost.x + pred.cueDir.x * 64, O + pred.ghost.y + pred.cueDir.y * 64); g.stroke();
+          }
+        }
+      }
+      // balls (cue last, so it sits on top of the guide's start)
+      const sorted = balls.slice().sort((a, b)=> (a.n === 0 ? 1 : 0) - (b.n === 0 ? 1 : 0));
+      for(const b of sorted){
+        if(b.down) continue;
+        const x = O + b.x, y = O + b.y;
+        g.beginPath(); g.ellipse(x, y + POOL_R * 0.42, POOL_R * 0.96, POOL_R * 0.5, 0, 0, 7); g.fillStyle = "rgba(0,0,0,.28)"; g.fill();
+        g.beginPath(); g.arc(x, y, POOL_R, 0, 7);
+        if(b.n === 0) g.fillStyle = "#f7f5ee";
+        else if(poolGroupOf(b.n) === "stripe") g.fillStyle = "#f7f5ee";
+        else g.fillStyle = POOL_BALL_COLORS[b.n];
+        g.fill();
+        if(b.n !== 0 && poolGroupOf(b.n) === "stripe"){
+          g.save();
+          g.beginPath(); g.arc(x, y, POOL_R, 0, 7); g.clip();
+          g.fillStyle = POOL_BALL_COLORS[b.n];
+          g.fillRect(x - POOL_R, y - POOL_R * 0.58, POOL_R * 2, POOL_R * 1.16);
+          g.restore();
+        }
+        if(b.n !== 0){
+          g.beginPath(); g.arc(x, y, POOL_R * 0.56, 0, 7); g.fillStyle = "#fbfaf5"; g.fill();
+          g.fillStyle = "#17171c"; g.font = `800 ${POOL_R * 0.72}px system-ui, sans-serif`;
+          g.textAlign = "center"; g.textBaseline = "middle";
+          g.fillText(String(b.n), x, y + 0.5);
+        }
+        g.beginPath(); g.arc(x - POOL_R * 0.34, y - POOL_R * 0.38, POOL_R * 0.2, 0, 7); g.fillStyle = "rgba(255,255,255,.5)"; g.fill();
+        if(opts && opts.placing && b.n === 0){
+          g.beginPath(); g.arc(x, y, POOL_R + 5, 0, 7); g.strokeStyle = "#ffd34d"; g.lineWidth = 2; g.setLineDash([5, 4]); g.stroke(); g.setLineDash([]);
+        }
+      }
+    }
+    const poolView = { shotId: 0, anim: null, raf: 0 };
+    function poolAnimDuration(sim){ return Math.min(5200, Math.max(700, sim.frames.length * (1000 / 60))); }
+    function poolPaintFrame(frame){
+      const cv = document.getElementById("pool-canvas");
+      if(!cv || !frame) return;
+      poolDrawTable(cv, frame.map((p, n)=> ({ n, x: p ? p[0] : -100, y: p ? p[1] : -100, down: !p })), null);
+    }
+    function poolPaintStatic(balls){
+      const b = $("board"); if(!b) return;
+      if(!document.getElementById("pool-canvas")) b.innerHTML = poolCanvasHTML();
+      const cv = document.getElementById("pool-canvas");
+      if(cv) poolDrawTable(cv, balls, null);
+    }
+    /* Runs the sim for a shot and animates it on whatever canvas is
+       on the table right now. Returns the sim itself — the host
+       rules on the SAME result every other screen is watching. */
+    function poolStartAnim(beforeBalls, shot){
+      const sim = poolSimulate(beforeBalls, shot);
+      const dur = poolAnimDuration(sim);
+      poolView.anim = { frames: sim.frames, t0: (typeof performance !== "undefined" ? performance.now() : Date.now()), dur };
+      if(poolView.raf) cancelAnimationFrame(poolView.raf);
+      const tick = ()=>{
+        const a = poolView.anim; if(!a) return;
+        const now = (typeof performance !== "undefined" ? performance.now() : Date.now());
+        const frac = Math.min(1, (now - a.t0) / a.dur);
+        poolPaintFrame(a.frames[Math.min(a.frames.length - 1, Math.floor(frac * a.frames.length))]);
+        if(frac < 1) poolView.raf = requestAnimationFrame(tick);
+        else { poolView.anim = null; poolView.raf = 0; poolPaintFrame(a.frames[a.frames.length - 1]); }
+      };
+      poolView.raf = requestAnimationFrame(tick);
+      return sim;
+    }
+    /* ---------- the aim controls (solo prompt + MP prompt share
+       this exact machinery — state lives in poolAim, outside the
+       DOM, the Farkle-dice pattern, so snapshot re-renders can't
+       kill a drag). The guide paints only on the aiming screen. */
+    let poolAim = null;
+    function poolAimClear(){ poolAim = null; if(typeof mp !== "undefined" && mp) mp.poolUI = null; }
+    function poolAimBegin(cfg){
+      const balls = (cfg.balls || []).map(b=> ({ n: b.n, x: b.x, y: b.y, down: !!b.down }));
+      const core = { balls, groups: (cfg.groups || [null, null]).slice(), bih: cfg.bih || null, shotNo: cfg.isBreak ? 0 : 1, turn: cfg.myIdx || 0 };
+      let cuePos = null;
+      if(core.bih){
+        const c = balls.find(b=> b.n === 0);
+        cuePos = (c && !c.down && poolPlacementLegal(core, c.x, c.y)) ? { x: c.x, y: c.y } : poolAIBallInHand(core, core.turn);
+        if(c){ c.x = cuePos.x; c.y = cuePos.y; c.down = false; }
+      }
+      const sug = poolSuggestShot(core, core.turn);
+      poolAim = { balls, core, myIdx: core.turn, bih: core.bih, isBreak: !!cfg.isBreak, oppName: cfg.oppName || "Your opponent",
+        respond: cfg.respond, angle: sug ? sug.angle : 0, power: sug ? Math.max(0.4, Math.min(0.9, sug.power)) : 0.65,
+        cuePos, placing: !!core.bih, sug, coachAt: -99, pred: null };
+      if(typeof mp !== "undefined" && mp) mp.poolUI = poolAim;
+      poolPaintAimControls();
+      poolPaintAim();
+      poolAimCoach(true);
+    }
+    function poolAimCoach(force){
+      const aim = poolAim; if(!aim) return;
+      if(!force && Math.abs(aim.angle - aim.coachAt) < 0.003) return;
+      aim.coachAt = aim.angle;
+      const balls = aim.balls.map(bb=> aim.cuePos && bb.n === 0 ? { n: 0, x: aim.cuePos.x, y: aim.cuePos.y, down: false } : bb);
+      setTip(poolCoachHTML({ core: { balls, groups: aim.core.groups, bih: aim.bih, shotNo: aim.core.shotNo }, myIdx: aim.myIdx,
+        oppName: aim.oppName, isBreak: aim.isBreak, pred: poolAimPredict(balls, aim.angle) }));
+    }
+    function poolAimReadText(aim, pred){
+      if(aim.placing) return `Placing the cue ball — drag it where you want it, then tap <b>Aim</b>.`;
+      if(!pred || pred.hit === null) return `No ball on that line — a whiff is a foul. Power ${Math.round(aim.power * 100)}%.`;
+      return `On the <b>${pred.hit}</b>${aim.sug && aim.sug.ballN === pred.hit ? " — the coach's ball" : ""} · power ${Math.round(aim.power * 100)}%.`;
+    }
+    function poolPaintAim(){
+      const aim = poolAim; if(!aim) return;
+      const b = $("board"); if(!b) return;
+      let cv = document.getElementById("pool-canvas");
+      if(!cv){ b.innerHTML = poolCanvasHTML(); cv = document.getElementById("pool-canvas"); }
+      if(!cv) return;
+      const balls = aim.balls.map(bb=> aim.cuePos && bb.n === 0 ? { n: 0, x: aim.cuePos.x, y: aim.cuePos.y, down: false } : bb);
+      const pred = poolAimPredict(balls, aim.angle);
+      aim.pred = pred;
+      poolDrawTable(cv, balls, { pred: aim.placing ? null : pred, placing: aim.placing });
+      if(!cv.dataset.poolbound){
+        cv.dataset.poolbound = "1";
+        const toTable = (e)=>{ const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * (POOL_CW / r.width) - POOL_OFF, y: (e.clientY - r.top) * (POOL_CH / r.height) - POOL_OFF }; };
+        let drag = false;
+        cv.addEventListener("pointerdown", (e)=>{ drag = true; try{ cv.setPointerCapture(e.pointerId); }catch(err){} poolAimPointer(toTable(e)); });
+        cv.addEventListener("pointermove", (e)=>{ if(drag) poolAimPointer(toTable(e)); });
+        cv.addEventListener("pointerup", ()=>{ drag = false; poolAimCoach(true); });
+        cv.addEventListener("pointercancel", ()=>{ drag = false; });
+      }
+      const read = $("pool-aim-read");
+      if(read) read.innerHTML = poolAimReadText(aim, pred);
+    }
+    function poolAimPointer(p){
+      const aim = poolAim; if(!aim) return;
+      if(aim.placing && aim.cuePos){
+        const x = Math.max(POOL_R, Math.min(POOL_W - POOL_R, p.x)), y = Math.max(POOL_R, Math.min(POOL_H - POOL_R, p.y));
+        if(poolPlacementLegal(aim.core, x, y)) aim.cuePos = { x, y };
+        else if(poolPlacementLegal(aim.core, x, aim.cuePos.y)) aim.cuePos = { x, y: aim.cuePos.y };
+        else if(poolPlacementLegal(aim.core, aim.cuePos.x, y)) aim.cuePos = { x: aim.cuePos.x, y };
+        const cb = aim.balls.find(b=> b.n === 0);
+        if(cb){ cb.x = aim.cuePos.x; cb.y = aim.cuePos.y; cb.down = false; }
+        poolPaintAim();
+        return;
+      }
+      const cue = aim.cuePos || aim.balls.find(b=> b.n === 0);
+      if(!cue) return;
+      aim.angle = Math.atan2(p.y - cue.y, p.x - cue.x);
+      poolPaintAim();
+      poolAimCoach(false);
+    }
+    function poolPaintAimControls(){
+      const aim = poolAim; if(!aim) return;
+      setControls(`
+        ${aim.bih ? `<button class="btn" id="pool-place-mode">${aim.placing ? "✓ Ball placed — aim" : "Move the cue ball"}</button>` : ""}
+        <button class="btn" data-poolnudge="-0.01745" aria-label="Aim left one degree">⟨⟨</button>
+        <button class="btn" data-poolnudge="-0.001745" aria-label="Aim left a touch">⟨</button>
+        <span class="ctl-note"><b>Power</b></span>
+        <input type="range" class="pool-power" id="pool-power" min="5" max="100" value="${Math.round(aim.power * 100)}" aria-label="Shot power" />
+        <button class="btn" data-poolnudge="0.001745" aria-label="Aim right a touch">⟩</button>
+        <button class="btn" data-poolnudge="0.01745" aria-label="Aim right one degree">⟩⟩</button>
+        <button class="btn primary" id="pool-shoot">SHOOT</button>
+        <span class="ctl-note" id="pool-aim-read"></span>
+        <span class="ctl-note">${aim.bih ? "Ball in hand: drag the cue ball to place it — it won't sit on another ball. " : ""}Drag on the table to aim; the fine buttons nudge a tenth of a degree. The guide shows only on your screen.</span>`);
+      document.querySelectorAll("[data-poolnudge]").forEach(btn=> btn.addEventListener("click", ()=>{
+        const a = poolAim; if(!a) return;
+        a.angle += +btn.dataset.poolnudge; clickSound(600); poolPaintAim(); poolAimCoach(true);
+      }));
+      const pw = $("pool-power");
+      if(pw) pw.addEventListener("input", ()=>{ const a = poolAim; if(!a) return; a.power = +pw.value / 100; poolPaintAim(); });
+      wireBtn("pool-place-mode", ()=>{ const a = poolAim; if(!a) return; a.placing = !a.placing; poolPaintAimControls(); poolPaintAim(); });
+      wireBtn("pool-shoot", ()=>{
+        const a = poolAim; if(!a) return;
+        poolAimFinish({ type: "shoot", angle: a.angle, power: a.power, cue: a.bih && a.cuePos ? { x: a.cuePos.x, y: a.cuePos.y } : null });
+      });
+      poolPaintAim();
+    }
+    function poolAimFinish(shot){
+      const a = poolAim; if(!a) return;
+      const r = a.respond;
+      poolAimClear();
+      if(r) r(shot);
     }
 </script>
 
@@ -4780,6 +5510,139 @@ function finishCahGameSolo(seq){
   wireBtn("btn-deal", startCahGame);
 }
 
+/* ================= POOL — 8-BALL (solo) =================
+   One-on-one against Don (AI). Same core, same sim, same shot
+   machinery as the live room — the solo table is where the physics
+   gets its reps. Games won are the session score, like Cards. */
+let PO = null;   // pool state (solo)
+let poolSoloBreaker = 0;
+function poolScoreLineSolo(){
+  if(!PO || !PO.state) return "";
+  return PO.state.map((st, i)=> `${st.p.name} ${PO.wins[i]}`).join(" · ") + " — games won";
+}
+function paintPoolSoloPlates(){
+  if(!PO) return;
+  ["you", "don"].forEach((id, i)=>{
+    const el = document.querySelector("#seat-" + id + " .stk");
+    if(el) el.textContent = "Score " + fmt(PO.wins[i]);
+    if(PO.core){
+      let s = poolSeatLine(PO.core, i);
+      if(!PO.core.over && PO.core.turn === i) s += PO.core.bih ? " · ball in hand" : " · shooting";
+      setStatus(id, s);
+    }
+  });
+  $("bank-amt").textContent = fmt(PO.wins[0]);
+}
+function paintPoolBoardSolo(){
+  if(!PO || !PO.core) return;
+  if(poolAim){ poolPaintAim(); return; }
+  if(poolView.anim) return;   // the replay owns the canvas until it settles
+  poolPaintStatic(PO.core.balls);
+}
+function resetPoolTable(){
+  hideTurnTimer(); paintWinBanner(null); resetSoloStats(); paintScorePanel(null);
+  poolAimClear();
+  PO = { phase: "idle", core: null, state: null, wins: [0, 0] };
+  const you = byId("you"), don = { ...byId("don"), pos: "pos-top" };
+  seatsEl.innerHTML = [seatShell(you, { button: false }), seatShell(don, { button: false })].join("");
+  [you, don].forEach(p=>{ setStatus(p.id, ""); setBetBadge(p.id, 0); const c = $("cards-" + p.id); if(c) c.innerHTML = ""; });
+  setPot(0); paintBoard([]); refreshPlates(); paintPoolSoloPlates();
+  $("board").innerHTML = poolCanvasHTML();
+  poolDrawTable(document.getElementById("pool-canvas"), poolRackBalls(), null);
+  setTurn(null, "Pool — 8-Ball. One-on-one against Don: rack 'em when you're ready.");
+  setControls(`<button class="btn primary" id="btn-deal">Rack 'em — start a game</button>`);
+  wireBtn("btn-deal", startPoolGame);
+  setCenter("Pool — 8-Ball", "Open table · groups set by the first ball pocketed after the break · a foul hands over ball in hand anywhere · the 8 too early loses.");
+  if(mode === "apprentice" && tipsOn) setTip("Pool in one breath: <b>break</b> from behind the head string; the table is <b>open</b> until someone pockets a ball after the break — that ball sets <b>solids (1–7)</b> or <b>stripes (9–15)</b>. Pocket one of yours and you <b>shoot again</b>; a <b>scratch</b> or a whiff gives your opponent <b>ball in hand anywhere</b>. Clear your group, then sink the <b>8</b> — early, or with a scratch, and it costs you the game. Drag on the table to aim: the guide shows first contact and where both balls roll, and it shows <b>only on your screen</b>.");
+}
+function poolCenterLineSolo(){
+  const core = PO.core; if(!core) return "";
+  const t = PO.state[core.turn].p.name;
+  return core.groups[0] === null ? `Open table — ${t} to shoot` : `${t} to shoot · ${poolSeatLine(core, core.turn)}`;
+}
+function humanPoolShotPrompt(seq, idx){
+  return new Promise(res=>{
+    const core = PO.core;
+    let settled = false;
+    const done = (shot)=>{ if(settled) return; settled = true; clearTimeout(tmo); hideTurnTimer(); poolAimClear(); setControls(""); res(shot); };
+    const tmo = setTimeout(()=>{
+      if(seq === handSeq) showNotice(turnTimeoutText("poolshot"));
+      done(poolAIShot(core, idx));
+    }, POOL_MS);
+    showTurnTimer(POOL_MS, "Your shot");
+    poolAimBegin({ balls: core.balls, groups: core.groups, bih: core.bih, isBreak: core.shotNo === 0, myIdx: idx,
+      oppName: PO.state[1 - idx].p.name,
+      respond: (shot)=> done(poolValidateShot(core, shot) || poolAIShot(core, idx)) });
+  });
+}
+async function startPoolGame(){
+  const seq = ++handSeq;
+  paintWinBanner(null); paintScorePanel(null);
+  PO.core = poolNewCore();
+  PO.core.turn = poolSoloBreaker;
+  PO.state = [{ p: byId("you") }, { p: { ...byId("don"), pos: "pos-top" } }];
+  PO.phase = "play";
+  poolView.shotId = 0;
+  paintPoolBoardSolo(); paintPoolSoloPlates();
+  log(poolSoloBreaker === 0 ? `<b>You</b> to break — cue ball behind the head string.` : `<b>Don</b> to break.`);
+  setCenter("Pool — 8-Ball", poolScoreLineSolo());
+  runPoolSolo(seq);
+}
+async function runPoolSolo(seq){
+  const names = PO.state.map(s=> s.p.name);
+  while(PO && PO.core && !PO.core.over){
+    if(seq !== handSeq || !PO) return;
+    const core = PO.core, idx = core.turn;
+    const st = PO.state[idx];
+    paintPoolSoloPlates();
+    setCenter(poolCenterLineSolo(), poolScoreLineSolo());
+    let shot;
+    if(idx === 0){
+      setTurn(st.p, "Your shot — drag on the table to aim, set the power, SHOOT.");
+      shot = await humanPoolShotPrompt(seq, idx);
+      if(seq !== handSeq || !PO) return;
+    } else {
+      setTurn(st.p, "Don is lining up…");
+      setControls("");
+      await sleep(650 + Math.random() * 550);
+      if(seq !== handSeq || !PO) return;
+      shot = poolAIShot(core, idx);
+    }
+    const sim = poolStartAnim(core.balls, shot);
+    await sleep(poolAnimDuration(sim) + 220);
+    if(seq !== handSeq || !PO) return;
+    const out = poolApplyShot(core, sim);
+    poolOutcomeLines(names, idx, out).forEach(l=> log(l.html, l.win));
+    paintPoolSoloPlates();
+    paintPoolBoardSolo();
+  }
+  if(seq !== handSeq || !PO) return;
+  finishPoolGameSolo(seq);
+}
+function finishPoolGameSolo(seq){
+  if(seq !== handSeq || !PO || !PO.core) return;
+  PO.phase = "done";
+  const wi = PO.core.winner;
+  const winner = PO.state[wi];
+  PO.wins[wi]++;
+  const real = byId(winner.p.id);
+  real.handsWon = (real.handsWon || 0) + 1;
+  real.chipsWon = (real.chipsWon || 0) + 1;   // solo "Won" tracks games, like Cards points
+  poolSoloBreaker = 1 - poolSoloBreaker;
+  const banner = `${winner.p.name} won the game — 8-ball down`;
+  paintScorePanel([`<span class="sp-title">Game over:</span>`,
+    ...PO.state.map((s, i)=> `<b>${s.p.name}</b> — ${PO.wins[i]} game${PO.wins[i] === 1 ? "" : "s"} won.`),
+    `Session: ${poolScoreLineSolo()}. Next break: ${PO.state[poolSoloBreaker].p.name}.`]);
+  paintWinBanner(banner);
+  log(`<b>${banner}</b>`, true);
+  setCenter("Game over", poolScoreLineSolo());
+  setTurn(null, "Game over — rack 'em again when you're ready.");
+  paintPoolSoloPlates();
+  paintPoolBoardSolo();
+  setControls(`<button class="btn primary" id="btn-deal">Rack 'em — next game</button>`);
+  wireBtn("btn-deal", startPoolGame);
+}
+
 /* ================= BLACKJACK ================= */
 const BJ_SEATS = ["don","you","layton"];
 let bjShoe = [];
@@ -5015,6 +5878,8 @@ function paintGameSegs(){
   $("seg-farkle").classList.toggle("on", game==="farkle");
   $("seg-uno").classList.toggle("on", game==="uno");
   $("seg-cah").classList.toggle("on", game==="cah");
+  $("seg-pool").classList.toggle("on", game==="pool");
+  document.body.classList.toggle("game-pool", game==="pool");
   const vseg = $("spades-variant-seg");
   if(vseg) vseg.style.display = game === "spades" ? "" : "none";
   const fseg = $("farkle-target-seg");
@@ -5080,15 +5945,16 @@ function setFarkleTarget(v){
 function setGame(g){
   game = g; handSeq++;
   paintGameSegs();
-  if(isDrawGame(g)){ B=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; CT=null; resetDrawTable(); }
-  else if(g==="holdem"){ D=null; B=null; O=null; ST=null; SP=null; FK=null; UN=null; CT=null; resetHoldemTable(); }
-  else if(g==="omaha"){ D=null; B=null; H=null; ST=null; SP=null; FK=null; UN=null; CT=null; resetOmahaTable(); }
-  else if(g==="stud"){ D=null; B=null; H=null; O=null; SP=null; FK=null; UN=null; CT=null; resetStudTable(); }
-  else if(g==="spades"){ D=null; B=null; H=null; O=null; ST=null; FK=null; UN=null; CT=null; resetSpadesTable(); }
-  else if(g==="farkle"){ D=null; B=null; H=null; O=null; ST=null; SP=null; UN=null; CT=null; resetFarkleTable(); }
-  else if(g==="uno"){ D=null; B=null; H=null; O=null; ST=null; SP=null; FK=null; CT=null; resetUnoTable(); }
-  else if(g==="cah"){ D=null; B=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; resetCahTable(); }
-  else { D=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; CT=null; resetBJTable(); }
+  if(isDrawGame(g)){ B=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; CT=null; PO=null; resetDrawTable(); }
+  else if(g==="holdem"){ D=null; B=null; O=null; ST=null; SP=null; FK=null; UN=null; CT=null; PO=null; resetHoldemTable(); }
+  else if(g==="omaha"){ D=null; B=null; H=null; ST=null; SP=null; FK=null; UN=null; CT=null; PO=null; resetOmahaTable(); }
+  else if(g==="stud"){ D=null; B=null; H=null; O=null; SP=null; FK=null; UN=null; CT=null; PO=null; resetStudTable(); }
+  else if(g==="spades"){ D=null; B=null; H=null; O=null; ST=null; FK=null; UN=null; CT=null; PO=null; resetSpadesTable(); }
+  else if(g==="farkle"){ D=null; B=null; H=null; O=null; ST=null; SP=null; UN=null; CT=null; PO=null; resetFarkleTable(); }
+  else if(g==="uno"){ D=null; B=null; H=null; O=null; ST=null; SP=null; FK=null; CT=null; PO=null; resetUnoTable(); }
+  else if(g==="cah"){ D=null; B=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; PO=null; resetCahTable(); }
+  else if(g==="pool"){ D=null; B=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; CT=null; resetPoolTable(); }
+  else { D=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; CT=null; PO=null; resetBJTable(); }
   log("Switched the table to <b>" + GAME_NAMES[g] + "</b>.");
 }function setMode(m){
   mode = m;
@@ -5110,6 +5976,7 @@ $("seg-spades").addEventListener("click", ()=>{ clickSound(500); setGame("spades
 $("seg-farkle").addEventListener("click", ()=>{ clickSound(500); setGame("farkle"); });
 $("seg-uno").addEventListener("click", ()=>{ clickSound(500); setGame("uno"); });
 $("seg-cah").addEventListener("click", ()=>{ clickSound(500); setGame("cah"); });
+$("seg-pool").addEventListener("click", ()=>{ clickSound(500); setGame("pool"); });
 $("seg-sp-teams").addEventListener("click", ()=>{ clickSound(500); setSpadesVariant("teams"); });
 $("seg-sp-cut").addEventListener("click", ()=>{ clickSound(500); setSpadesVariant("cut"); });
 $("seg-fk-5000").addEventListener("click", ()=>{ clickSound(500); setFarkleTarget(5000); });
@@ -5345,6 +6212,8 @@ let MSP = null;            // host spades state (match scores/bags/dealer persis
 let MF = null;             // host farkle state (one whole game per Deal — scores live and die inside it)
 let MU = null;             // host uno state (one whole game per Deal — hands/piles live and die inside it; session points ride the seats)
 let MC = null;             // host cards-against-the-table state (one whole game per Deal — decks/hands/rounds live and die inside it; session points ride the seats as cahScore)
+let MPO = null;            // host pool state (one whole game per Deal — the rack, groups and turn live inside it; games won ride the seats as poolScore)
+let mpPoolBreaker = 0;     // who breaks the next pool game (alternates game to game)
 const AI_DEFS = [
   { name:"Don",    themeText:"crimson with gold trim and diamonds" },
   { name:"Thomas", themeText:"orange sunset stripes with black trim" },
@@ -5651,10 +6520,10 @@ function mpRoomEnded(msg){
   setGame(game);
 }
 function mpRenderRoomList(list){
-  const rows = list || mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0, cahScore: s.cahScore || 0 }));
+  const rows = list || mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0, cahScore: s.cahScore || 0, poolScore: s.poolScore || 0 }));
   const houseDealing = mpDisplayHostMode() === "deal";
   $("net-roomlist").innerHTML = rows.map(s=>
-    `<li>${chipSVG(mpSanTheme(s.theme), 24, mpEsc(s.short || ""))}<span><b>${mpEsc(s.name)}</b></span><span class="tag${s.away ? " awaytag" : ""}">${s.away ? "AWAY — SEAT HELD" : s.kind === "host" ? (houseDealing ? "THE HOUSE · DEALER" : "HOST · DEALER") : s.kind === "ai" ? "AI FILL" : "PLAYER"}</span>${s.ready && !s.away && s.kind === "guest" ? `<span class="tag" style="background:#2e9e5b;color:#fff">READY</span>` : ""}${game === "spades" ? ((s.handsWon || s.spadesScore) ? `<span class="tag">Hands ${s.handsWon || 0} · Score ${fmt(s.spadesScore || 0)}</span>` : "") : game === "farkle" ? ((s.handsWon || s.farkleScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.farkleScore || 0)}</span>` : "") : game === "uno" ? ((s.handsWon || s.unoScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.unoScore || 0)}</span>` : "") : game === "cah" ? ((s.handsWon || s.cahScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.cahScore || 0)}</span>` : "") : ((s.handsWon || s.chipsWon) ? `<span class="tag">Hands ${s.handsWon || 0} · Won ${fmt(s.chipsWon || 0)}</span>` : "")}${mp.role === "host" && s.away && s.pid && s.kind !== "host" ? `<button class="rmseat" type="button" data-remove-seat="${mpEsc(s.pid)}">Free seat</button>` : ""}</li>`).join("");
+    `<li>${chipSVG(mpSanTheme(s.theme), 24, mpEsc(s.short || ""))}<span><b>${mpEsc(s.name)}</b></span><span class="tag${s.away ? " awaytag" : ""}">${s.away ? "AWAY — SEAT HELD" : s.kind === "host" ? (houseDealing ? "THE HOUSE · DEALER" : "HOST · DEALER") : s.kind === "ai" ? "AI FILL" : "PLAYER"}</span>${s.ready && !s.away && s.kind === "guest" ? `<span class="tag" style="background:#2e9e5b;color:#fff">READY</span>` : ""}${game === "spades" ? ((s.handsWon || s.spadesScore) ? `<span class="tag">Hands ${s.handsWon || 0} · Score ${fmt(s.spadesScore || 0)}</span>` : "") : game === "farkle" ? ((s.handsWon || s.farkleScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.farkleScore || 0)}</span>` : "") : game === "uno" ? ((s.handsWon || s.unoScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.unoScore || 0)}</span>` : "") : game === "cah" ? ((s.handsWon || s.cahScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.cahScore || 0)}</span>` : "") : game === "pool" ? ((s.handsWon || s.poolScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.poolScore || 0)}</span>` : "") : ((s.handsWon || s.chipsWon) ? `<span class="tag">Hands ${s.handsWon || 0} · Won ${fmt(s.chipsWon || 0)}</span>` : "")}${mp.role === "host" && s.away && s.pid && s.kind !== "host" ? `<button class="rmseat" type="button" data-remove-seat="${mpEsc(s.pid)}">Free seat</button>` : ""}</li>`).join("");
   document.querySelectorAll("[data-remove-seat]").forEach(b=> b.addEventListener("click", ()=> mpFreeSeat(b.dataset.removeSeat)));
 }
 function mpFreeSeat(pid){
@@ -5804,6 +6673,7 @@ function mpSeatsForHand(){
   if(game === "farkle" && MF) return MF.state.map(s=>s.seat);
   if(game === "uno" && MU) return MU.state.map(s=>s.seat);
   if(game === "cah" && MC) return MC.state.map(s=>s.seat);
+  if(game === "pool" && MPO) return MPO.state.map(s=>s.seat);
   if(game === "bj" && MB) return MB.order.map(pid=> MB.seats[pid].seat);
   // no hand on the table: in deal-only mode the host is the House, not a seat
   const disp = (mp.phase === "lobby" || mp.phase === "done") ? mp.hostMode : mp.activeHostMode;
@@ -5811,7 +6681,7 @@ function mpSeatsForHand(){
 }
 function mpBuildSnap(forPid){
   const seats = mpSeatsForHand();
-  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "omaha" && MO) || (game === "stud" && MS) || (game === "bj" && MB) || (game === "uno" && MU) || (game === "cah" && MC);
+  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "omaha" && MO) || (game === "stud" && MS) || (game === "bj" && MB) || (game === "uno" && MU) || (game === "cah" && MC) || (game === "pool" && MPO);
   const snapSeats = seats.map(seat=>{
     const rseat = mp.roster.find(x=>x.pid === seat.pid);
     const base = { pid: seat.pid, name: seat.name, short: seat.short, theme: seat.theme, stack: seat.stack,
@@ -5910,8 +6780,23 @@ function mpBuildSnap(forPid){
         if(seat.pid === forPid) base.cards = st.hand.slice();   // own hand only (white-card indices)
       }
     }
+    if(game === "pool" && MPO){
+      const st = MPO.state.find(s=>s.seat.pid === seat.pid);
+      if(st){
+        /* Pool: no cards, no chips — the seat carries the session
+           score and the shooter's table state (group + balls left,
+           ball in hand, whose shot it is). The balls themselves ride
+           snap.pool, in full, for every viewer: the table is public,
+           and the authoritative positions heal any replay drift. */
+        const idx = MPO.state.indexOf(st);
+        base.score = seat.poolScore || 0;
+        base.status = poolSeatLine(MPO.core, idx)
+          + (!MPO.core.over && MPO.core.turn === idx ? (MPO.core.bih ? " · ball in hand" : " · shooting") : "");
+      }
+    }
     if(game === "uno" && base.score == null) base.score = seat.unoScore || 0;
     if(game === "cah" && base.score == null) base.score = seat.cahScore || 0;
+    if(game === "pool" && base.score == null) base.score = seat.poolScore || 0;
     if(game === "bj" && MB){
       const st = MB.seats[seat.pid];
       if(st){
@@ -5942,7 +6827,7 @@ function mpBuildSnap(forPid){
     dealer: (game === "bj" && MB) ? { cards: MB.dealer.map((c, i)=> (i === 1 && !MB.reveal) ? null : c), reveal: MB.reveal,
              shown: MB.dealer.length ? (MB.dealer[0].r === 14 ? 11 : MB.dealer[0].r > 10 ? 10 : MB.dealer[0].r) : null,
              total: MB.reveal && MB.dealer.length ? bjValue(MB.dealer) : null } : null,
-    room: mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: !!s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0, cahScore: s.cahScore || 0 })),
+    room: mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: !!s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0, cahScore: s.cahScore || 0, poolScore: s.poolScore || 0 })),
     lastLog: mp._lastLog || null,
     iAmSeated: seats.some(s=>s.pid === forPid),
     spadesVariant,
@@ -6030,6 +6915,26 @@ function mpBuildSnap(forPid){
                seatScores,
                scoreBreak: (MC && MC.scoreBreak) ? MC.scoreBreak : null };
     })(),
+    pool: (()=> {
+      if(game !== "pool") return null;
+      // The table is public: every ball rides every snapshot, at full
+      // precision (tests compare a guest's replayed end state against
+      // these numbers exactly — rounding here would break the sync).
+      // A live shot rides as its PARAMETERS plus the pre-shot balls;
+      // every client replays the identical sim from them.
+      let seatScores;
+      if(MPO) seatScores = snapSeats.map(s=> s.score != null ? s.score : 0);
+      else seatScores = snapSeats.map(s=>{ const rs = mp.roster.find(x=>x.pid === s.pid); return rs ? (rs.poolScore || 0) : 0; });
+      return { balls: MPO ? MPO.core.balls.map(b=> ({ n: b.n, x: b.x, y: b.y, down: !!b.down })) : (mp._lobbyRack || (mp._lobbyRack = poolRackBalls())),
+               groups: MPO ? MPO.core.groups.slice() : [null, null],
+               turnPid: MPO && mp.phase === "play" && !MPO.core.over ? MPO.state[MPO.core.turn].seat.pid : null,
+               bih: MPO ? MPO.core.bih : null,
+               shotNo: MPO ? MPO.core.shotNo : 0,
+               over: MPO ? !!MPO.core.over : false,
+               shot: (MPO && MPO.lastShot) ? MPO.lastShot : null,
+               seatScores,
+               scoreBreak: (MPO && MPO.scoreBreak) ? MPO.scoreBreak : null };
+    })(),
   };
 }
 function mpSync(){
@@ -6075,6 +6980,7 @@ function mpRenderSnap(snap, isHost){
   else if(mine === -1){ /* spectator: keep table order, bottom seat is just a seat */ }
   const posFor = (seatIdx)=>{
     if(snap.game === "bj") return ["pos-you", "pos-left", "pos-right", "pos-top"][order.indexOf(seatIdx)] || "pos-top";
+    if(snap.game === "pool") return ["pos-you", "pos-top"][order.indexOf(seatIdx)] || "pos-top";   // 1-vs-1: you at the bottom, your opponent across the table
     if(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno" || snap.game === "cah") return (snap.house && snap.seats.length < 4 ? MP_HOUSE_POS : MP_POS)[order.indexOf(seatIdx)] || "pos-top";
     if(snap.house) return MP_HOUSE_POS[order.indexOf(seatIdx)] || "pos-right";
     return MP_POS[order.indexOf(seatIdx)] || "pos-top";
@@ -6134,7 +7040,7 @@ function mpRenderSnap(snap, isHost){
         <div class="cards ${isMine ? "you-cards" : ""}${snap.game === "stud" ? " stud-cards" : ""}${snap.game === "spades" ? " spades-cards" + (s.cards ? "" : " fan") : ""}${snap.game === "uno" ? " uno-cards fan" : ""}${snap.game === "cah" ? " cah-cards" + (s.cards ? "" : " backs") : ""}" id="cards-mp-${s.pid}">${cardsHtml}</div>
         <div><span class="plate">${chipSVG(s.theme, 26, mpEsc(s.short || ""))}
           <span class="nm">${mpEsc(s.name)}${isMine ? " (you)" : ""}${s.kind === "ai" ? '<span class="aibadge">AI</span>' : ""}${s.away ? '<span class="aibadge">AWAY</span>' : ""}${s.czar ? '<span class="aibadge czarbadge">CZAR</span>' : ""}${s.ready && !s.away ? '<span class="aibadge readybadge">READY</span>' : ""}</span>
-          <span class="stk">${(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno" || snap.game === "cah") ? "Score " + fmt(s.score != null ? s.score : 0) : fmt(s.stack) + " chips"}</span>
+          <span class="stk">${(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno" || snap.game === "cah" || snap.game === "pool") ? "Score " + fmt(s.score != null ? s.score : 0) : fmt(s.stack) + " chips"}</span>
           ${s.bet > 0 ? `<span class="betbadge">${fmt(s.bet)}</span>` : ""}
         </span><div class="status">${status}</div></div>
       </div></div>`;
@@ -6199,6 +7105,22 @@ function mpRenderSnap(snap, isHost){
     if(ch.scoreBreak) paintScorePanel(ch.scoreBreak);
     else paintScorePanel(null);
   }
+  if(snap.game === "pool" && snap.pool){
+    // the center of the table is the pool table itself: a fresh shot
+    // in the snapshot replays through the identical sim on this
+    // screen; otherwise the authoritative balls paint as they lie.
+    // (paintBoard above already cleared the center — the canvas is
+    // (re)created by the painters.)
+    const pl = snap.pool;
+    if(pl.shot && pl.shot.id > poolView.shotId){
+      poolView.shotId = pl.shot.id;
+      poolStartAnim(pl.shot.balls, pl.shot);
+    } else if(!poolView.anim){
+      poolPaintStatic(pl.balls);
+    }
+    if(pl.scoreBreak) paintScorePanel(pl.scoreBreak);
+    else paintScorePanel(null);
+  }
   if(snap.center) setCenter(snap.center[0], snap.center[1]);
   paintWinBanner(snap.winBanner || null);
   const activeSeat = (snap.phase !== "done" && snap.activePid) ? snap.seats.find(s=>s.pid === snap.activePid) : null;
@@ -6207,7 +7129,7 @@ function mpRenderSnap(snap, isHost){
   else if(snap.phase === "done") $("tb-who").textContent = snap.center ? snap.center[0] : "Hand over";   // showdown/result state — never a stale "X's turn"
   if(snap.lastLog && snap.lastLog.id !== mp.lastLogId){ mp.lastLogId = snap.lastLog.id; if(!isHost) log(snap.lastLog.msg, snap.lastLog.win); }
   if(isHost) mpRenderHostControls(); else mpRenderGuestIdle(snap);
-  mpRenderRoomList(snap.room.concat(snap.seats.filter(s=>s.kind === "ai" && !snap.room.some(r=>r.name === s.name)).map(s=>({ name: s.name, kind: "ai", theme: s.theme, short: s.short, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.score != null ? s.score : (s.spadesScore || 0), farkleScore: s.score != null ? s.score : (s.farkleScore || 0), unoScore: s.score != null ? s.score : (s.unoScore || 0), cahScore: s.score != null ? s.score : (s.cahScore || 0) }))));
+  mpRenderRoomList(snap.room.concat(snap.seats.filter(s=>s.kind === "ai" && !snap.room.some(r=>r.name === s.name)).map(s=>({ name: s.name, kind: "ai", theme: s.theme, short: s.short, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.score != null ? s.score : (s.spadesScore || 0), farkleScore: s.score != null ? s.score : (s.farkleScore || 0), unoScore: s.score != null ? s.score : (s.unoScore || 0), cahScore: s.score != null ? s.score : (s.cahScore || 0), poolScore: s.score != null ? s.score : (s.poolScore || 0) }))));
   // my stack in the top bar follows the room stack — except the House,
   // which deals only and holds no stack at all
   if(snap.house && snap.house.pid === mp.myPid){ $("bank-amt").textContent = "—"; }
@@ -6231,6 +7153,11 @@ function mpRenderSnap(snap, isHost){
     if(myIdx >= 0) $("bank-amt").textContent = fmt(snap.cah.seatScores[myIdx] || 0);
     else { const me = mp.roster.find(s=>s.pid === mp.myPid); if(me) $("bank-amt").textContent = fmt(me.cahScore || 0); }
   }
+  else if(snap.game === "pool" && snap.pool){
+    const myIdx = snap.seats.findIndex(s=>s.pid === mp.myPid);
+    if(myIdx >= 0) $("bank-amt").textContent = fmt(snap.pool.seatScores[myIdx] || 0);
+    else { const me = mp.roster.find(s=>s.pid === mp.myPid); if(me) $("bank-amt").textContent = fmt(me.poolScore || 0); }
+  }
   else {
     const mySeat = snap.seats.find(s=>s.pid === mp.myPid) || mp.roster.find(s=>s.pid === mp.myPid);
     if(mySeat){ $("bank-amt").textContent = fmt(mySeat.stack); }
@@ -6243,6 +7170,7 @@ function mpRenderSnap(snap, isHost){
   if(mp.unoUI) mpPaintUnoCards();
   if(mp.cahUI) mpPaintCahCards();
   if(mp.cahPickUI) mpPaintCahPick();
+  if(mp.poolUI) poolPaintAim();   // an open aim survives snapshot re-renders: state lives in poolAim, not the DOM
   mpOffTurnCoach(snap, isHost);
   reapplyReactions();   // the rebuild above wiped the seat DOM — repaint any reaction floats still inside their TTL
 }
@@ -6292,6 +7220,12 @@ function mpReadyGate(){
     // players' readiness alone.
     return { ok: true, players, readyCount, needCount: present.length, awayNames, reason: "ok" };
   }
+  if(!ok && game === "pool" && reason === "players" && aiFillOn() && players >= 1 && present.length > 0 && readyCount === present.length){
+    // Pool is 1-vs-1: one present player plus the AI fill is a legal
+    // table, so the gate passes on the present players' readiness
+    // alone (the fill takes the second seat).
+    return { ok: true, players, readyCount, needCount: present.length, awayNames, reason: "ok" };
+  }
   if(game === "cah"){
     // Cards Against the Table needs THREE at the table — a Czar and
     // at least two players to judge between. AI fill brings the
@@ -6338,7 +7272,7 @@ function mpAutoDealCancel(sync){
 function mpHostDealNow(){
   mpAutoDealCancel(false);
   mp.gateOkSince = 0;
-  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else if(game === "stud") mpStartStud(); else if(game === "spades") mpStartSpades(); else if(game === "farkle") mpStartFarkle(); else if(game === "uno") mpStartUno(); else if(game === "cah") mpStartCah(); else mpStartBJ();
+  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else if(game === "stud") mpStartStud(); else if(game === "spades") mpStartSpades(); else if(game === "farkle") mpStartFarkle(); else if(game === "uno") mpStartUno(); else if(game === "cah") mpStartCah(); else if(game === "pool") mpStartPool(); else mpStartBJ();
 }function mpAutoDealTick(){
   if(mp.role !== "host"){ mp.gateOkSince = 0; return; }
   if(mp.phase !== "lobby" && mp.phase !== "done"){ mp.gateOkSince = 0; mpAutoDealCancel(true); return; }
@@ -6371,7 +7305,7 @@ function mpRenderHostControls(){
     // the label ALWAYS matches the gate's verdict + reason (incl. AWAY)
     const dealLabel = cdSec != null
       ? `Dealing in ${cdSec}… — tap to deal now`
-      : gate.ok ? `${other}${(isDrawGame(game) || game === "stud") ? " — ante 10" : (game === "holdem" || game === "omaha") ? " — blinds 5/10" : game === "farkle" ? " — first to " + fmt(farkleTarget) : game === "uno" ? " — 7 cards each" : game === "cah" ? " — first to 5 points" : ""}`
+      : gate.ok ? `${other}${(isDrawGame(game) || game === "stud") ? " — ante 10" : (game === "holdem" || game === "omaha") ? " — blinds 5/10" : game === "farkle" ? " — first to " + fmt(farkleTarget) : game === "uno" ? " — 7 cards each" : game === "cah" ? " — first to 5 points" : game === "pool" ? " — rack 'em" : ""}`
       : gate.reason === "away" ? mpAwayLabel(gate.awayNames)
       : gate.reason === "players" ? `Waiting for players — ${gate.players} of ${gate.needTotal || 2} seated`
       : `Waiting for ready — ${gate.readyCount} of ${gate.needCount} ready`;
@@ -6441,6 +7375,12 @@ function mpDefaultAction(kind, ctx){
     // a random crown — an AWAY or timed-out Czar still crowns someone
     return { type: "pick", idx: (ctx && ctx.defPick) || 0 };
   }
+  if(kind === "poolshot"){
+    // the AI-heuristic shot the host computed for this exact table —
+    // an AWAY seat or a timeout plays on with it
+    const d = (ctx && ctx.defShot) || { angle: 0, power: 0.65, cue: null };
+    return { type: "shoot", angle: d.angle, power: d.power, cue: d.cue || null };
+  }
   return { type: "stand" };
 }
 async function mpPrompt(seat, kind, ctx){
@@ -6466,6 +7406,7 @@ async function mpPrompt(seat, kind, ctx){
         else if(kind === "unoturn") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — the table is playing their Uno turns for them.`);
         else if(kind === "cahsubmit") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — the table played a card for them.`);
         else if(kind === "cahpick") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — the table crowned a winner for them.`);
+        else if(kind === "poolshot") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — the table is shooting for them.`);
         mpSync();
       } else {
         mpSendTo(seat.pid, { t: "timeout-note", promptId, text: turnTimeoutText(kind, ctx) });
@@ -6483,13 +7424,13 @@ function mpLocalPrompt(kind, ctx){
     showTurnTimer(ms, kind === "draw" ? "Your draw" : "Your turn");
     const timer = setTimeout(()=>{
       if(settled) return; settled = true;
-      hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; mp.cahUI = null; mp.cahPickUI = null;
+      hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; mp.cahUI = null; mp.cahPickUI = null; poolAimClear();
       showNotice(turnTimeoutText(kind, ctx));
       resolve(mpDefaultAction(kind, ctx));
     }, ms);
     mpBuildPromptUI(kind, ctx, (action)=>{
       if(settled) return; settled = true;
-      clearTimeout(timer); hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; mp.cahUI = null; mp.cahPickUI = null;
+      clearTimeout(timer); hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; mp.cahUI = null; mp.cahPickUI = null; poolAimClear();
       resolve(action || mpDefaultAction(kind, ctx));
     });
   });
@@ -6539,6 +7480,7 @@ function gameIntroTip(g){
   if(g === "farkle") return "Farkle in one breath: roll all six and set aside the dice that score — <b>1s are 100, 5s are 50</b>, three of a kind pays face × 100 (three 1s = 1,000), and the six-dice combos pay big: a <b>straight 1–6</b> or <b>three pairs</b> pays <b>1,500</b>, <b>two triplets</b> <b>2,500</b>, four of a kind <b>1,000</b>, six of a kind <b>3,000</b>. Then <b>bank</b> the turn total or roll what's left and press on. A roll with <b>nothing</b> scoring is a <b>farkle</b>: the unbanked points vanish. Score with all six and they're <b>hot</b> — they all come back and the points ride along. Your first bank needs <b>500</b>, and three farkles in a row cost <b>1,000</b>.";
   if(g === "uno") return "Uno in one breath: <b>match the top card by color, number, or symbol</b> — or drop a <b>Wild</b> and name the color. <b>Skip</b> and <b>Reverse</b> bend the turn order; <b>Draw Two</b> and the <b>Wild Draw Four</b> feed the next player cards and cost them their turn. Nothing to play? Draw <b>one</b> — if it plays, you may drop it right away. Down to one card, the table calls <b>UNO!</b> for you. Go out and you score everything left in everyone else's hands: numbers at face value, actions 20, Wilds 50.";
   if(g === "cah") return "Cards Against the Table in one breath: each round, one player is the <b>Card Czar</b> and reads a <b>black card</b> with a blank — or two. Everyone else plays <b>white cards</b> from their hand to fill it in; the plays are <b>anonymous</b> until the Czar crowns the funniest, and its author scores a <b>point</b>. First to <b>5</b> wins. The deck is this room's own — written for this table, cookouts and all.";
+  if(g === "pool") return "Pool in one breath: <b>break</b> from behind the head string; the table is <b>open</b> until someone pockets a ball after the break — that ball sets <b>solids (1–7)</b> or <b>stripes (9–15)</b>. Pocket one of yours and you <b>shoot again</b>; a <b>scratch</b> or a whiff gives your opponent <b>ball in hand anywhere</b>. Clear your group, then sink the <b>8</b> — early, or with a scratch, and it costs you the game. Drag on the table to aim: the guide shows first contact and where both balls roll, and it shows <b>only on your screen</b>. Every screen replays the exact same physics from the shot's angle and power.";
   if(g === "bj") return "Blackjack in one sentence: <b>get closer to 21 than the dealer without going over</b>. The dealer’s face-up card is your crystal ball — the coach reads it for you on every decision while Apprentice mode is on.";
   const V = DRAW_VARIANTS[g] || DRAW_VARIANTS.draw;
   return V.tip;
@@ -6593,6 +7535,28 @@ function mpOffTurnCoach(snap, isHost){
     else if(ch.phase === "picked") L.push(`Round over — the crown is placed. Points: ${snap.seats.map(s=> `<b>${mpEsc(s.name)}</b> ${s.score || 0}`).join(" · ")}.`);
     if(race) L.push(race);
     if(!L.length) L.push(`First to <b>${ch.target}</b> points takes the game.`);
+    setTip(L.join("<br>"));
+    return;
+  }
+  if(snap.game === "pool"){
+    /* Pool off-turn read: the table is public — balls, groups and
+       turn all ride the snapshot — so the read is my group state
+       and what the shooter is looking at. No aim data exists
+       off-turn (the guide never leaves the shooter's screen). */
+    if(!mySeat || !snap.pool) return;
+    const pl = snap.pool;
+    const myIdx = snap.seats.findIndex(s=>s.pid === mp.myPid);
+    if(myIdx < 0) return;
+    const pkey = "pool|" + (pl.turnPid || "") + "|" + pl.balls.filter(b=>b.down).length + "|" + (pl.groups[myIdx] || "-") + "|" + (pl.bih || "-");
+    if(mp._coachKey === pkey) return;
+    mp._coachKey = pkey;
+    const core = { balls: pl.balls, groups: pl.groups, over: !!pl.over, winner: -1 };
+    const L = [];
+    const shooter = pl.turnPid ? snap.seats.find(s=>s.pid === pl.turnPid) : null;
+    if(pl.groups[0] === null) L.push(pl.shotNo === 0 ? `The <b>break</b> is coming — the table is <b>open</b> until a ball drops after it.` : `The table is still <b>open</b> — the first ball pocketed now sets the groups.`);
+    else if(poolRemaining(core, myIdx) === 0) L.push(`Your group is <b>clear</b> — you're on the <b>8</b> when your turn comes.`);
+    else L.push(`You're <b>${poolGroupName(pl.groups[myIdx]).toLowerCase()}</b> — <b>${poolRemaining(core, myIdx)}</b> left. ${poolSeatLine(core, 1 - myIdx)} for your opponent.`);
+    if(shooter && pl.turnPid !== mp.myPid) L.push(`<b>${mpEsc(shooter.name)}</b> is at the table${pl.bih ? " with ball in hand" : ""} — watch the replay; the balls land the same on every screen.`);
     setTip(L.join("<br>"));
     return;
   }
@@ -6840,6 +7804,15 @@ function mpBuildPromptUI(kind, ctx, respond){
     paintUnoPromptControls();
     mpPaintUnoCards();
   }
+  if(kind === "poolshot"){
+    /* The shooter's aim lives in poolAim (block 1's shared
+       machinery): drag to aim, slider for power, SHOOT to answer.
+       The guide paints only on this screen; the answer that rides
+       back is exactly { angle, power, cue } — the shot itself. */
+    poolAimBegin({ balls: ctx.balls, groups: ctx.groups, bih: ctx.bih || null, isBreak: !!ctx.isBreak,
+      myIdx: ctx.myIdx || 0, oppName: ctx.oppName || "Your opponent", respond });
+    return;
+  }
   if(kind === "cahsubmit"){
     if(mode === "apprentice" && tipsOn) setTip(cahCoachHTML({ step: "submit", black: ctx.black, picks: ctx.picks,
       hand: myCards, played: new Set(ctx.playedIds || []), raceLine: ctx.raceLine || "" }));
@@ -7058,6 +8031,12 @@ function mpPaintFarkleDice(){
   }
 }
 function mpAIAction(seat, kind, ctx){
+  if(kind === "poolshot"){
+    if(!MPO) return { type: "shoot", angle: 0, power: 0.65, cue: null };
+    const idx = MPO.state.findIndex(s=>s.seat.pid === seat.pid);
+    const s = poolAIShot(MPO.core, idx < 0 ? 0 : idx);
+    return { type: "shoot", angle: s.angle, power: s.power, cue: s.cue || null };
+  }
   if(kind === "cahsubmit"){
     if(!MC) return { type: "submit", cards: [] };
     const st = MC.state.find(s=>s.seat.pid === seat.pid);
@@ -7178,12 +8157,12 @@ function mpGuestOnData(msg){
     if(mp.guestPromptTimer) clearTimeout(mp.guestPromptTimer);
     mp.guestPromptTimer = setTimeout(()=>{
       if(mp.guestPrompt !== msg.promptId) return;
-      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; hideTurnTimer();
+      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; poolAimClear(); hideTurnTimer();
       setControls(`<span class="ctl-note">Time ran out — the host played the safe move for you.</span>`);
       showNotice(turnTimeoutText(msg.kind, msg.ctx));
     }, ms + 2500);
     mpBuildPromptUI(msg.kind, msg.ctx, (action)=>{
-      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null;
+      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; poolAimClear();
       if(mp.guestPromptTimer){ clearTimeout(mp.guestPromptTimer); mp.guestPromptTimer = null; }
       hideTurnTimer();
       mpToHost({ t: "action", promptId: msg.promptId, action });
@@ -7192,7 +8171,7 @@ function mpGuestOnData(msg){
   }
   if(msg.t === "timeout-note"){
     if(mp.guestPrompt === msg.promptId){
-      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null;
+      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; poolAimClear();
       if(mp.guestPromptTimer){ clearTimeout(mp.guestPromptTimer); mp.guestPromptTimer = null; }
       hideTurnTimer();
       setControls(`<span class="ctl-note">Time ran out — the host played the safe move for you.</span>`);
@@ -7265,7 +8244,7 @@ function mpResetTableMP(){
   hideTurnTimer();
   mp.cdEndsAt = 0; mp.cdShownSec = null; mp.gateOkSince = 0;
   mp.winBanner = null; paintWinBanner(null); mpResetReady();
-  MD = null; MB = null; MH = null; MO = null; MS = null; MSP = null; MF = null; MU = null; MC = null; mp.phase = "lobby"; mp.activeSeatPid = null;
+  MD = null; MB = null; MH = null; MO = null; MS = null; MSP = null; MF = null; MU = null; MC = null; MPO = null; poolAimClear(); mp.phase = "lobby"; mp.activeSeatPid = null;
   paintScorePanel(null);
   const info = game === "holdem"
     ? ["Texas Hold'em — live room", "Blinds 5/10 · two hole cards · flop, turn, river · best 5 of 7 · the host deals."]
@@ -7283,6 +8262,8 @@ function mpResetTableMP(){
     ? ["Uno — live room", "108 cards · 7 each · match color, number, or symbol · Skip, Reverse, Draw Two and Wilds bite · first to go out scores the table · the host deals."]
     : game === "cah"
     ? ["Cards Against the Table — live room", "An original house deck · 7 white cards each · a rotating Card Czar · anonymous plays · first to 5 points · the host deals."]
+    : game === "pool"
+    ? ["Pool — 8-Ball · live room", "One-on-one · open table · groups set by the first ball after the break · a foul gives ball in hand anywhere · the 8 too early loses · the host racks."]
     : isDrawGame(game)
     ? [drawVariant().name + " — live room", drawVariant().wilds ? "Jokers & deuces wild · two draws — up to 3, then up to 2 · the host deals." : "No wilds · one draw — up to 5 · the host deals."]
     : ["Blackjack — live room", "Dealer stands on 17 · blackjack pays 3:2 · the host deals."];
@@ -7308,7 +8289,7 @@ function mpResetTableMP(){
       // AI seat starts at 1,000
       const stack = (mp.aiStacks[def.name] != null) ? mp.aiStacks[def.name] : 1000;
       const ast = mp.aiStats[def.name] || { hands: 0, chips: 0 };
-      seats.push({ pid: "ai-" + def.name.toLowerCase(), name: def.name, short: def.name[0], theme: parseChipPrompt(def.themeText, def.name), stack, kind: "ai", handsWon: ast.hands, chipsWon: ast.chips, spadesScore: ast.spades || 0, farkleScore: ast.farkle || 0, unoScore: ast.uno || 0, cahScore: ast.cah || 0 });
+      seats.push({ pid: "ai-" + def.name.toLowerCase(), name: def.name, short: def.name[0], theme: parseChipPrompt(def.themeText, def.name), stack, kind: "ai", handsWon: ast.hands, chipsWon: ast.chips, spadesScore: ast.spades || 0, farkleScore: ast.farkle || 0, unoScore: ast.uno || 0, cahScore: ast.cah || 0, poolScore: ast.pool || 0 });
     }
   }
   return seats;
@@ -7319,9 +8300,9 @@ function mpSeatStackSync(){
   // seats (they keep both across hands, like a seated player does)
   const seats = mpSeatsForHand();
   seats.forEach(seat=>{
-    if(seat.kind === "ai"){ mp.aiStacks[seat.name] = seat.stack; mp.aiStats[seat.name] = { hands: seat.handsWon || 0, chips: seat.chipsWon || 0, spades: seat.spadesScore || 0, farkle: seat.farkleScore || 0, uno: seat.unoScore || 0, cah: seat.cahScore || 0 }; return; }
+    if(seat.kind === "ai"){ mp.aiStacks[seat.name] = seat.stack; mp.aiStats[seat.name] = { hands: seat.handsWon || 0, chips: seat.chipsWon || 0, spades: seat.spadesScore || 0, farkle: seat.farkleScore || 0, uno: seat.unoScore || 0, cah: seat.cahScore || 0, pool: seat.poolScore || 0 }; return; }
     const r = mp.roster.find(x=>x.pid === seat.pid);
-    if(r){ r.stack = seat.stack; r.handsWon = seat.handsWon || 0; r.chipsWon = seat.chipsWon || 0; if(game === "spades") r.spadesScore = seat.spadesScore || 0; if(game === "farkle") r.farkleScore = seat.farkleScore || 0; if(game === "uno") r.unoScore = seat.unoScore || 0; if(game === "cah") r.cahScore = seat.cahScore || 0; }
+    if(r){ r.stack = seat.stack; r.handsWon = seat.handsWon || 0; r.chipsWon = seat.chipsWon || 0; if(game === "spades") r.spadesScore = seat.spadesScore || 0; if(game === "farkle") r.farkleScore = seat.farkleScore || 0; if(game === "uno") r.unoScore = seat.unoScore || 0; if(game === "cah") r.cahScore = seat.cahScore || 0; if(game === "pool") r.poolScore = seat.poolScore || 0; }
   });
 }
 
@@ -8392,6 +9373,106 @@ function mpCahFinish(){
   mp._lastLog = mpLogBoth(`<b>${mpEsc(banner)}</b>`, true);
   setCenter("Game over", cahScoreLineMP());
   $("tb-what").textContent = "Game over — the host starts the next game when everyone's ready.";
+  mpSeatStackSync();
+  mp.phase = "done"; mp.activeSeatPid = null;
+  mpResetReady();
+  mpSync();
+}
+
+/* ----- Pool — 8-Ball (host authority) -----
+   One-on-one. The host owns the rack, the groups and the turn; a
+   shot is exactly { angle, power, cue } and it is the sync: the
+   host broadcasts the parameters inside the snapshot (snap.pool.shot,
+   with the pre-shot balls) and EVERY client replays the identical
+   fixed-step sim, so all screens watch the same shot land the same
+   way. The host rules on the same sim result it animated, then the
+   authoritative balls ride the next snapshot — any drift self-heals.
+   The aim guide exists only inside the shooter's prompt (poolAim),
+   never in a snapshot. */
+function poolScoreLineMP(){
+  if(!MPO) return "";
+  return MPO.state.map(s=> `${s.seat.name} ${fmt(s.seat.poolScore || 0)}`).join(" · ") + " — games won";
+}
+function poolCenterLineMP(){
+  const core = MPO.core;
+  const t = MPO.state[core.turn].seat.name;
+  return core.groups[0] === null ? `Open table — ${t} to shoot` : `${t} to shoot · ${poolSeatLine(core, core.turn)}`;
+}
+async function mpStartPool(){
+  if(!mpReadyGate().ok){ mp._lastLog = mpLogBoth("Deal held — every seated player has to tap <b>I’m Ready</b> first."); mpSync(); return; }
+  const seq = ++mp.seq; handSeq++;
+  mp.winBanner = null;
+  mp.activeHostMode = mp.hostMode;   // the mode is locked in for this game
+  const seats = mpTableSeats(2);
+  if(seats.length < 2){
+    mp.phase = "lobby";
+    mp._lastLog = mpLogBoth("Pool is <b>1-vs-1</b> — it needs two players at the table. Invite a friend, or turn <b>Fill empty seats with AI</b> on.");
+    mpSync();
+    return;
+  }
+  const state = seats.map(seat=> ({ seat }));
+  MPO = { state, core: poolNewCore(), lastShot: null, shotSeq: 0, scoreBreak: null };
+  MPO.core.turn = mpPoolBreaker % 2;
+  mp.phase = "play";
+  const breaker = state[MPO.core.turn].seat;
+  mp._lastLog = mpLogBoth(`Live Pool racked — <b>${mpEsc(breaker.name)}</b> to break from behind the head string. Open table; the first ball pocketed after the break sets the groups.`);
+  mpSync();
+  while(MPO && !MPO.core.over){
+    if(seq !== mp.seq || !MPO) return;
+    const okTurn = await mpPoolTakeShot(seq, MPO.core.turn);
+    if(!okTurn) return;
+  }
+  if(seq !== mp.seq || !MPO) return;
+  mpPoolFinish();
+}
+async function mpPoolTakeShot(seq, idx){
+  const st = MPO.state[idx];
+  const seat = st.seat;
+  const core = MPO.core;
+  mp.activeSeatPid = seat.pid;
+  $("tb-what").textContent = core.shotNo === 0
+    ? (seat.pid === mp.myPid ? "Your break — place the cue ball behind the head string, then let it fly." : `${seat.name} to break.`)
+    : (seat.pid === mp.myPid ? "Your shot — drag on the table to aim, set the power, SHOOT." : `${seat.name} is lining up…`);
+  setCenter(poolCenterLineMP(), poolScoreLineMP());
+  const defShot = poolAIShot(core, idx);
+  mpSync();
+  const act = await mpPrompt(seat, "poolshot", { ms: POOL_MS, balls: core.balls.map(b=> ({ n: b.n, x: b.x, y: b.y, down: !!b.down })),
+    groups: core.groups.slice(), bih: core.bih, isBreak: core.shotNo === 0, myIdx: idx,
+    oppName: MPO.state[1 - idx].seat.name, defShot });
+  if(seq !== mp.seq || !MPO) return false;
+  const shot = poolValidateShot(core, act) || defShot;
+  // broadcast the shot: parameters + the exact pre-shot balls. Every
+  // screen (this one included) replays it through poolStartAnim.
+  MPO.lastShot = { id: ++MPO.shotSeq, angle: shot.angle, power: shot.power, cue: shot.cue || null,
+                   balls: core.balls.map(b=> ({ n: b.n, x: b.x, y: b.y, down: !!b.down })) };
+  const sim = poolStartAnim(core.balls, shot);
+  mpSync();
+  await sleep(poolAnimDuration(sim) + 220);
+  if(seq !== mp.seq || !MPO) return false;
+  const out = poolApplyShot(core, sim);
+  MPO.lastShot = null;
+  const names = MPO.state.map(s=> mpEsc(s.seat.name));
+  const lines = poolOutcomeLines(names, idx, out);
+  if(lines.length) mp._lastLog = mpLogBoth(lines.map(l=> l.html).join("<br>"), lines.some(l=> l.win));
+  setCenter(poolCenterLineMP(), poolScoreLineMP());
+  mpSync();
+  return true;
+}
+function mpPoolFinish(){
+  const wi = MPO.core.winner;
+  const winner = MPO.state[wi];
+  winner.seat.handsWon = (winner.seat.handsWon || 0) + 1;
+  winner.seat.poolScore = (winner.seat.poolScore || 0) + 1;
+  mpPoolBreaker = 1 - mpPoolBreaker;
+  const lines = [`<span class="sp-title">Game over:</span>`];
+  MPO.state.forEach((s, i)=> lines.push(`<b>${mpEsc(s.seat.name)}</b> — ${fmt(s.seat.poolScore || 0)} game${(s.seat.poolScore || 0) === 1 ? "" : "s"} won${i === wi ? " · took this one" : ""}.`));
+  lines.push(`Next break: ${mpEsc(MPO.state[mpPoolBreaker].seat.name)}.`);
+  MPO.scoreBreak = lines;
+  const banner = `${winner.seat.name} won the game — 8-ball down`;
+  mp.winBanner = banner;
+  mp._lastLog = mpLogBoth(`<b>${mpEsc(banner)}</b>`, true);
+  setCenter("Game over", poolScoreLineMP());
+  $("tb-what").textContent = "Game over — the host racks the next game when everyone's ready.";
   mpSeatStackSync();
   mp.phase = "done"; mp.activeSeatPid = null;
   mpResetReady();
