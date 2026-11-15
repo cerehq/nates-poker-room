@@ -351,6 +351,43 @@
       .uno-colorbtn.yellow{ background:#f2b705; border-color:#b97f00; color:#3a2a00; }
       .uno-colorbtn.green{ background:#2e7d32; border-color:#1d5521; color:#fff; }
       .uno-colorbtn.blue{ background:#1e56b8; border-color:#143d80; color:#fff; }
+      /* ---------- Cards Against the Table ---------- */
+      .cards.cah-cards{ --cah-w:clamp(64px,15vw,92px); min-height:calc(var(--cah-w)*1.34); flex-wrap:wrap; }
+      .cards.cah-cards.backs{ flex-wrap:nowrap; --cah-w:clamp(26px,6vw,40px); min-height:calc(var(--cah-w)*1.34); }
+      .ccard{ --cw:var(--cah-w, 92px); width:var(--cw); aspect-ratio:5/6.7; border-radius:calc(var(--cw)*.1); position:relative; flex:none;
+        background:linear-gradient(160deg,#fffef9,#f1eee2); color:#17171c; border:1px solid #cfc9b8;
+        box-shadow:0 3px 8px rgba(0,0,0,.35); padding:9% 9% 16%; box-sizing:border-box; overflow:hidden; }
+      .ccard .cc-text{ font-size:calc(var(--cw)*.135); font-weight:700; line-height:1.32; display:block; }
+      .ccard .cc-foot{ position:absolute; left:9%; right:9%; bottom:5%; font-size:calc(var(--cw)*.075); font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#8a8474; }
+      .ccard.back{ background:linear-gradient(160deg,#e8e4d8,#cfc9b8); display:grid; place-items:center; padding:0; }
+      .ccard .cc-backmark{ font-size:calc(var(--cw)*.16); font-weight:900; letter-spacing:.04em; color:#6d675a; text-align:center; line-height:1.25; padding:0 6%; }
+      .cards.cah-cards .ccard + .ccard{ margin-left:0; }
+      .cards.cah-cards.backs .ccard + .ccard{ margin-left:calc(var(--cah-w, 40px) * -0.55); }
+      .you-cards .ccard{ cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; }
+      .you-cards .ccard.sel{ transform:translateY(-9px); box-shadow:0 0 0 2.5px var(--gold-bright), 0 10px 14px rgba(0,0,0,.45); }
+      .you-cards .ccard.dim{ opacity:.45; filter:saturate(.6); cursor:not-allowed; }
+      .ccard .picknum{ position:absolute; top:5%; right:6%; width:calc(var(--cw)*.24); height:calc(var(--cw)*.24); border-radius:50%;
+        background:var(--gold-bright); color:#241a02; font-size:calc(var(--cw)*.15); font-weight:900; display:grid; place-items:center; box-shadow:0 2px 5px rgba(0,0,0,.35); z-index:2; }
+      .bcard{ max-width:340px; margin:0 auto; background:linear-gradient(165deg,#26262e,#101014); color:#f5f2e8; border:1px solid #3c3c46;
+        border-radius:14px; padding:16px 18px 22px; box-shadow:0 8px 20px rgba(0,0,0,.5); position:relative; text-align:left; }
+      .bcard .bc-text{ font-size:17px; font-weight:800; line-height:1.45; display:block; }
+      .bcard .bc-text .cah-fill{ color:var(--gold-bright); }
+      .bcard .bc-foot{ position:absolute; left:18px; bottom:7px; font-size:9px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:#8f8fa0; }
+      .bcard .bc-czar{ position:absolute; right:14px; bottom:6px; font-size:10px; font-weight:800; letter-spacing:.05em; color:#c9a7ff; }
+      .cah-center{ text-align:center; padding:2px 0 0; }
+      .cah-subs{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:12px; }
+      .cah-sub{ max-width:300px; flex:1 1 200px; background:var(--panel-2); border:1.5px solid var(--line); border-radius:12px; padding:11px 13px;
+        font-size:14px; line-height:1.45; text-align:left; color:var(--ink); }
+      .cah-sub .cah-fill{ color:#a97e14; font-weight:800; }
+      @media (prefers-color-scheme: dark){ .cah-sub .cah-fill{ color:var(--gold-bright); } }
+      .cah-sub.winner{ border-color:var(--gold-bright); box-shadow:0 0 0 2.5px var(--gold-bright), 0 8px 16px rgba(0,0,0,.35); }
+      .cah-sub .cah-author{ display:block; margin-top:6px; font-size:12px; font-weight:800; color:var(--gold); }
+      .cah-sub .cah-subnum{ display:block; font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+      .cah-subslot{ width:52px; aspect-ratio:5/6.7; border-radius:8px; background:linear-gradient(160deg,#e8e4d8,#cfc9b8); border:1px solid #b6b09c;
+        display:grid; place-items:center; color:#6d675a; font-weight:900; font-size:11px; box-shadow:0 3px 7px rgba(0,0,0,.3); }
+      .you-cards .cah-sub.pickable{ cursor:pointer; }
+      .you-cards .cah-sub.pickable:hover{ border-color:var(--gold-bright); }
+      .plate .aibadge.czarbadge{ background:#7c3aed; color:#fff; }
       .you-cards .card{ cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; }
       .you-cards .card.sel{ transform:translateY(-11px); box-shadow:0 0 0 2.5px var(--danger), 0 10px 14px rgba(0,0,0,.4); }
       .you-cards .card.sugg{ box-shadow:0 0 0 2.5px var(--gold-bright), 0 6px 10px rgba(0,0,0,.35); }
@@ -534,7 +571,7 @@
     <header class="topbar">
       <div>
         <h1>Nate&rsquo;s <span class="thin">Poker Room</span></h1>
-        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Seven Card Stud, Five Card Draw, Blackjack, Spades, Farkle &amp; Uno. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
+        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Seven Card Stud, Five Card Draw, Blackjack, Spades, Farkle, Uno &amp; Cards Against the Table. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
       </div>
       <div class="bar-controls">
         <div class="seg" role="tablist" aria-label="Game">
@@ -548,6 +585,7 @@
           <button id="seg-spades" type="button">Spades</button>
           <button id="seg-farkle" type="button">Farkle</button>
           <button id="seg-uno" type="button">Uno</button>
+          <button id="seg-cah" type="button">Cards Against the Table</button>
         </div>
         <div class="seg" id="spades-variant-seg" style="display:none" aria-label="Spades variant">
           <span class="seg-label">Spades</span>
@@ -851,6 +889,17 @@
               <li><b>No chips in Uno</b> — your seat shows your session points; the room list keeps your games and score.</li>
             </ul>
           </details>
+          <details>
+            <summary>House rules — Cards Against the Table</summary>
+            <ul>
+              <li><b>The game:</b> a fill-in-the-blank party game with an <b>original house deck</b> — every card at this table was written for this room. Three or four players; empty seats fill with AI so the jokes never wait.</li>
+              <li><b>The Czar:</b> each round one player is the <b>Card Czar</b> (purple badge) — the role rotates around the table every round. The Czar reads the black card and judges; the Czar does <b>not</b> play a card that round. (When the House deals, the host never czars.)</li>
+              <li><b>The black card</b> has one blank — or two. Everyone else plays <b>one white card per blank</b> from their hand of <b>seven</b>; for a two-blank card, the order you pick them in is the order they read. You draw back up to seven after playing.</li>
+              <li><b>Anonymous:</b> plays go in face-down and are shuffled before the reveal — nobody, not even the Czar, can see whose card is whose until the winner is crowned.</li>
+              <li><b>Scoring:</b> the Czar crowns the funniest play; its author scores <b>1 point</b>. First to <b>5 points</b> wins the game. Ninety seconds to play your card(s), ninety for the Czar to pick — run out of time and the table picks for you.</li>
+              <li><b>No chips here</b> — your seat shows your points; the room list keeps your games and score.</li>
+            </ul>
+          </details>
         </div>
       </aside>
     </div>
@@ -1015,7 +1064,7 @@
                  sub:"No wilds — a straight 52-card deck · one draw, up to 5 cards.",
                  tip:"Classic draw, the old-school way — <b>no wilds</b>, one draw of up to 5. Made hands are scarcer here, so a pair is a real start. Hit <b>Deal</b> and I’ll size up your hand." },
     };
-    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", stud:"Seven Card Stud", bj:"Blackjack", spades:"Spades", farkle:"Farkle", uno:"Uno" };
+    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", stud:"Seven Card Stud", bj:"Blackjack", spades:"Spades", farkle:"Farkle", uno:"Uno", cah:"Cards Against the Table" };
     /* Spades variant: "teams" = 4P partnership (partners across, 13 cards,
        match to 500); "cut" = 3P cutthroat (2♣ removed, 17 cards each,
        every player for themselves, match to 300). The host picks it in a
@@ -1076,7 +1125,7 @@
       else { el.textContent = ""; el.classList.remove("on"); }
     }
     /* ================= turn timer, notices, tap binding ================= */
-    const TURN_MS = 90000, DRAW_MS = 120000, AWAY_MS = 5000, SPADES_MS = 60000, FARKLE_MS = 60000, UNO_MS = 60000;
+    const TURN_MS = 90000, DRAW_MS = 120000, AWAY_MS = 5000, SPADES_MS = 60000, FARKLE_MS = 60000, UNO_MS = 60000, CAH_MS = 90000;
     function fmtClock(ms){ const s = Math.max(0, Math.ceil(ms/1000)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
     let _ttIv = null;
     /* Turn nudge: if the player whose turn it is hasn't acted in 20s,
@@ -1136,6 +1185,8 @@
       if(kind === "spadesplay") return "Time ran out — your lowest legal card was played.";
       if(kind === "farkleturn") return ctx && ctx.step === "decide" ? "Time ran out — the table banked what it safely could for you." : "Time ran out — the table rolled for you.";
       if(kind === "unoturn") return "Time ran out — the table played your Uno turn for you.";
+      if(kind === "cahsubmit") return "Time ran out — the table played a card for you.";
+      if(kind === "cahpick") return "Time ran out — the table crowned a winner for you.";
       return "Time ran out — the table moved on.";
     }
     /* One tap = one toggle, in every browser (incl. in-app webviews): fire on
@@ -2313,6 +2364,405 @@ function spadesTargetFor(variant){ return variant === "cut" ? 300 : 500; }
       if(view.nextCount === 1 && playable.length) L.push(`Careful — <b>${view.nextName || "the next player"}</b> is sitting on <b>UNO</b> (one card). If they get a turn and can play it, they go out and score your whole hand.`);
       if(view.hand.length === 2) L.push(`You're two cards from out yourself — play one and the table calls <b>UNO!</b> for you.`);
       if(view.hand.length === 1) L.push(`You're on <b>UNO</b> — if this card plays, you're out and the table's hands are yours.`);
+      return L.join("<br>");
+    }
+
+    /* ================= CARDS AGAINST THE TABLE (shared core) =========
+       The party shelf's last game: a fill-in-the-blank card game in
+       the CAH style, played with an ORIGINAL house deck written for
+       this room (no borrowed card text — every black and white card
+       below was composed for Nate's table: game-night humor, everyday
+       life, and small-town Eastern NC flavor, PG-13 at most).
+       A rotating Card Czar reads a black prompt card; everyone else
+       plays white answer cards into its blanks (1 card for a 1-blank
+       prompt, 2 in order for a 2-blank). Plays are anonymous until
+       the Czar crowns one; its author scores a point. First to
+       CAH_TARGET points wins. Cards ride the wire as INDICES into
+       these two arrays (the deck ships in the page), so a hand is
+       just a list of numbers. */
+    const CAH_TARGET = 5;   // points to win the game
+    const CAH_HAND = 7;     // white cards held
+    const CAH_BLACKS = [
+      "I got kicked out of the cookout because of ____.",
+      "Grandma's secret ingredient? ____.",
+      "The power went out during the hurricane, and honestly, ____ was to blame.",
+      "Nothing says Eastern North Carolina like ____.",
+      "The wedding DJ ended the night with ____.",
+      "My truck wouldn't start, so I rode ____ to work.",
+      "The preacher stopped mid-sermon when he saw ____ in the back pew.",
+      "____: it's not just for breakfast anymore.",
+      "The church picnic was going great until ____ showed up.",
+      "My love language is ____.",
+      "The HOA sent me a strongly worded letter about ____.",
+      "____ ruined Thanksgiving, and honestly, we should have seen it coming.",
+      "I spend my Friday nights thinking about ____.",
+      "The secret to a happy marriage is ____.",
+      "____: coming soon to a gas station near you.",
+      "My car's bumper sticker just says ____.",
+      "The worst part of the family reunion was ____.",
+      "I can't believe I paid fifty dollars for ____.",
+      "The meteorologist is calling for a 90% chance of ____.",
+      "____ is the reason we can't have nice things.",
+      "Grandpa's war stories always end with ____.",
+      "The baby shower took a turn when someone gifted ____.",
+      "My New Year's resolution lasted exactly one day thanks to ____.",
+      "____ should be an Olympic sport.",
+      "The lost-and-found at the county fair contains nothing but ____.",
+      "I knew the date was over when they brought up ____.",
+      "The real treasure was ____ all along.",
+      "____ hits different at 2 a.m.",
+      "My resume just says 'expert in ____' and honestly, that's enough.",
+      "The sermon this Sunday is titled '____ and Other Mistakes.'",
+      "Nothing fixes a bad day like ____.",
+      "The group chat has been nothing but ____ for three days straight.",
+      "____: the official sponsor of my bad decisions.",
+      "I would trade my own brother for ____. No hesitation.",
+      "The recipe called for two cups of ____.",
+      "____ is my emotional support problem.",
+      "The auctioneer started the bidding at ____.",
+      "My retirement plan is just ____ and hope.",
+      "____: batteries not included, dignity not guaranteed.",
+      "The only thing standing between me and greatness is ____.",
+      "Mama always said, 'Never trust ____.'",
+      "The poker game ended early because of ____.",
+      "____ is what the dog was barking at all night.",
+      "I keep a spare ____ in the truck, just in case.",
+      "____ + ____ = a perfect Saturday.",
+      "Forget diamonds — ____ is forever, and ____ is close enough.",
+      "The recipe for disaster: one part ____, two parts ____.",
+      "____ is just ____ with better PR.",
+      "First comes ____, then comes ____, then comes a strongly worded text from Mama.",
+      "I traded ____ for ____, and I'd do it again.",
+      "____ walked into the cookout carrying ____, and nobody asked questions.",
+      "My therapist says ____ is just a coping mechanism for ____.",
+      "____ is temporary. ____ is forever.",
+      "Nothing says 'I love you' like ____ followed by ____.",
+      "The secret menu item is ____ topped with ____.",
+      "____ in the streets, ____ in the group chat.",
+      "Step one: ____. Step two: ____. Step three: profit.",
+      "You can't have ____ without ____, and that's the law around here.",
+      "The forecast calls for ____ with a chance of ____.",
+      "____ is my cardio, and ____ is my cheat day.",
+      "It started with ____ and somehow ended with ____.",
+      "____: the gift that keeps on giving, unlike ____.",
+      "Behind every great cookout is ____ and a questionable amount of ____.",
+      "____ is a gateway to ____, and there's no coming back.",
+      "The only thing better than ____ is ____ at half price.",
+      "I put ____ on the wedding registry right next to ____."
+    ];
+    const CAH_WHITES = [
+      "a church fan working overtime",
+      "sweet tea strong enough to stand a spoon in",
+      "a pickup truck with one working headlight",
+      "leftover hushpuppies",
+      "a folding chair that has seen some things",
+      "Grandma's cast-iron skillet",
+      "an aggressively seasoned potato salad",
+      "the last slice of pecan pie",
+      "a hurricane party",
+      "a cooler full of questionable decisions",
+      "the DJ's backup playlist",
+      "a karaoke night gone wrong",
+      "my uncle's 'famous' chili",
+      "a lawn chair throne",
+      "the good parking spot at church",
+      "a screen door that slams like thunder",
+      "mosquitoes the size of small birds",
+      "a biscuit run at midnight",
+      "the smell of a cookout two streets over",
+      "a porch swing and nowhere to be",
+      "my cousin's mixtape from 2009",
+      "a group chat that never sleeps",
+      "an unmarked container in the fridge",
+      "the last cold drink in the cooler",
+      "a riding mower with racing stripes",
+      "Daddy's secret barbecue sauce",
+      "a fan that only works on the highest setting",
+      "a screen-porch sermon",
+      "the church van",
+      "a casserole with a mysterious crunch",
+      "my mama's side-eye",
+      "a folding table that wobbles on purpose",
+      "the world's okayest potato salad",
+      "a cooler labeled 'do not open'",
+      "three generations arguing over dominoes",
+      "a hammock nap that went too long",
+      "the smell of rain on hot pavement",
+      "a jar of pickles from an unknown year",
+      "my neighbor's rooster alarm clock",
+      "a porch light left on for nobody",
+      "an off-key hymn",
+      "a wedding in a barn with string lights",
+      "the bouquet toss injury report",
+      "a best man's speech that went off the rails",
+      "an open bar and an open microphone",
+      "a dance floor with no witnesses",
+      "my two left feet",
+      "a slow cooker doing the Lord's work",
+      "cornbread in a cast-iron skillet",
+      "collard greens with a kick",
+      "a whole hog and a head-count problem",
+      "vinegar-based everything",
+      "a sweet potato pie worth fighting for",
+      "banana pudding with the wafers gone soft",
+      "a deviled egg eating contest",
+      "hot sauce on absolutely everything",
+      "a biscuit the size of a hubcap",
+      "iced tea refills, no questions asked",
+      "a gravy boat used as a serving bowl",
+      "leftovers that taste better on day three",
+      "a potluck with four potato salads",
+      "the good china that never leaves the cabinet",
+      "a recipe written on a church bulletin",
+      "my boss's motivational desk calendar",
+      "a meeting that could have been an email",
+      "the office fridge science experiment",
+      "a printer that only jams on Fridays",
+      "casual Friday taken way too far",
+      "a slideshow with 94 slides",
+      "the reply-all incident",
+      "a desk plant I keep forgetting to water",
+      "my two-week notice, mentally drafted daily",
+      "a stapler with a grudge",
+      "the break room microwave situation",
+      "a conference call with a rooster in the background",
+      "overtime pay and empty promises",
+      "a suggestion box nobody reads",
+      "the world's longest Monday",
+      "a nap in the truck on lunch break",
+      "my last clean work shirt",
+      "a toolbox held together by hope",
+      "duct tape and confidence",
+      "a ladder, a prayer, and no spotter",
+      "the check-engine light I've ignored since March",
+      "a spare tire that's also flat",
+      "jumper cables older than I am",
+      "a gas gauge living on faith",
+      "my truck's mysterious dashboard rattle",
+      "a tailgate that won't stay shut",
+      "mud on everything I own",
+      "a fishing story that grows every year",
+      "the one that got away, allegedly",
+      "a tackle box full of snacks",
+      "a lawn that judges the neighbors",
+      "fresh pine straw and good intentions",
+      "a garden gnome uprising",
+      "the sprinkler hitting the mailbox again",
+      "a mailbox held up by zip ties",
+      "my porch, my rules",
+      "a rocking chair with a squeak in 4/4 time",
+      "lightning bugs in a mason jar",
+      "a thunderstorm on a tin roof",
+      "humidity you can wear like a coat",
+      "a heat wave with an attitude",
+      "the first cool morning of fall",
+      "a bonfire and a story that isn't true",
+      "marshmallows burnt exactly right",
+      "a flashlight with dying batteries",
+      "the family dog who runs the house",
+      "a cat with main-character energy",
+      "a hunting dog afraid of loud noises",
+      "the neighbor's cat, again",
+      "a toddler with a marker and no supervision",
+      "my baby cousin's demolition phase",
+      "a diaper blowout at the worst possible moment",
+      "grandkids hopped up on birthday cake",
+      "a minivan full of cousins",
+      "the kids' table, where the real talk happens",
+      "a water balloon ambush",
+      "a sprinkler run in your good clothes",
+      "fireworks from a parking lot stand",
+      "a sparklers-only celebration",
+      "the Fourth of July potato salad incident",
+      "a Christmas light display visible from space",
+      "a Santa suit with a busted zipper",
+      "re-gifted fruitcake, third year running",
+      "a Thanksgiving nap that counts as cardio",
+      "the wishbone custody battle",
+      "an Easter egg hunt with real stakes",
+      "a Halloween costume held together by tape",
+      "my poker face, which fools no one",
+      "a bluff that aged terribly",
+      "the last chip, dramatically wagered",
+      "a Farkle roll that broke my heart",
+      "three farkles in a row",
+      "a royal flush and nobody to tell",
+      "beginner's luck, weaponized",
+      "the house rules, made up on the spot",
+      "a victory lap around the kitchen table",
+      "game night trash talk, pre-approved by Mama",
+      "a rematch nobody agreed to",
+      "the scorekeeper's creative math",
+      "a dice tower of bad decisions",
+      "my lucky socks, unwashed for science",
+      "a playlist of nothing but slow jams",
+      "the aux cord privileges, revoked",
+      "a bass line you can feel in your teeth",
+      "karaoke confidence after one sweet tea",
+      "a microphone drop nobody asked for",
+      "the wedding dance floor at 9 p.m.",
+      "a two-step with the wrong partner",
+      "my ringtone going off in church",
+      "a phone at 2% during a storm",
+      "Wi-Fi that quits during the big game",
+      "a group photo where nobody's ready",
+      "the family group chat's 400 unread messages",
+      "a voicemail from Mama, marked urgent",
+      "a text that just says 'call me'",
+      "an alarm set for the wrong day",
+      "a to-do list from last month",
+      "laundry mountain, population: me",
+      "a junk drawer with its own ecosystem",
+      "the missing container lid, every single one",
+      "a sock with no partner and no regrets",
+      "a coupon that expired yesterday",
+      "exact change at the worst possible time",
+      "a receipt long enough to be a scarf",
+      "the last parking spot, stolen politely",
+      "a shopping cart with one bad wheel",
+      "a self-checkout machine judging me loudly",
+      "a 'quick errand' that took three hours",
+      "directions from somebody who says 'you can't miss it'",
+      "a shortcut that was neither short nor a cut"
+    ];
+    /* Test seam: when set, buildCahDecks deals the hook's index
+       orders instead of shuffled ones; production leaves it null. */
+    let cahDeckHook = null;
+    function cahBlanks(text){ return (String(text).match(/____/g) || []).length; }
+    function cahBlackAt(idx){ const text = CAH_BLACKS[idx]; return { idx, text, picks: cahBlanks(text) }; }
+    function buildCahDecks(){
+      if(cahDeckHook){
+        const h = cahDeckHook();
+        if(h && Array.isArray(h.blacks) && Array.isArray(h.whites) && h.blacks.length && h.whites.length)
+          return { blacks: h.blacks.slice(), whites: h.whites.slice() };
+      }
+      return { blacks: shuffle(CAH_BLACKS.map((_, i)=> i)), whites: shuffle(CAH_WHITES.map((_, i)=> i)) };
+    }
+    function cahEsc(t){ return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+    /* The prompt with its answers filled in — the reveal render.
+       Answers arrive as raw deck text and are escaped here; the
+       black text is an internal constant, escaped the same way. */
+    function cahFillHTML(blackText, whiteTexts){
+      let n = 0;
+      return cahEsc(blackText).replace(/____/g, ()=> `<span class="cah-fill">${cahEsc((whiteTexts || [])[n++] || "____")}</span>`);
+    }
+    /* A submission is legal only as exactly `picks` distinct cards
+       the player actually holds. The host runs this on every guest
+       answer; anything else falls back to the default play. */
+    function cahValidateSubmission(hand, cards, picks){
+      if(!Array.isArray(cards) || cards.length !== picks) return false;
+      if(new Set(cards).size !== cards.length) return false;
+      return cards.every(id=> (hand || []).includes(id));
+    }
+    function cahWords(text){
+      return new Set(String(text).toLowerCase().replace(/[^a-z0-9' ]/g, " ").split(/\s+/).filter(w=> w.length >= 4));
+    }
+    /* The house AI's taste, such as it is — shared by solo AI, MP AI
+       fill, AWAY seats and prompt defaults, for playing AND judging.
+       Honest label: a coin-flip with manners. It keeps the table
+       moving; the funny is the humans' job. A card scores for sharing
+       a real word with the prompt (echo jokes land), for being fresh
+       (not played yet this game), and for reading clean (mid-length
+       phrases drop into a blank without a fight). */
+    function cahCardScore(id, blackText, played){
+      const t = CAH_WHITES[id] || "";
+      const bw = cahWords(blackText), tw = cahWords(t);
+      let s = Math.random() * 1.5;
+      tw.forEach(w=>{ if(bw.has(w)) s += 2.5; });
+      if(!played || !played.has(id)) s += 1;
+      if(t.length >= 10 && t.length <= 42) s += 0.75;
+      return s;
+    }
+    function cahAISubmit(hand, blackText, picks, played){
+      const ranked = (hand || []).slice().sort((a, b)=> cahCardScore(b, blackText, played) - cahCardScore(a, blackText, played));
+      const out = ranked.slice(0, picks);
+      if(picks === 2 && out.length === 2){
+        // a two-card play reads better when the cards don't open alike
+        const firstWord = (id)=> (CAH_WHITES[id] || "").split(/\s+/)[0];
+        if(firstWord(out[0]) === firstWord(out[1])){
+          const alt = ranked.slice(2).find(id=> firstWord(id) !== firstWord(out[0]));
+          if(alt != null) out[1] = alt;
+        }
+      }
+      return out;
+    }
+    function cahAICzarPick(blackText, subsTexts){
+      let best = 0, bestScore = -Infinity;
+      (subsTexts || []).forEach((texts, i)=>{
+        const joined = (texts || []).join(" ");
+        const bw = cahWords(blackText), tw = cahWords(joined);
+        let s = Math.random() * 2;
+        tw.forEach(w=>{ if(bw.has(w)) s += 3; });
+        if(joined.length >= 18 && joined.length <= 70) s += 0.5;
+        if(s > bestScore){ bestScore = s; best = i; }
+      });
+      return best;
+    }
+    /* The coach's suggestion runs the same taste as the AI, then
+       explains itself in one line. */
+    function cahSuggest(hand, blackText, picks, played){
+      const ids = cahAISubmit(hand, blackText, picks, played);
+      const bw = cahWords(blackText);
+      const shared = ids.flatMap(id=> [...cahWords(CAH_WHITES[id] || "")].filter(w=> bw.has(w)));
+      let reason;
+      if(shared.length) reason = `it echoes the prompt's own word “${shared[0]}” — an echo lands twice as hard`;
+      else if(ids.some(id=> !played || !played.has(id))) reason = "it's fresh — the table hasn't seen it yet, and fresh cards read funnier";
+      else reason = "it's the cleanest read in your hand — short cards land the joke, long ones explain it to death";
+      return { ids, reason };
+    }
+    /* A white answer card in pure CSS (see the .ccard styles).
+       opts.back renders the plain house back. Text is deck-internal
+       and escaped at render. */
+    function cahWhiteCardHTML(text, opts){
+      opts = opts || {};
+      if(opts.back) return `<div class="ccard back ${opts.cls || ""}" ${opts.attrs || ""}><span class="cc-backmark">Cards<br>Against<br>the Table</span></div>`;
+      return `<div class="ccard ${opts.cls || ""}" ${opts.attrs || ""}>${opts.badge != null ? `<span class="picknum">${opts.badge}</span>` : ""}<span class="cc-text">${cahEsc(text)}</span><span class="cc-foot">Cards Against the Table</span></div>`;
+    }
+    function cahBlackCardHTML(blackText, czarName){
+      return `<div class="bcard"><span class="bc-text">${cahEsc(blackText)}</span><span class="bc-foot">Cards Against the Table</span>${czarName ? `<span class="bc-czar">Czar: ${czarName}</span>` : ""}</div>`;
+    }
+    /* The table center, shared by solo and every MP screen: the big
+       black card, then either the face-down submission slots (while
+       collecting — counts only, never contents) or the revealed
+       plays, anonymous until the winner is crowned (author rides
+       only on the winning play, and only after the pick). czarName
+       and author must arrive display-safe (MP callers escape). */
+    function cahCenterHTML(view){
+      if(!view || !view.black) return `<div class="cah-center"><div class="dice-lbl">Cards Against the Table</div><div class="dice-meta">Fill in the blank — funniest play wins the point. First to ${CAH_TARGET} points.</div></div>`;
+      let h = `<div class="cah-center">${cahBlackCardHTML(view.black, view.czarName || "")}`;
+      if(view.phase === "collect"){
+        h += `<div class="cah-subs">${Array.from({ length: view.expectedCount || 0 }, (_, i)=> `<div class="cah-subslot">${i < (view.submittedCount || 0) ? "✓ in" : "…"}</div>`).join("")}</div>`;
+        h += `<div class="dice-meta">${view.submittedCount || 0} of ${view.expectedCount || 0} plays are in — everything stays face-down until everyone's played.</div>`;
+      } else if(view.phase === "reveal" || view.phase === "picked"){
+        h += `<div class="cah-subs">${(view.subs || []).map((s, i)=> `<div class="cah-sub${s.winner ? " winner" : ""}${view.pickable ? " pickable" : ""}" ${view.pickable ? `data-cahpick="${i}"` : ""}><span class="cah-subnum">Play ${i + 1}${s.winner ? " — 👑 winner" : ""}</span>${cahFillHTML(view.black, s.texts)}${s.author ? `<span class="cah-author">— ${s.author}</span>` : ""}</div>`).join("")}</div>`;
+        if(view.phase === "reveal") h += `<div class="dice-meta">The plays are shuffled and anonymous — the Czar crowns one.</div>`;
+      }
+      return h + `</div>`;
+    }
+    /* The score-race line the coaches share: names whoever sits one
+       point from winning (names must arrive display-safe). */
+    function cahRaceLine(scores, target){
+      if(!scores || !scores.length) return "";
+      const top = Math.max(...scores.map(s=> s.points));
+      if(top < target - 1 || top === 0) return "";
+      const leaders = scores.filter(s=> s.points === top).map(s=> s.name);
+      return `<b>${leaders.join(" &amp; ")}</b> ${leaders.length > 1 ? "are" : "is"} one point from winning — ${top} of ${target}. The whole table feels it.`;
+    }
+    /* Apprentice coach for Cards Against the Table. view = { step:
+       "submit" | "czar", black, picks, hand (own white ids), played,
+       raceLine }. The live prompt owns the coach on your turn. */
+    function cahCoachHTML(view){
+      const L = [];
+      if(view.step === "czar"){
+        L.push(`You're the <b>Card Czar</b> this round — you don't play a card. Read every play out loud (it helps), then crown the one that makes YOU laugh. There's no wrong answer — only a wrong Czar.`);
+      } else {
+        L.push(`The black card wants <b>${view.picks === 2 ? "two cards, in the order they should read" : "one card"}</b> — the blank wants a person, a place, a thing, or a whole little scene. Play the card that lands the joke, not the one that makes the most sense.`);
+        if(view.hand && view.hand.length){
+          const s = cahSuggest(view.hand, view.black, view.picks, view.played);
+          if(s.ids.length) L.push(`The coach's play: <b>${s.ids.map(id=> cahEsc(CAH_WHITES[id])).join("</b> + <b>")}</b> — ${s.reason}.`);
+        }
+      }
+      if(view.raceLine) L.push(view.raceLine);
       return L.join("<br>");
     }
 
@@ -4082,6 +4532,254 @@ function finishUnoGameSolo(seq){
   wireBtn("btn-deal", startUnoGame);
 }
 
+/* ================= CARDS AGAINST THE TABLE (solo) =================
+   Points, not chips: seats show their points, the pot box stays
+   dark, and there's no top-up. CT holds one whole game — decks,
+   hands, the rotating Czar, the round's plays. All taste (what the
+   AI plays, what an AI Czar crowns) comes from the shared core in
+   the first script block. */
+let CT = null;   // cards-against-the-table state (solo)
+let cahStarter = 0;
+function cahScoreLineSolo(){
+  if(!CT || !CT.state) return "";
+  return CT.state.map((st, i)=> `${st.p.name} ${CT.points[i]}`).join(" · ") + ` — first to ${CAH_TARGET}`;
+}
+function cahSoloStatus(i){
+  if(!CT || !CT.state) return "";
+  const st = CT.state[i];
+  if(CT.phase !== "done" && i === CT.czarIdx && CT.black) return "Card Czar 👑";
+  return st.hand.length + " cards" + (CT.black && CT.subByIdx && CT.subByIdx.has(i) ? " · played ✓" : "");
+}
+function paintCahSoloPlates(){
+  if(!CT) return;
+  players.forEach((p, i)=>{
+    const el = document.querySelector("#seat-" + p.id + " .stk");
+    if(el) el.textContent = "Score " + fmt(CT.points[i]);
+    if(CT.state) setStatus(p.id, cahSoloStatus(i));
+  });
+  $("bank-amt").textContent = fmt(CT.points[0]);
+}
+function resetCahTable(){
+  hideTurnTimer(); paintWinBanner(null); resetSoloStats(); paintScorePanel(null);
+  CT = { phase: "idle", points: [0, 0, 0, 0], state: null, decks: null, discard: [],
+         black: null, czarIdx: -1, round: 0, winner: -1, subByIdx: null, revealSubs: null, winSub: -1,
+         played: new Set(), pickUI: null, submitUI: null };
+  seatsEl.innerHTML = players.map(p=> seatShell(p, { button: false })).join("");
+  players.forEach(p=>{ setStatus(p.id, ""); setBetBadge(p.id, 0); const c = $("cards-" + p.id); if(c) c.innerHTML = ""; });
+  setPot(0); paintBoard([]); refreshPlates(); paintCahSoloPlates();
+  setTurn(null, "Cards Against the Table — fill in the blank, funniest play wins the point. First to 5.");
+  setControls(`<button class="btn primary" id="btn-deal">Start a game</button>`);
+  wireBtn("btn-deal", startCahGame);
+  setCenter("Cards Against the Table", "An original house deck · 7 white cards each · a rotating Card Czar · anonymous plays · first to 5 points.");
+  if(mode === "apprentice" && tipsOn) setTip("Cards Against the Table in one breath: each round, one player is the <b>Card Czar</b> and reads a <b>black card</b> with a blank — or two. Everyone else plays <b>white cards</b> from their hand to fill it in; the plays are <b>anonymous</b> until the Czar crowns the funniest, and its author scores a <b>point</b>. First to <b>5</b> wins. The deck is this room's own — written for this table, cookouts and all.");
+}
+function paintCahCenterSolo(){
+  const b = $("board"); if(!b || !CT) return;
+  if(!CT.black){ b.innerHTML = cahCenterHTML(null); return; }
+  const czar = CT.state[CT.czarIdx];
+  if(CT.phase === "reveal" || CT.phase === "picked"){
+    b.innerHTML = cahCenterHTML({ black: CT.black.text, czarName: czar ? czar.p.name : "", phase: CT.phase,
+      pickable: CT.phase === "reveal" && CT.czarIdx === 0 && !!CT.pickUI,
+      subs: (CT.revealSubs || []).map((s, i)=> ({ texts: s.cards.map(id=> CAH_WHITES[id]),
+        winner: CT.phase === "picked" && i === CT.winSub,
+        author: CT.phase === "picked" && i === CT.winSub ? CT.state[s.idx].p.name : null })) });
+    if(CT.pickUI) b.querySelectorAll("[data-cahpick]").forEach(el=> bindTap(el, ()=>{ if(CT && CT.pickUI) CT.pickUI.pick(+el.dataset.cahpick); }));
+    return;
+  }
+  b.innerHTML = cahCenterHTML({ black: CT.black.text, czarName: czar ? czar.p.name : "", phase: "collect",
+    submittedCount: CT.subByIdx ? CT.subByIdx.size : 0, expectedCount: CT.state.length - 1 });
+}
+function renderCahHandsSolo(){
+  if(!CT || !CT.state) return;
+  CT.state.forEach(st=>{
+    const el = $("cards-" + st.p.id); if(!el) return;
+    el.classList.add("cah-cards");
+    if(st.p.id === "you"){
+      el.classList.remove("backs");
+      const ui = CT.submitUI;
+      el.innerHTML = st.hand.map(id=>{
+        const order = ui ? ui.sel.indexOf(id) : -1;
+        if(ui) return cahWhiteCardHTML(CAH_WHITES[id], { cls: order >= 0 ? "sel" : "", badge: order >= 0 ? order + 1 : null, attrs: `data-cahcard="${id}"` });
+        return cahWhiteCardHTML(CAH_WHITES[id], {});
+      }).join("");
+      if(ui) el.querySelectorAll("[data-cahcard]").forEach(cardEl=> bindTap(cardEl, ()=>{
+        if(!CT || !CT.submitUI) return;
+        CT.submitUI.toggle(+cardEl.dataset.cahcard);
+      }));
+    } else {
+      el.classList.add("backs");
+      el.innerHTML = st.hand.map(()=> cahWhiteCardHTML("", { back: true })).join("");
+    }
+  });
+  paintCahSoloPlates();
+  paintCahCenterSolo();
+}
+function cahDrawWhiteSolo(st){
+  if(!CT.decks.whites.length){
+    if(CT.discard.length){ CT.decks.whites = shuffle(CT.discard); CT.discard = []; log("The white discard pile was shuffled back in."); }
+    else return;
+  }
+  st.hand.push(CT.decks.whites.pop());
+}
+function cahRefillHandsSolo(){
+  CT.state.forEach(st=>{ let guard = 0; while(st.hand.length < CAH_HAND && guard++ < 12){ const before = st.hand.length; cahDrawWhiteSolo(st); if(st.hand.length === before) break; } });
+}
+function cahSoloTakeSubmission(idx, cards){
+  const st = CT.state[idx];
+  const use = cahValidateSubmission(st.hand, cards, CT.black.picks) ? cards.slice() : cahAISubmit(st.hand, CT.black.text, CT.black.picks, CT.played);
+  use.forEach(id=>{ const at = st.hand.indexOf(id); if(at >= 0) st.hand.splice(at, 1); CT.discard.push(id); CT.played.add(id); });
+  CT.subByIdx.set(idx, use);
+}
+function humanCahSubmitPrompt(seq, st){
+  return new Promise(res=>{
+    const picks = CT.black.picks;
+    if(mode === "apprentice" && tipsOn) setTip(cahCoachHTML({ step: "submit", black: CT.black.text, picks, hand: st.hand.slice(), played: CT.played,
+      raceLine: cahRaceLine(CT.state.map((s, i)=> ({ name: s.p.name, points: CT.points[i] })), CAH_TARGET) }));
+    let settled = false;
+    const done = (cards)=>{ if(settled) return; settled = true; clearTimeout(tmo); hideTurnTimer(); CT.submitUI = null; setControls(""); res(cards); };
+    const tmo = setTimeout(()=>{
+      if(seq === handSeq) showNotice("Time ran out — the table played a card for you.");
+      done(cahAISubmit(st.hand, CT.black.text, picks, CT.played));
+    }, CAH_MS);
+    showTurnTimer(CAH_MS, "Your play");
+    const ui = { sel: [],
+      toggle: (id)=>{
+        const at = ui.sel.indexOf(id);
+        if(at >= 0) ui.sel.splice(at, 1);
+        else if(ui.sel.length < picks) ui.sel.push(id);
+        else { clickSound(300); return; }
+        clickSound(700);
+        renderCahHandsSolo();
+        paintCahSubmitControls();
+      } };
+    CT.submitUI = ui;
+    function paintCahSubmitControls(){
+      setControls(`<span class="ctl-note" style="font-size:14.5px"><b>Your play — tap ${picks === 2 ? "two cards, in the order they should read" : "a card"} to fill the blank${picks === 2 ? "s" : ""}.</b> ${ui.sel.length} of ${picks} picked — tap a picked card to unpick it.</span>
+        <button class="btn primary" id="btn-cah-submit" ${ui.sel.length === picks ? "" : "disabled"}>Play ${picks === 2 ? "these cards" : "this card"}</button>
+        <span class="ctl-note">Plays are anonymous — even the Czar won't know it's yours unless it wins.</span>`);
+      wireBtn("btn-cah-submit", ()=> done(ui.sel.slice()));
+    }
+    paintCahSubmitControls();
+    renderCahHandsSolo();
+  });
+}
+function humanCahPickPrompt(seq){
+  return new Promise(res=>{
+    if(mode === "apprentice" && tipsOn) setTip(cahCoachHTML({ step: "czar",
+      raceLine: cahRaceLine(CT.state.map((s, i)=> ({ name: s.p.name, points: CT.points[i] })), CAH_TARGET) }));
+    let settled = false;
+    const done = (idx)=>{ if(settled) return; settled = true; clearTimeout(tmo); hideTurnTimer(); CT.pickUI = null; setControls(""); res(idx); };
+    const tmo = setTimeout(()=>{
+      if(seq === handSeq) showNotice("Time ran out — the table crowned a winner for you.");
+      done(Math.floor(Math.random() * CT.revealSubs.length));
+    }, CAH_MS);
+    showTurnTimer(CAH_MS, "Your crown");
+    CT.pickUI = { pick: (idx)=> done(idx) };
+    setControls(`<span class="ctl-note" style="font-size:14.5px"><b>You're the Czar — tap the play up top that wins the round.</b></span>
+      <span class="ctl-note">Anonymous until you crown it. Go with your gut.</span>`);
+    renderCahHandsSolo();
+  });
+}
+async function startCahGame(){
+  const seq = ++handSeq;
+  paintWinBanner(null); paintScorePanel(null); paintBoard([]);
+  setControls("");
+  CT.decks = buildCahDecks();
+  CT.discard = []; CT.played = new Set(); CT.points = [0, 0, 0, 0]; CT.round = 0; CT.winner = -1; CT.phase = "play";
+  CT.black = null; CT.subByIdx = null; CT.revealSubs = null; CT.winSub = -1;
+  CT.state = players.map(p=> ({ p, hand: [] }));
+  for(let k = 0; k < CAH_HAND; k++) for(const st of CT.state) st.hand.push(CT.decks.whites.pop());
+  const n = CT.state.length;
+  const firstCzar = cahStarter % n; cahStarter++;
+  seatsEl.innerHTML = players.map((p, i)=> seatShell(p, { button: i === firstCzar })).join("");
+  players.forEach(p=>{ setStatus(p.id, ""); setBetBadge(p.id, 0); });
+  renderCahHandsSolo();
+  clickSound(440);
+  log(`Cards Against the Table dealt — ${CAH_HAND} white cards each from the house deck (${CAH_BLACKS.length} black cards, ${CAH_WHITES.length} white). First to ${CAH_TARGET} points.`);
+  while(CT.winner < 0){
+    if(seq !== handSeq || !CT) return;
+    CT.round++;
+    CT.czarIdx = (firstCzar + CT.round - 1) % n;
+    if(!CT.decks.blacks.length) CT.decks.blacks = shuffle(CAH_BLACKS.map((_, i)=> i));
+    CT.black = cahBlackAt(CT.decks.blacks.pop());
+    CT.subByIdx = new Map(); CT.revealSubs = null; CT.winSub = -1; CT.phase = "play";
+    const czar = CT.state[CT.czarIdx];
+    setTurn(czar.p, CT.czarIdx === 0 ? "You're the Card Czar." : "Reading the black card.");
+    setCenter(`Round ${CT.round} — ${czar.p.name} is the Czar`, cahScoreLineSolo());
+    renderCahHandsSolo();
+    log(`<b>Round ${CT.round}</b> — <b>${czar.p.name}</b> is the Card Czar. The black card: “${cahEsc(CT.black.text)}”`);
+    for(let k = 1; k < n; k++){
+      if(seq !== handSeq || !CT) return;
+      const idx = (CT.czarIdx + k) % n;
+      const st = CT.state[idx];
+      if(idx === 0){
+        const cards = await humanCahSubmitPrompt(seq, st);
+        if(seq !== handSeq || !CT) return;
+        cahSoloTakeSubmission(idx, cards);
+      } else {
+        await sleep(500 + Math.random() * 500);
+        if(seq !== handSeq || !CT) return;
+        cahSoloTakeSubmission(idx, cahAISubmit(st.hand, CT.black.text, CT.black.picks, CT.played));
+      }
+      renderCahHandsSolo();
+    }
+    // the reveal: plays are shuffled, so the order gives nothing away
+    CT.revealSubs = shuffle([...CT.subByIdx.entries()].map(([idx, cards])=> ({ idx, cards })));
+    cahRefillHandsSolo();
+    CT.phase = "reveal";
+    setCenter("The plays are in", cahScoreLineSolo());
+    renderCahHandsSolo();
+    log("All plays are in — shuffled and anonymous. The Czar reads them over…");
+    await sleep(1100);
+    if(seq !== handSeq || !CT) return;
+    let winSub;
+    if(CT.czarIdx === 0){
+      winSub = await humanCahPickPrompt(seq);
+      if(seq !== handSeq || !CT) return;
+    } else {
+      await sleep(900 + Math.random() * 700);
+      if(seq !== handSeq || !CT) return;
+      winSub = cahAICzarPick(CT.black.text, CT.revealSubs.map(s=> s.cards.map(id=> CAH_WHITES[id])));
+    }
+    CT.winSub = winSub;
+    const winSeat = CT.revealSubs[winSub].idx;
+    CT.points[winSeat]++;
+    CT.phase = "picked";
+    const winSt = CT.state[winSeat];
+    const winTexts = CT.revealSubs[winSub].cards.map(id=> CAH_WHITES[id]);
+    paintWinBanner(`${winSt.p.name}'s card won the round`);
+    log(`<b>${czar.p.name}</b> crowns: “${cahEsc(winTexts.join("” + “"))}” — <b>${winSt.p.name}</b> scores a point (${CT.points[winSeat]} of ${CAH_TARGET}).`, true);
+    setCenter(`${winSt.p.name} takes the round`, cahScoreLineSolo());
+    renderCahHandsSolo();
+    if(CT.points[winSeat] >= CAH_TARGET){ CT.winner = winSeat; break; }
+    await sleep(2100);
+    if(seq !== handSeq || !CT) return;
+    paintWinBanner(null);
+  }
+  finishCahGameSolo(seq);
+}
+function finishCahGameSolo(seq){
+  if(seq !== handSeq || !CT) return;
+  CT.phase = "done";
+  const wi = CT.winner;
+  const winner = CT.state[wi];
+  winner.p.handsWon = (winner.p.handsWon || 0) + 1;
+  winner.p.chipsWon = (winner.p.chipsWon || 0) + CT.points[wi];   // solo "Won" tracks points, like Spades/Farkle/Uno
+  const lines = [`<span class="sp-title">Game over — after ${CT.round} rounds:</span>`];
+  CT.state.map((st, i)=> ({ name: st.p.name, pts: CT.points[i] })).sort((a, b)=> b.pts - a.pts)
+    .forEach(r=> lines.push(`<b>${r.name}</b> — ${r.pts} point${r.pts === 1 ? "" : "s"}.`));
+  lines.push(`Session points this game: ${CT.state.map((s, i)=> `${s.p.name} ${CT.points[i]}`).join(" · ")}.`);
+  paintScorePanel(lines);
+  const banner = `${winner.p.name} won the game with ${CT.points[wi]} points`;
+  paintWinBanner(banner);
+  log(`<b>${banner}</b>`, true);
+  setCenter("Game over", cahScoreLineSolo());
+  setTurn(null, "Game over — start a new one when you're ready.");
+  renderCahHandsSolo();
+  setControls(`<button class="btn primary" id="btn-deal">Start a new game</button>`);
+  wireBtn("btn-deal", startCahGame);
+}
+
 /* ================= BLACKJACK ================= */
 const BJ_SEATS = ["don","you","layton"];
 let bjShoe = [];
@@ -4316,6 +5014,7 @@ function paintGameSegs(){
   $("seg-spades").classList.toggle("on", game==="spades");
   $("seg-farkle").classList.toggle("on", game==="farkle");
   $("seg-uno").classList.toggle("on", game==="uno");
+  $("seg-cah").classList.toggle("on", game==="cah");
   const vseg = $("spades-variant-seg");
   if(vseg) vseg.style.display = game === "spades" ? "" : "none";
   const fseg = $("farkle-target-seg");
@@ -4381,14 +5080,15 @@ function setFarkleTarget(v){
 function setGame(g){
   game = g; handSeq++;
   paintGameSegs();
-  if(isDrawGame(g)){ B=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; resetDrawTable(); }
-  else if(g==="holdem"){ D=null; B=null; O=null; ST=null; SP=null; FK=null; UN=null; resetHoldemTable(); }
-  else if(g==="omaha"){ D=null; B=null; H=null; ST=null; SP=null; FK=null; UN=null; resetOmahaTable(); }
-  else if(g==="stud"){ D=null; B=null; H=null; O=null; SP=null; FK=null; UN=null; resetStudTable(); }
-  else if(g==="spades"){ D=null; B=null; H=null; O=null; ST=null; FK=null; UN=null; resetSpadesTable(); }
-  else if(g==="farkle"){ D=null; B=null; H=null; O=null; ST=null; SP=null; UN=null; resetFarkleTable(); }
-  else if(g==="uno"){ D=null; B=null; H=null; O=null; ST=null; SP=null; FK=null; resetUnoTable(); }
-  else { D=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; resetBJTable(); }
+  if(isDrawGame(g)){ B=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; CT=null; resetDrawTable(); }
+  else if(g==="holdem"){ D=null; B=null; O=null; ST=null; SP=null; FK=null; UN=null; CT=null; resetHoldemTable(); }
+  else if(g==="omaha"){ D=null; B=null; H=null; ST=null; SP=null; FK=null; UN=null; CT=null; resetOmahaTable(); }
+  else if(g==="stud"){ D=null; B=null; H=null; O=null; SP=null; FK=null; UN=null; CT=null; resetStudTable(); }
+  else if(g==="spades"){ D=null; B=null; H=null; O=null; ST=null; FK=null; UN=null; CT=null; resetSpadesTable(); }
+  else if(g==="farkle"){ D=null; B=null; H=null; O=null; ST=null; SP=null; UN=null; CT=null; resetFarkleTable(); }
+  else if(g==="uno"){ D=null; B=null; H=null; O=null; ST=null; SP=null; FK=null; CT=null; resetUnoTable(); }
+  else if(g==="cah"){ D=null; B=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; resetCahTable(); }
+  else { D=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; CT=null; resetBJTable(); }
   log("Switched the table to <b>" + GAME_NAMES[g] + "</b>.");
 }function setMode(m){
   mode = m;
@@ -4409,6 +5109,7 @@ $("seg-bj").addEventListener("click", ()=>{ clickSound(500); setGame("bj"); });
 $("seg-spades").addEventListener("click", ()=>{ clickSound(500); setGame("spades"); });
 $("seg-farkle").addEventListener("click", ()=>{ clickSound(500); setGame("farkle"); });
 $("seg-uno").addEventListener("click", ()=>{ clickSound(500); setGame("uno"); });
+$("seg-cah").addEventListener("click", ()=>{ clickSound(500); setGame("cah"); });
 $("seg-sp-teams").addEventListener("click", ()=>{ clickSound(500); setSpadesVariant("teams"); });
 $("seg-sp-cut").addEventListener("click", ()=>{ clickSound(500); setSpadesVariant("cut"); });
 $("seg-fk-5000").addEventListener("click", ()=>{ clickSound(500); setFarkleTarget(5000); });
@@ -4643,6 +5344,7 @@ let MS = null;             // host stud hand state
 let MSP = null;            // host spades state (match scores/bags/dealer persist across hands)
 let MF = null;             // host farkle state (one whole game per Deal — scores live and die inside it)
 let MU = null;             // host uno state (one whole game per Deal — hands/piles live and die inside it; session points ride the seats)
+let MC = null;             // host cards-against-the-table state (one whole game per Deal — decks/hands/rounds live and die inside it; session points ride the seats as cahScore)
 const AI_DEFS = [
   { name:"Don",    themeText:"crimson with gold trim and diamonds" },
   { name:"Thomas", themeText:"orange sunset stripes with black trim" },
@@ -4949,10 +5651,10 @@ function mpRoomEnded(msg){
   setGame(game);
 }
 function mpRenderRoomList(list){
-  const rows = list || mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0 }));
+  const rows = list || mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0, cahScore: s.cahScore || 0 }));
   const houseDealing = mpDisplayHostMode() === "deal";
   $("net-roomlist").innerHTML = rows.map(s=>
-    `<li>${chipSVG(mpSanTheme(s.theme), 24, mpEsc(s.short || ""))}<span><b>${mpEsc(s.name)}</b></span><span class="tag${s.away ? " awaytag" : ""}">${s.away ? "AWAY — SEAT HELD" : s.kind === "host" ? (houseDealing ? "THE HOUSE · DEALER" : "HOST · DEALER") : s.kind === "ai" ? "AI FILL" : "PLAYER"}</span>${s.ready && !s.away && s.kind === "guest" ? `<span class="tag" style="background:#2e9e5b;color:#fff">READY</span>` : ""}${game === "spades" ? ((s.handsWon || s.spadesScore) ? `<span class="tag">Hands ${s.handsWon || 0} · Score ${fmt(s.spadesScore || 0)}</span>` : "") : game === "farkle" ? ((s.handsWon || s.farkleScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.farkleScore || 0)}</span>` : "") : game === "uno" ? ((s.handsWon || s.unoScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.unoScore || 0)}</span>` : "") : ((s.handsWon || s.chipsWon) ? `<span class="tag">Hands ${s.handsWon || 0} · Won ${fmt(s.chipsWon || 0)}</span>` : "")}${mp.role === "host" && s.away && s.pid && s.kind !== "host" ? `<button class="rmseat" type="button" data-remove-seat="${mpEsc(s.pid)}">Free seat</button>` : ""}</li>`).join("");
+    `<li>${chipSVG(mpSanTheme(s.theme), 24, mpEsc(s.short || ""))}<span><b>${mpEsc(s.name)}</b></span><span class="tag${s.away ? " awaytag" : ""}">${s.away ? "AWAY — SEAT HELD" : s.kind === "host" ? (houseDealing ? "THE HOUSE · DEALER" : "HOST · DEALER") : s.kind === "ai" ? "AI FILL" : "PLAYER"}</span>${s.ready && !s.away && s.kind === "guest" ? `<span class="tag" style="background:#2e9e5b;color:#fff">READY</span>` : ""}${game === "spades" ? ((s.handsWon || s.spadesScore) ? `<span class="tag">Hands ${s.handsWon || 0} · Score ${fmt(s.spadesScore || 0)}</span>` : "") : game === "farkle" ? ((s.handsWon || s.farkleScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.farkleScore || 0)}</span>` : "") : game === "uno" ? ((s.handsWon || s.unoScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.unoScore || 0)}</span>` : "") : game === "cah" ? ((s.handsWon || s.cahScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.cahScore || 0)}</span>` : "") : ((s.handsWon || s.chipsWon) ? `<span class="tag">Hands ${s.handsWon || 0} · Won ${fmt(s.chipsWon || 0)}</span>` : "")}${mp.role === "host" && s.away && s.pid && s.kind !== "host" ? `<button class="rmseat" type="button" data-remove-seat="${mpEsc(s.pid)}">Free seat</button>` : ""}</li>`).join("");
   document.querySelectorAll("[data-remove-seat]").forEach(b=> b.addEventListener("click", ()=> mpFreeSeat(b.dataset.removeSeat)));
 }
 function mpFreeSeat(pid){
@@ -5101,6 +5803,7 @@ function mpSeatsForHand(){
   if(game === "spades" && MSP) return MSP.state.map(s=>s.seat);
   if(game === "farkle" && MF) return MF.state.map(s=>s.seat);
   if(game === "uno" && MU) return MU.state.map(s=>s.seat);
+  if(game === "cah" && MC) return MC.state.map(s=>s.seat);
   if(game === "bj" && MB) return MB.order.map(pid=> MB.seats[pid].seat);
   // no hand on the table: in deal-only mode the host is the House, not a seat
   const disp = (mp.phase === "lobby" || mp.phase === "done") ? mp.hostMode : mp.activeHostMode;
@@ -5108,7 +5811,7 @@ function mpSeatsForHand(){
 }
 function mpBuildSnap(forPid){
   const seats = mpSeatsForHand();
-  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "omaha" && MO) || (game === "stud" && MS) || (game === "bj" && MB) || (game === "uno" && MU);
+  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "omaha" && MO) || (game === "stud" && MS) || (game === "bj" && MB) || (game === "uno" && MU) || (game === "cah" && MC);
   const snapSeats = seats.map(seat=>{
     const rseat = mp.roster.find(x=>x.pid === seat.pid);
     const base = { pid: seat.pid, name: seat.name, short: seat.short, theme: seat.theme, stack: seat.stack,
@@ -5191,7 +5894,24 @@ function mpBuildSnap(forPid){
         if(seat.pid === forPid) base.cards = st.hand.slice();   // own hand only
       }
     }
+    if(game === "cah" && MC){
+      const st = MC.state.find(s=>s.seat.pid === seat.pid);
+      if(st){
+        /* Cards Against the Table privacy: a white hand rides ONLY
+           in its owner's copy. The Czar flag and the played flag are
+           public table state; a play's CONTENTS never ride any
+           snapshot until the reveal (see snap.cah), and its author
+           is attached only after the crown. */
+        base.score = seat.cahScore || 0;
+        base.czar = MC.black != null && MC.state[MC.czarIdx] === st;
+        base.submitted = !!(MC.subByPid && MC.subByPid.has(seat.pid));
+        base.cardCount = st.hand.length;
+        base.status = base.czar ? "Card Czar 👑" : st.hand.length + " cards" + (base.submitted ? " · played ✓" : "");
+        if(seat.pid === forPid) base.cards = st.hand.slice();   // own hand only (white-card indices)
+      }
+    }
     if(game === "uno" && base.score == null) base.score = seat.unoScore || 0;
+    if(game === "cah" && base.score == null) base.score = seat.cahScore || 0;
     if(game === "bj" && MB){
       const st = MB.seats[seat.pid];
       if(st){
@@ -5222,7 +5942,7 @@ function mpBuildSnap(forPid){
     dealer: (game === "bj" && MB) ? { cards: MB.dealer.map((c, i)=> (i === 1 && !MB.reveal) ? null : c), reveal: MB.reveal,
              shown: MB.dealer.length ? (MB.dealer[0].r === 14 ? 11 : MB.dealer[0].r > 10 ? 10 : MB.dealer[0].r) : null,
              total: MB.reveal && MB.dealer.length ? bjValue(MB.dealer) : null } : null,
-    room: mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: !!s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0 })),
+    room: mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: !!s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0, cahScore: s.cahScore || 0 })),
     lastLog: mp._lastLog || null,
     iAmSeated: seats.some(s=>s.pid === forPid),
     spadesVariant,
@@ -5281,6 +6001,35 @@ function mpBuildSnap(forPid){
                seatScores,
                scoreBreak: (MU && MU.scoreBreak) ? MU.scoreBreak : null };
     })(),
+    cah: (()=> {
+      if(game !== "cah") return null;
+      // Points ride the seats (session score); the round state rides
+      // here. ANONYMITY IS ENFORCED IN THIS PAYLOAD, not the paint:
+      // during "collect" a play exists only as a per-seat played flag
+      // + a count — its cards are nowhere in any snapshot, for any
+      // viewer, the Czar included. At "reveal" the plays ride as
+      // shuffled card lists with NO author field at all. Only at
+      // "picked" does the winning play gain winnerIdx + winnerPid.
+      let seatScores;
+      if(MC) seatScores = snapSeats.map(s=> s.score != null ? s.score : 0);
+      else seatScores = snapSeats.map(s=>{ const rs = mp.roster.find(x=>x.pid === s.pid); return rs ? (rs.cahScore || 0) : 0; });
+      const czarSeat = MC && MC.black ? MC.state[MC.czarIdx].seat : null;
+      return { black: MC && MC.black ? MC.black.text : null,
+               picks: MC && MC.black ? MC.black.picks : 1,
+               czarPid: czarSeat ? czarSeat.pid : null,
+               czarName: czarSeat ? czarSeat.name : null,
+               round: MC ? MC.round : 0,
+               target: CAH_TARGET,
+               phase: MC ? MC.phase : "idle",
+               submittedCount: MC && MC.subByPid ? MC.subByPid.size : 0,
+               expectedCount: MC ? MC.state.length - 1 : 0,
+               subs: (MC && (MC.phase === "reveal" || MC.phase === "picked") && MC.revealSubs)
+                 ? MC.revealSubs.map(s=> ({ cards: s.cards.slice() })) : null,
+               winnerIdx: (MC && MC.phase === "picked") ? MC.winSub : -1,
+               winnerPid: (MC && MC.phase === "picked" && MC.revealSubs && MC.revealSubs[MC.winSub]) ? MC.revealSubs[MC.winSub].seat.pid : null,
+               seatScores,
+               scoreBreak: (MC && MC.scoreBreak) ? MC.scoreBreak : null };
+    })(),
   };
 }
 function mpSync(){
@@ -5326,7 +6075,7 @@ function mpRenderSnap(snap, isHost){
   else if(mine === -1){ /* spectator: keep table order, bottom seat is just a seat */ }
   const posFor = (seatIdx)=>{
     if(snap.game === "bj") return ["pos-you", "pos-left", "pos-right", "pos-top"][order.indexOf(seatIdx)] || "pos-top";
-    if(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno") return (snap.house && snap.seats.length < 4 ? MP_HOUSE_POS : MP_POS)[order.indexOf(seatIdx)] || "pos-top";
+    if(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno" || snap.game === "cah") return (snap.house && snap.seats.length < 4 ? MP_HOUSE_POS : MP_POS)[order.indexOf(seatIdx)] || "pos-top";
     if(snap.house) return MP_HOUSE_POS[order.indexOf(seatIdx)] || "pos-right";
     return MP_POS[order.indexOf(seatIdx)] || "pos-top";
   };
@@ -5335,7 +6084,7 @@ function mpRenderSnap(snap, isHost){
     // The House seat: dealer only — no cards, no stack, never a player.
     // In 4P Spades all four player spots are taken, so the House label
     // tucks into the top-right corner instead of the top spot.
-    html += `<div class="seat ${(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno") && snap.seats.length >= 4 ? "pos-housecorner" : "pos-dealer"}" id="seat-house"><div class="seat-inner">
+    html += `<div class="seat ${(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno" || snap.game === "cah") && snap.seats.length >= 4 ? "pos-housecorner" : "pos-dealer"}" id="seat-house"><div class="seat-inner">
       <div class="cards" id="cards-mp-house"></div>
       <div><span class="plate">${chipSVG(snap.house.theme, 26, "H")}
         <span class="nm">The House — dealer</span><span class="aibadge">HOUSE</span>
@@ -5369,16 +6118,23 @@ function mpRenderSnap(snap, isHost){
       if(s.cards) cardsHtml = unoSortHand(s.cards).map(c=> unoCardHTML(c, {})).join("");
       else for(let k = 0; k < s.cardCount; k++) cardsHtml += unoCardHTML(null, { back: true });
     }
+    else if(snap.game === "cah"){
+      /* Cards Against the Table: my own white hand face-up (the
+         snapshot carries white-card INDICES for my seat only),
+         everyone else as house backs with a count. */
+      if(s.cards) cardsHtml = s.cards.map(id=> cahWhiteCardHTML(CAH_WHITES[id], {})).join("");
+      else for(let k = 0; k < s.cardCount; k++) cardsHtml += cahWhiteCardHTML("", { back: true });
+    }
     else if(s.cards) cardsHtml = (snap.game === "spades" ? spadesSortHand(s.cards) : s.cards).map(c=>cardHTML(c, {})).join("");
     else for(let k = 0; k < s.cardCount; k++) cardsHtml += cardHTML(null, { back: true });
     let status = s.status || "";
     if(snap.game === "bj" && s.handTotal && !status) status = (s.handTotal.soft ? "Soft " : "") + s.handTotal.total;
     html += `<div class="seat ${pos}${s.folded || s.bust ? " folded" : ""}" id="seat-${s.pid}">
       <div class="seat-inner">
-        <div class="cards ${isMine ? "you-cards" : ""}${snap.game === "stud" ? " stud-cards" : ""}${snap.game === "spades" ? " spades-cards" + (s.cards ? "" : " fan") : ""}${snap.game === "uno" ? " uno-cards fan" : ""}" id="cards-mp-${s.pid}">${cardsHtml}</div>
+        <div class="cards ${isMine ? "you-cards" : ""}${snap.game === "stud" ? " stud-cards" : ""}${snap.game === "spades" ? " spades-cards" + (s.cards ? "" : " fan") : ""}${snap.game === "uno" ? " uno-cards fan" : ""}${snap.game === "cah" ? " cah-cards" + (s.cards ? "" : " backs") : ""}" id="cards-mp-${s.pid}">${cardsHtml}</div>
         <div><span class="plate">${chipSVG(s.theme, 26, mpEsc(s.short || ""))}
-          <span class="nm">${mpEsc(s.name)}${isMine ? " (you)" : ""}${s.kind === "ai" ? '<span class="aibadge">AI</span>' : ""}${s.away ? '<span class="aibadge">AWAY</span>' : ""}${s.ready && !s.away ? '<span class="aibadge readybadge">READY</span>' : ""}</span>
-          <span class="stk">${(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno") ? "Score " + fmt(s.score != null ? s.score : 0) : fmt(s.stack) + " chips"}</span>
+          <span class="nm">${mpEsc(s.name)}${isMine ? " (you)" : ""}${s.kind === "ai" ? '<span class="aibadge">AI</span>' : ""}${s.away ? '<span class="aibadge">AWAY</span>' : ""}${s.czar ? '<span class="aibadge czarbadge">CZAR</span>' : ""}${s.ready && !s.away ? '<span class="aibadge readybadge">READY</span>' : ""}</span>
+          <span class="stk">${(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno" || snap.game === "cah") ? "Score " + fmt(s.score != null ? s.score : 0) : fmt(s.stack) + " chips"}</span>
           ${s.bet > 0 ? `<span class="betbadge">${fmt(s.bet)}</span>` : ""}
         </span><div class="status">${status}</div></div>
       </div></div>`;
@@ -5427,6 +6183,22 @@ function mpRenderSnap(snap, isHost){
     if(u.scoreBreak) paintScorePanel(u.scoreBreak);
     else paintScorePanel(null);
   }
+  if(snap.game === "cah" && snap.cah){
+    // the center of the table is the black card and the plays: slots
+    // while collecting (counts only), the anonymous reveal, then the
+    // crowned winner with its author named at last
+    const ch = snap.cah;
+    const winnerSeat = ch.winnerPid ? snap.seats.find(s=>s.pid === ch.winnerPid) : null;
+    $("board").innerHTML = cahCenterHTML({
+      black: ch.black, czarName: ch.czarName ? mpEsc(ch.czarName) : "", phase: ch.phase,
+      submittedCount: ch.submittedCount, expectedCount: ch.expectedCount,
+      subs: (ch.subs || []).map((s, i)=> ({ texts: s.cards.map(id=> CAH_WHITES[id]),
+        winner: ch.phase === "picked" && i === ch.winnerIdx,
+        author: ch.phase === "picked" && i === ch.winnerIdx && winnerSeat ? mpEsc(winnerSeat.name) : null }))
+    });
+    if(ch.scoreBreak) paintScorePanel(ch.scoreBreak);
+    else paintScorePanel(null);
+  }
   if(snap.center) setCenter(snap.center[0], snap.center[1]);
   paintWinBanner(snap.winBanner || null);
   const activeSeat = (snap.phase !== "done" && snap.activePid) ? snap.seats.find(s=>s.pid === snap.activePid) : null;
@@ -5435,7 +6207,7 @@ function mpRenderSnap(snap, isHost){
   else if(snap.phase === "done") $("tb-who").textContent = snap.center ? snap.center[0] : "Hand over";   // showdown/result state — never a stale "X's turn"
   if(snap.lastLog && snap.lastLog.id !== mp.lastLogId){ mp.lastLogId = snap.lastLog.id; if(!isHost) log(snap.lastLog.msg, snap.lastLog.win); }
   if(isHost) mpRenderHostControls(); else mpRenderGuestIdle(snap);
-  mpRenderRoomList(snap.room.concat(snap.seats.filter(s=>s.kind === "ai" && !snap.room.some(r=>r.name === s.name)).map(s=>({ name: s.name, kind: "ai", theme: s.theme, short: s.short, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.score != null ? s.score : (s.spadesScore || 0), farkleScore: s.score != null ? s.score : (s.farkleScore || 0), unoScore: s.score != null ? s.score : (s.unoScore || 0) }))));
+  mpRenderRoomList(snap.room.concat(snap.seats.filter(s=>s.kind === "ai" && !snap.room.some(r=>r.name === s.name)).map(s=>({ name: s.name, kind: "ai", theme: s.theme, short: s.short, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.score != null ? s.score : (s.spadesScore || 0), farkleScore: s.score != null ? s.score : (s.farkleScore || 0), unoScore: s.score != null ? s.score : (s.unoScore || 0), cahScore: s.score != null ? s.score : (s.cahScore || 0) }))));
   // my stack in the top bar follows the room stack — except the House,
   // which deals only and holds no stack at all
   if(snap.house && snap.house.pid === mp.myPid){ $("bank-amt").textContent = "—"; }
@@ -5454,6 +6226,11 @@ function mpRenderSnap(snap, isHost){
     if(myIdx >= 0) $("bank-amt").textContent = fmt(snap.uno.seatScores[myIdx] || 0);
     else { const me = mp.roster.find(s=>s.pid === mp.myPid); if(me) $("bank-amt").textContent = fmt(me.unoScore || 0); }
   }
+  else if(snap.game === "cah" && snap.cah){
+    const myIdx = snap.seats.findIndex(s=>s.pid === mp.myPid);
+    if(myIdx >= 0) $("bank-amt").textContent = fmt(snap.cah.seatScores[myIdx] || 0);
+    else { const me = mp.roster.find(s=>s.pid === mp.myPid); if(me) $("bank-amt").textContent = fmt(me.cahScore || 0); }
+  }
   else {
     const mySeat = snap.seats.find(s=>s.pid === mp.myPid) || mp.roster.find(s=>s.pid === mp.myPid);
     if(mySeat){ $("bank-amt").textContent = fmt(mySeat.stack); }
@@ -5464,6 +6241,8 @@ function mpRenderSnap(snap, isHost){
   if(mp.spadesUI) mpPaintSpadesCards();
   if(mp.farkleUI) mpPaintFarkleDice();
   if(mp.unoUI) mpPaintUnoCards();
+  if(mp.cahUI) mpPaintCahCards();
+  if(mp.cahPickUI) mpPaintCahPick();
   mpOffTurnCoach(snap, isHost);
   reapplyReactions();   // the rebuild above wiped the seat DOM — repaint any reaction floats still inside their TTL
 }
@@ -5513,6 +6292,17 @@ function mpReadyGate(){
     // players' readiness alone.
     return { ok: true, players, readyCount, needCount: present.length, awayNames, reason: "ok" };
   }
+  if(game === "cah"){
+    // Cards Against the Table needs THREE at the table — a Czar and
+    // at least two players to judge between. AI fill brings the
+    // table to four, so with fill on, the present players' readiness
+    // is all the gate needs; without it, three humans must be in.
+    const tableSize = aiFillOn() ? (players >= 1 ? 4 : 0) : players;
+    if(tableSize >= 3 && present.length > 0 && readyCount === present.length)
+      return { ok: true, players, readyCount, needCount: present.length, awayNames, reason: "ok" };
+    if(players >= 2 && readyCount === present.length)
+      return { ok: false, players, readyCount, needCount: present.length, awayNames, reason: "players", needTotal: 3 };
+  }
   return { ok, players, readyCount, needCount: present.length, awayNames, reason };
 }
 function mpAwayLabel(awayNames){
@@ -5548,7 +6338,7 @@ function mpAutoDealCancel(sync){
 function mpHostDealNow(){
   mpAutoDealCancel(false);
   mp.gateOkSince = 0;
-  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else if(game === "stud") mpStartStud(); else if(game === "spades") mpStartSpades(); else if(game === "farkle") mpStartFarkle(); else if(game === "uno") mpStartUno(); else mpStartBJ();
+  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else if(game === "stud") mpStartStud(); else if(game === "spades") mpStartSpades(); else if(game === "farkle") mpStartFarkle(); else if(game === "uno") mpStartUno(); else if(game === "cah") mpStartCah(); else mpStartBJ();
 }function mpAutoDealTick(){
   if(mp.role !== "host"){ mp.gateOkSince = 0; return; }
   if(mp.phase !== "lobby" && mp.phase !== "done"){ mp.gateOkSince = 0; mpAutoDealCancel(true); return; }
@@ -5581,7 +6371,7 @@ function mpRenderHostControls(){
     // the label ALWAYS matches the gate's verdict + reason (incl. AWAY)
     const dealLabel = cdSec != null
       ? `Dealing in ${cdSec}… — tap to deal now`
-      : gate.ok ? `${other}${(isDrawGame(game) || game === "stud") ? " — ante 10" : (game === "holdem" || game === "omaha") ? " — blinds 5/10" : game === "farkle" ? " — first to " + fmt(farkleTarget) : game === "uno" ? " — 7 cards each" : ""}`
+      : gate.ok ? `${other}${(isDrawGame(game) || game === "stud") ? " — ante 10" : (game === "holdem" || game === "omaha") ? " — blinds 5/10" : game === "farkle" ? " — first to " + fmt(farkleTarget) : game === "uno" ? " — 7 cards each" : game === "cah" ? " — first to 5 points" : ""}`
       : gate.reason === "away" ? mpAwayLabel(gate.awayNames)
       : gate.reason === "players" ? `Waiting for players — ${gate.players} of ${gate.needTotal || 2} seated`
       : `Waiting for ready — ${gate.readyCount} of ${gate.needCount} ready`;
@@ -5643,6 +6433,14 @@ function mpDefaultAction(kind, ctx){
     // (ctx.defAction) — an AWAY seat or a timeout plays on with it
     return (ctx && ctx.defAction) || { type: "draw" };
   }
+  if(kind === "cahsubmit"){
+    // the host computed the AI-taste play for this exact hand + prompt
+    return { type: "submit", cards: (ctx && ctx.defCards || []).slice() };
+  }
+  if(kind === "cahpick"){
+    // a random crown — an AWAY or timed-out Czar still crowns someone
+    return { type: "pick", idx: (ctx && ctx.defPick) || 0 };
+  }
   return { type: "stand" };
 }
 async function mpPrompt(seat, kind, ctx){
@@ -5666,6 +6464,8 @@ async function mpPrompt(seat, kind, ctx){
         else if(kind === "spadesplay") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — played their lowest legal card.`);
         else if(kind === "farkleturn") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — the table is playing their Farkle turns for them.`);
         else if(kind === "unoturn") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — the table is playing their Uno turns for them.`);
+        else if(kind === "cahsubmit") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — the table played a card for them.`);
+        else if(kind === "cahpick") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — the table crowned a winner for them.`);
         mpSync();
       } else {
         mpSendTo(seat.pid, { t: "timeout-note", promptId, text: turnTimeoutText(kind, ctx) });
@@ -5683,13 +6483,13 @@ function mpLocalPrompt(kind, ctx){
     showTurnTimer(ms, kind === "draw" ? "Your draw" : "Your turn");
     const timer = setTimeout(()=>{
       if(settled) return; settled = true;
-      hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null;
+      hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; mp.cahUI = null; mp.cahPickUI = null;
       showNotice(turnTimeoutText(kind, ctx));
       resolve(mpDefaultAction(kind, ctx));
     }, ms);
     mpBuildPromptUI(kind, ctx, (action)=>{
       if(settled) return; settled = true;
-      clearTimeout(timer); hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null;
+      clearTimeout(timer); hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; mp.cahUI = null; mp.cahPickUI = null;
       resolve(action || mpDefaultAction(kind, ctx));
     });
   });
@@ -5738,6 +6538,7 @@ function gameIntroTip(g){
   if(g === "spades") return "Spades in one breath: <b>bid</b> how many tricks you'll take, then play them out — <b>follow suit</b> if you can, and remember <b>spades are trump</b> but can't be led until they're broken. Make your number for <b>10 points a trick</b> plus a point a bag; miss it and you're set. <b>Nil</b> — promising to take nothing at all — is worth ±100. The coach counts your hand with you.";
   if(g === "farkle") return "Farkle in one breath: roll all six and set aside the dice that score — <b>1s are 100, 5s are 50</b>, three of a kind pays face × 100 (three 1s = 1,000), and the six-dice combos pay big: a <b>straight 1–6</b> or <b>three pairs</b> pays <b>1,500</b>, <b>two triplets</b> <b>2,500</b>, four of a kind <b>1,000</b>, six of a kind <b>3,000</b>. Then <b>bank</b> the turn total or roll what's left and press on. A roll with <b>nothing</b> scoring is a <b>farkle</b>: the unbanked points vanish. Score with all six and they're <b>hot</b> — they all come back and the points ride along. Your first bank needs <b>500</b>, and three farkles in a row cost <b>1,000</b>.";
   if(g === "uno") return "Uno in one breath: <b>match the top card by color, number, or symbol</b> — or drop a <b>Wild</b> and name the color. <b>Skip</b> and <b>Reverse</b> bend the turn order; <b>Draw Two</b> and the <b>Wild Draw Four</b> feed the next player cards and cost them their turn. Nothing to play? Draw <b>one</b> — if it plays, you may drop it right away. Down to one card, the table calls <b>UNO!</b> for you. Go out and you score everything left in everyone else's hands: numbers at face value, actions 20, Wilds 50.";
+  if(g === "cah") return "Cards Against the Table in one breath: each round, one player is the <b>Card Czar</b> and reads a <b>black card</b> with a blank — or two. Everyone else plays <b>white cards</b> from their hand to fill it in; the plays are <b>anonymous</b> until the Czar crowns the funniest, and its author scores a <b>point</b>. First to <b>5</b> wins. The deck is this room's own — written for this table, cookouts and all.";
   if(g === "bj") return "Blackjack in one sentence: <b>get closer to 21 than the dealer without going over</b>. The dealer’s face-up card is your crystal ball — the coach reads it for you on every decision while Apprentice mode is on.";
   const V = DRAW_VARIANTS[g] || DRAW_VARIANTS.draw;
   return V.tip;
@@ -5772,6 +6573,26 @@ function mpOffTurnCoach(snap, isHost){
     if(mySeat.streak === 2) L.push(`You're on <b>two farkles in a row</b> — one more costs <b>1,000</b>. On your turn, bank the first safe total you can.`);
     if(!mySeat.onBoard) L.push(`You're not on the board yet — your first bank needs <b>500</b> in one turn.`);
     if(!L.length) L.push(`You're at <b>${fmt(mySeat.score || 0)}</b> — first to <b>${fmt(fk.target)}</b> opens the final round.`);
+    setTip(L.join("<br>"));
+    return;
+  }
+  if(snap.game === "cah"){
+    /* Cards off-turn read: the round state is public (black card,
+       Czar, plays-in count, points) — the only private thing at this
+       table is the white hands, and the read uses only my own. */
+    if(!mySeat || !snap.cah || !snap.cah.black) return;
+    const ch = snap.cah;
+    const ckey = "cah|" + ch.round + "|" + ch.phase + "|" + (mySeat.score || 0) + "|" + ch.submittedCount + "|" + (mySeat.cards ? mySeat.cards.join(",") : "");
+    if(mp._coachKey === ckey) return;
+    mp._coachKey = ckey;
+    const L = [];
+    const race = cahRaceLine(snap.seats.map(s=> ({ name: mpEsc(s.name), points: s.score || 0 })), ch.target);
+    if(ch.czarPid === mp.myPid) L.push(`You're the <b>Card Czar</b> this round — your hand sits this one out. The plays come in face-down; crown the one that makes YOU laugh.`);
+    else if(ch.phase === "collect") L.push(`<b>${mpEsc(ch.czarName || "The Czar")}</b> is judging: “${cahEsc(ch.black)}” — ${ch.submittedCount} of ${ch.expectedCount} plays are in. Yours rides face-down like everyone's.`);
+    else if(ch.phase === "reveal") L.push(`The plays are face-up and <b>anonymous</b> — even you can't tell which is yours at a glance. The Czar is reading them over.`);
+    else if(ch.phase === "picked") L.push(`Round over — the crown is placed. Points: ${snap.seats.map(s=> `<b>${mpEsc(s.name)}</b> ${s.score || 0}`).join(" · ")}.`);
+    if(race) L.push(race);
+    if(!L.length) L.push(`First to <b>${ch.target}</b> points takes the game.`);
     setTip(L.join("<br>"));
     return;
   }
@@ -6019,6 +6840,82 @@ function mpBuildPromptUI(kind, ctx, respond){
     paintUnoPromptControls();
     mpPaintUnoCards();
   }
+  if(kind === "cahsubmit"){
+    if(mode === "apprentice" && tipsOn) setTip(cahCoachHTML({ step: "submit", black: ctx.black, picks: ctx.picks,
+      hand: myCards, played: new Set(ctx.playedIds || []), raceLine: ctx.raceLine || "" }));
+    mp.cahUI = { cards: myCards, picks: ctx.picks, sel: [], respond };
+    paintCahPromptControls();
+    mpPaintCahCards();
+  }
+  if(kind === "cahpick"){
+    if(mode === "apprentice" && tipsOn) setTip(cahCoachHTML({ step: "czar", raceLine: ctx.raceLine || "" }));
+    mp.cahPickUI = { respond };
+    setControls(`<span class="ctl-note" style="font-size:14.5px"><b>You're the Czar — tap the play up top that wins the round.</b></span>
+      <span class="ctl-note">Live Cards — anonymous until you crown it. Your cards and coach show only on your screen.</span>`);
+    mpPaintCahPick();
+  }
+}
+/* The Cards submit prompt's control row, re-rendered as the pick
+   count changes (the Submit button arms only at the exact count). */
+function paintCahPromptControls(){
+  const ui = mp.cahUI; if(!ui) return;
+  setControls(`<span class="ctl-note" style="font-size:14.5px"><b>Your play — tap ${ui.picks === 2 ? "two cards, in the order they should read" : "a card"} to fill the blank${ui.picks === 2 ? "s" : ""}.</b> ${ui.sel.length} of ${ui.picks} picked — tap a picked card to unpick it.</span>
+    <button class="btn primary" id="mp-cah-submit" ${ui.sel.length === ui.picks ? "" : "disabled"}>Play ${ui.picks === 2 ? "these cards" : "this card"}</button>
+    <span class="ctl-note">Live Cards — plays are anonymous, even to the Czar, until one is crowned.</span>`);
+  wireBtn("mp-cah-submit", ()=>{ const u = mp.cahUI; if(!u || u.sel.length !== u.picks) return; mp.cahUI = null; u.respond({ type: "submit", cards: u.sel.slice() }); });
+}
+/* Same outside-the-DOM pattern as the Uno prompt: a Cards submit
+   prompt lives in mp.cahUI, and this repaint runs after every
+   snapshot re-render while the prompt is open, so the white hand,
+   its pick badges and its tap handlers survive the seats DOM being
+   rebuilt. Selection ORDER is the play order for two-blank cards —
+   the badges show 1 and 2. */
+function mpPaintCahCards(){
+  const ui = mp.cahUI; if(!ui) return;
+  const snap = mp.snap;
+  const mySeat = snap ? snap.seats.find(s=>s.pid === mp.myPid) : null;
+  const myCards = (mySeat && mySeat.cards) || ui.cards || [];
+  if(myCards.length) ui.cards = myCards;
+  const el = $("cards-mp-" + mp.myPid); if(!el) return;
+  el.innerHTML = myCards.map(id=>{
+    const order = ui.sel.indexOf(id);
+    return cahWhiteCardHTML(CAH_WHITES[id], { cls: order >= 0 ? "sel" : "", badge: order >= 0 ? order + 1 : null, attrs: `data-cahcard="${id}"` });
+  }).join("");
+  el.querySelectorAll("[data-cahcard]").forEach(cardEl=> bindTap(cardEl, ()=>{
+    if(mp.cahUI !== ui) return;
+    const id = +cardEl.dataset.cahcard;
+    const at = ui.sel.indexOf(id);
+    if(at >= 0) ui.sel.splice(at, 1);
+    else if(ui.sel.length < ui.picks) ui.sel.push(id);
+    else { clickSound(300); return; }
+    clickSound(700);
+    paintCahPromptControls();
+    mpPaintCahCards();
+  }));
+}
+/* The Czar's pick lives in the table-center #board, which every
+   snapshot render repaints — so while a cahpick prompt is open this
+   repaint (invoked at the end of mpRenderSnap, the Farkle-dice
+   pattern) re-renders the revealed plays as tappable crowns. The
+   plays it paints come from the snapshot, which carries no author
+   data at reveal — the Czar's own screen can't leak what the data
+   doesn't hold. */
+function mpPaintCahPick(){
+  const ui = mp.cahPickUI; if(!ui) return;
+  const snap = mp.snap;
+  if(!snap || !snap.cah || snap.cah.phase !== "reveal") return;
+  const ch = snap.cah;
+  const b = $("board"); if(!b) return;
+  b.innerHTML = cahCenterHTML({
+    black: ch.black, czarName: ch.czarName ? mpEsc(ch.czarName) : "", phase: "reveal", pickable: true,
+    subs: (ch.subs || []).map(s=> ({ texts: s.cards.map(id=> CAH_WHITES[id]), winner: false, author: null }))
+  });
+  b.querySelectorAll("[data-cahpick]").forEach(el=> bindTap(el, ()=>{
+    if(mp.cahPickUI !== ui) return;
+    const idx = +el.dataset.cahpick;
+    mp.cahPickUI = null;
+    ui.respond({ type: "pick", idx });
+  }));
 }
 /* The Uno prompt's control row, re-rendered as its state changes
    (a tapped Wild swaps it for the color picker; Back swaps back). */
@@ -6161,6 +7058,16 @@ function mpPaintFarkleDice(){
   }
 }
 function mpAIAction(seat, kind, ctx){
+  if(kind === "cahsubmit"){
+    if(!MC) return { type: "submit", cards: [] };
+    const st = MC.state.find(s=>s.seat.pid === seat.pid);
+    if(!st) return { type: "submit", cards: [] };
+    return { type: "submit", cards: cahAISubmit(st.hand, MC.black.text, MC.black.picks, MC.played) };
+  }
+  if(kind === "cahpick"){
+    if(!MC || !MC.revealSubs) return { type: "pick", idx: 0 };
+    return { type: "pick", idx: cahAICzarPick(MC.black.text, MC.revealSubs.map(s=> s.cards.map(id=> CAH_WHITES[id]))) };
+  }
   if(kind === "unoturn"){
     if(!MU) return { type: "draw" };
     const idx = MU.state.findIndex(s=>s.seat.pid === seat.pid);
@@ -6358,7 +7265,7 @@ function mpResetTableMP(){
   hideTurnTimer();
   mp.cdEndsAt = 0; mp.cdShownSec = null; mp.gateOkSince = 0;
   mp.winBanner = null; paintWinBanner(null); mpResetReady();
-  MD = null; MB = null; MH = null; MO = null; MS = null; MSP = null; MF = null; MU = null; mp.phase = "lobby"; mp.activeSeatPid = null;
+  MD = null; MB = null; MH = null; MO = null; MS = null; MSP = null; MF = null; MU = null; MC = null; mp.phase = "lobby"; mp.activeSeatPid = null;
   paintScorePanel(null);
   const info = game === "holdem"
     ? ["Texas Hold'em — live room", "Blinds 5/10 · two hole cards · flop, turn, river · best 5 of 7 · the host deals."]
@@ -6374,6 +7281,8 @@ function mpResetTableMP(){
     ? ["Farkle — live room", "Six dice · 1s are 100, 5s are 50, three of a kind and up · a straight 1–6 pays 1,500 · 500 to get on the board · three farkles running cost 1,000 · first to " + fmt(farkleTarget) + ", then one final round · the host deals."]
     : game === "uno"
     ? ["Uno — live room", "108 cards · 7 each · match color, number, or symbol · Skip, Reverse, Draw Two and Wilds bite · first to go out scores the table · the host deals."]
+    : game === "cah"
+    ? ["Cards Against the Table — live room", "An original house deck · 7 white cards each · a rotating Card Czar · anonymous plays · first to 5 points · the host deals."]
     : isDrawGame(game)
     ? [drawVariant().name + " — live room", drawVariant().wilds ? "Jokers & deuces wild · two draws — up to 3, then up to 2 · the host deals." : "No wilds · one draw — up to 5 · the host deals."]
     : ["Blackjack — live room", "Dealer stands on 17 · blackjack pays 3:2 · the host deals."];
@@ -6387,7 +7296,7 @@ function mpResetTableMP(){
   // Spades is the exception: a 4P partnership game NEEDS its 4 players
   // even with the House dealing (the dealer renders in its own spot),
   // so Spades always seats its full count.
-  const capSeats = (game === "spades" || game === "farkle" || game === "uno") ? maxSeats : (mp.hostMode === "deal" ? Math.min(maxSeats, 3) : maxSeats);   // the House dealer seat takes the top spot, so a deal-only table seats at most 3 players (Blackjack already caps at 3) — Spades, Farkle and Uno keep their full count: their tables seat 4 with the House in its own spot
+  const capSeats = (game === "spades" || game === "farkle" || game === "uno" || game === "cah") ? maxSeats : (mp.hostMode === "deal" ? Math.min(maxSeats, 3) : maxSeats);   // the House dealer seat takes the top spot, so a deal-only table seats at most 3 players (Blackjack already caps at 3) — Spades, Farkle, Uno and Cards keep their full count: their tables seat 4 with the House in its own spot
   const humans = mp.roster.filter(s=>!s.away && !(mp.hostMode === "deal" && s.pid === mp.myPid)).slice(0, capSeats);
   const seats = humans.map(s=> Object.assign({}, s));
   if(aiFillOn()){
@@ -6399,7 +7308,7 @@ function mpResetTableMP(){
       // AI seat starts at 1,000
       const stack = (mp.aiStacks[def.name] != null) ? mp.aiStacks[def.name] : 1000;
       const ast = mp.aiStats[def.name] || { hands: 0, chips: 0 };
-      seats.push({ pid: "ai-" + def.name.toLowerCase(), name: def.name, short: def.name[0], theme: parseChipPrompt(def.themeText, def.name), stack, kind: "ai", handsWon: ast.hands, chipsWon: ast.chips, spadesScore: ast.spades || 0, farkleScore: ast.farkle || 0, unoScore: ast.uno || 0 });
+      seats.push({ pid: "ai-" + def.name.toLowerCase(), name: def.name, short: def.name[0], theme: parseChipPrompt(def.themeText, def.name), stack, kind: "ai", handsWon: ast.hands, chipsWon: ast.chips, spadesScore: ast.spades || 0, farkleScore: ast.farkle || 0, unoScore: ast.uno || 0, cahScore: ast.cah || 0 });
     }
   }
   return seats;
@@ -6410,9 +7319,9 @@ function mpSeatStackSync(){
   // seats (they keep both across hands, like a seated player does)
   const seats = mpSeatsForHand();
   seats.forEach(seat=>{
-    if(seat.kind === "ai"){ mp.aiStacks[seat.name] = seat.stack; mp.aiStats[seat.name] = { hands: seat.handsWon || 0, chips: seat.chipsWon || 0, spades: seat.spadesScore || 0, farkle: seat.farkleScore || 0, uno: seat.unoScore || 0 }; return; }
+    if(seat.kind === "ai"){ mp.aiStacks[seat.name] = seat.stack; mp.aiStats[seat.name] = { hands: seat.handsWon || 0, chips: seat.chipsWon || 0, spades: seat.spadesScore || 0, farkle: seat.farkleScore || 0, uno: seat.unoScore || 0, cah: seat.cahScore || 0 }; return; }
     const r = mp.roster.find(x=>x.pid === seat.pid);
-    if(r){ r.stack = seat.stack; r.handsWon = seat.handsWon || 0; r.chipsWon = seat.chipsWon || 0; if(game === "spades") r.spadesScore = seat.spadesScore || 0; if(game === "farkle") r.farkleScore = seat.farkleScore || 0; if(game === "uno") r.unoScore = seat.unoScore || 0; }
+    if(r){ r.stack = seat.stack; r.handsWon = seat.handsWon || 0; r.chipsWon = seat.chipsWon || 0; if(game === "spades") r.spadesScore = seat.spadesScore || 0; if(game === "farkle") r.farkleScore = seat.farkleScore || 0; if(game === "uno") r.unoScore = seat.unoScore || 0; if(game === "cah") r.cahScore = seat.cahScore || 0; }
   });
 }
 
@@ -7347,6 +8256,141 @@ function mpUnoFinish(){
   mp.winBanner = banner;
   mp._lastLog = mpLogBoth(`<b>${mpEsc(banner)}</b>`, true);
   setCenter("Game over", unoScoreLineMP());
+  $("tb-what").textContent = "Game over — the host starts the next game when everyone's ready.";
+  mpSeatStackSync();
+  mp.phase = "done"; mp.activeSeatPid = null;
+  mpResetReady();
+  mpSync();
+}
+
+/* ----- Cards Against the Table (host authority) -----
+   One whole game per Deal. The flow is round-based, not turn-based:
+   the Czar's black card goes up, every other seat is prompted AT
+   ONCE for its play (Promise.all over mpPrompt — AI seats answer
+   through mpAIAction, AWAY seats through the prompt default on the
+   fast AWAY timer, guests on the 90-second CAH timer), the plays
+   are shuffled and revealed with NO author attached anywhere in the
+   snapshot, and only then is the Czar prompted to crown one. The
+   winner's point rides their seat as cahScore and persists to the
+   roster / AI stats via mpSeatStackSync. Privacy: a white hand
+   rides only in its owner's snapshot; a play's contents ride no
+   snapshot until the reveal; its author is attached only after the
+   crown (see the snap.cah builder). */
+let cahMpStarter = 0;
+function cahScoreLineMP(){
+  return MC.state.map(s=> `${mpEsc(s.seat.name)} ${s.seat.cahScore || 0}`).join(" · ") + ` — first to ${CAH_TARGET}`;
+}
+function cahRaceLineMP(){
+  return cahRaceLine(MC.state.map(s=> ({ name: mpEsc(s.seat.name), points: s.seat.cahScore || 0 })), CAH_TARGET);
+}
+function cahMpDrawWhite(st){
+  if(!MC.decks.whites.length){
+    if(MC.discard.length){ MC.decks.whites = shuffle(MC.discard); MC.discard = []; mp._lastLog = mpLogBoth("The white discard pile was shuffled back in."); }
+    else return;
+  }
+  st.hand.push(MC.decks.whites.pop());
+}
+function cahMpTakeSubmission(st, cards){
+  const use = cahValidateSubmission(st.hand, cards, MC.black.picks) ? cards.slice()
+    : cahAISubmit(st.hand, MC.black.text, MC.black.picks, MC.played);
+  use.forEach(id=>{ const at = st.hand.indexOf(id); if(at >= 0) st.hand.splice(at, 1); MC.discard.push(id); MC.played.add(id); });
+  MC.subByPid.set(st.seat.pid, use);
+}
+async function mpStartCah(){
+  if(!mpReadyGate().ok){ mp._lastLog = mpLogBoth("Deal held — every seated player has to tap <b>I’m Ready</b> first."); mpSync(); return; }
+  const seq = ++mp.seq; handSeq++;
+  mp.winBanner = null;
+  mp.activeHostMode = mp.hostMode;   // the mode is locked in for this game
+  const seats = mpTableSeats(4);
+  if(seats.length < 3){
+    mp.phase = "lobby";
+    mp._lastLog = mpLogBoth("Cards Against the Table needs <b>3–4 players</b> — a Czar and at least two players to judge between. Invite a friend, or turn <b>Fill empty seats with AI</b> on.");
+    mpSync();
+    return;
+  }
+  const decks = buildCahDecks();
+  const state = seats.map(seat=> ({ seat, hand: [] }));
+  for(let k = 0; k < CAH_HAND; k++) for(const st of state) st.hand.push(decks.whites.pop());
+  MC = { state, decks, discard: [], played: new Set(), black: null, czarIdx: -1, round: 0,
+         phase: "idle", subByPid: null, revealSubs: null, winSub: -1, winner: -1, scoreBreak: null };
+  mp.phase = "play";
+  const n = state.length;
+  const firstCzar = cahMpStarter % n; cahMpStarter++;
+  mp._lastLog = mpLogBoth(`Live Cards Against the Table dealt — ${CAH_HAND} white cards each from the house deck (${CAH_BLACKS.length} black cards, ${CAH_WHITES.length} white). First to ${CAH_TARGET} points.`);
+  mpSync();
+  while(MC.winner < 0){
+    if(seq !== mp.seq || !MC) return;
+    MC.round++;
+    MC.czarIdx = (firstCzar + MC.round - 1) % n;
+    if(!MC.decks.blacks.length) MC.decks.blacks = shuffle(CAH_BLACKS.map((_, i)=> i));
+    MC.black = cahBlackAt(MC.decks.blacks.pop());
+    MC.subByPid = new Map(); MC.revealSubs = null; MC.winSub = -1; MC.phase = "collect";
+    const czar = MC.state[MC.czarIdx];
+    mp.activeSeatPid = czar.seat.pid;
+    $("tb-what").textContent = czar.seat.pid === mp.myPid ? "You're the Card Czar — the plays are coming in." : `${czar.seat.name} is the Card Czar.`;
+    setCenter(`Round ${MC.round} — ${czar.seat.name} is the Czar`, cahScoreLineMP());
+    mp._lastLog = mpLogBoth(`<b>Round ${MC.round}</b> — <b>${mpEsc(czar.seat.name)}</b> is the Card Czar. The black card: “${cahEsc(MC.black.text)}”`);
+    mpSync();
+    // everyone but the Czar plays at once — the round moves at the
+    // speed of the slowest card-picker, not the sum of them
+    const submitters = MC.state.filter((_, i)=> i !== MC.czarIdx);
+    await Promise.all(submitters.map(async st=>{
+      const defCards = cahAISubmit(st.hand, MC.black.text, MC.black.picks, MC.played);
+      const act = await mpPrompt(st.seat, "cahsubmit", { ms: CAH_MS, black: MC.black.text, picks: MC.black.picks,
+        defCards, playedIds: [...MC.played], raceLine: cahRaceLineMP() });
+      if(seq !== mp.seq || !MC) return;
+      cahMpTakeSubmission(st, act && act.type === "submit" ? act.cards : defCards);
+      mpSync();
+    }));
+    if(seq !== mp.seq || !MC) return;
+    // hands refill before the reveal, so the crown is the only news
+    MC.state.forEach(st=>{ let guard = 0; while(st.hand.length < CAH_HAND && guard++ < 12){ const before = st.hand.length; cahMpDrawWhite(st); if(st.hand.length === before) break; } });
+    // the reveal: plays shuffled — order of arrival gives nothing away
+    MC.revealSubs = shuffle([...MC.subByPid.entries()].map(([pid, cards])=> {
+      const st = MC.state.find(s=>s.seat.pid === pid);
+      return { seat: st.seat, cards };
+    }));
+    MC.phase = "reveal";
+    setCenter("The plays are in", cahScoreLineMP());
+    mp._lastLog = mpLogBoth("All plays are in — shuffled and anonymous. The Czar reads them over…");
+    mpSync();
+    await sleep(1100);
+    if(seq !== mp.seq || !MC) return;
+    const czarSt = MC.state[MC.czarIdx];
+    const act = await mpPrompt(czarSt.seat, "cahpick", { ms: CAH_MS, black: MC.black.text,
+      defPick: Math.floor(Math.random() * MC.revealSubs.length), raceLine: cahRaceLineMP() });
+    if(seq !== mp.seq || !MC) return;
+    let winSub = act && act.type === "pick" ? act.idx : -1;
+    if(!(winSub >= 0 && winSub < MC.revealSubs.length)) winSub = Math.floor(Math.random() * MC.revealSubs.length);
+    MC.winSub = winSub;
+    const winSeat = MC.revealSubs[winSub].seat;
+    winSeat.cahScore = (winSeat.cahScore || 0) + 1;
+    MC.phase = "picked";
+    const winTexts = MC.revealSubs[winSub].cards.map(id=> CAH_WHITES[id]);
+    mp.winBanner = `${winSeat.name}'s card won the round`;
+    mp._lastLog = mpLogBoth(`<b>${mpEsc(czarSt.seat.name)}</b> crowns: “${cahEsc(winTexts.join("” + “"))}” — <b>${mpEsc(winSeat.name)}</b> scores a point (${winSeat.cahScore} of ${CAH_TARGET}).`, true);
+    setCenter(`${winSeat.name} takes the round`, cahScoreLineMP());
+    mpSeatStackSync();
+    mpSync();
+    if(winSeat.cahScore >= CAH_TARGET){ MC.winner = MC.state.findIndex(s=> s.seat === winSeat); break; }
+    await sleep(2400);
+    if(seq !== mp.seq || !MC) return;
+    mp.winBanner = null;
+  }
+  mpCahFinish();
+}
+function mpCahFinish(){
+  const winner = MC.state[MC.winner];
+  winner.seat.handsWon = (winner.seat.handsWon || 0) + 1;
+  const lines = [`<span class="sp-title">Game over — after ${MC.round} rounds:</span>`];
+  MC.state.map(st=> ({ name: mpEsc(st.seat.name), pts: st.seat.cahScore || 0 })).sort((a, b)=> b.pts - a.pts)
+    .forEach(r=> lines.push(`<b>${r.name}</b> — ${r.pts} point${r.pts === 1 ? "" : "s"}.`));
+  lines.push(`Session: ${MC.state.map(s=> `${mpEsc(s.seat.name)} ${fmt(s.seat.cahScore || 0)}`).join(" · ")}.`);
+  MC.scoreBreak = lines;
+  const banner = `${winner.seat.name} won the game with ${fmt(winner.seat.cahScore || 0)} points`;
+  mp.winBanner = banner;
+  mp._lastLog = mpLogBoth(`<b>${mpEsc(banner)}</b>`, true);
+  setCenter("Game over", cahScoreLineMP());
   $("tb-what").textContent = "Game over — the host starts the next game when everyone's ready.";
   mpSeatStackSync();
   mp.phase = "done"; mp.activeSeatPid = null;
