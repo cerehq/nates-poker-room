@@ -313,6 +313,44 @@
       .dice-meta{ margin-top:6px; font-size:13px; color:var(--ink); }
       .dice-meta b{ color:var(--gold); }
       .fk-fark{ font-family:var(--display); font-size:24px; letter-spacing:.1em; color:#ff7a6b; text-shadow:0 2px 10px rgba(255,60,40,.45); }
+      /* Uno cards — the real thing in pure CSS: a saturated color field,
+         the tilted white oval, a big glyph, corner indices. Wilds are
+         black with a four-color oval; the back is the classic black
+         with a red oval. Sizes ride --uno-w so a 15-card hand still
+         fits the felt (hands fan over each other, like Spades). */
+      .cards.uno-cards{ --uno-w:clamp(32px,5.6vw,48px); min-height:calc(var(--uno-w)*1.42); }
+      .ucard{ --uw:var(--uno-w, 48px); width:var(--uw); aspect-ratio:5/7; border-radius:calc(var(--uw)*.14); position:relative; flex:none;
+        box-shadow:1px 1px 0 rgba(0,0,0,.35), 2px 2px 0 rgba(0,0,0,.22), 0 8px 13px rgba(0,0,0,.4), inset 0 0 0 2px rgba(255,255,255,.85);
+        user-select:none; overflow:hidden; animation:cardIn .3s ease backwards; font-weight:800; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+      .ucard .uc-oval{ position:absolute; left:50%; top:50%; width:88%; height:60%; transform:translate(-50%,-50%) rotate(-18deg); background:#fff; border-radius:50%; display:grid; place-items:center; box-shadow:inset 0 0 0 1px rgba(0,0,0,.08); }
+      .ucard .uc-big{ font-size:calc(var(--uw)*.42); line-height:1; transform:rotate(18deg); }
+      .ucard .uc-big.sym{ font-size:calc(var(--uw)*.34); }
+      .ucard .uc-corner{ position:absolute; font-size:calc(var(--uw)*.19); color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.4); z-index:2; line-height:1; }
+      .ucard .uc-corner.tl{ left:9%; top:6%; }
+      .ucard .uc-corner.br{ right:9%; bottom:6%; transform:rotate(180deg); }
+      .ucard.red{ background:linear-gradient(150deg,#e2493a,#b71f14); } .ucard.red .uc-big{ color:#c1271a; }
+      .ucard.yellow{ background:linear-gradient(150deg,#ffc61a,#e89b00); } .ucard.yellow .uc-big{ color:#dd9200; }
+      .ucard.green{ background:linear-gradient(150deg,#4cb050,#2c7d33); } .ucard.green .uc-big{ color:#2e7d32; }
+      .ucard.blue{ background:linear-gradient(150deg,#3f7fdb,#1f4fa3); } .ucard.blue .uc-big{ color:#1e56b8; }
+      .ucard.wild{ background:linear-gradient(150deg,#2b2b30,#101014); }
+      .ucard.wild .uc-oval{ background:conic-gradient(#e2493a 0 25%, #ffc61a 0 50%, #4cb050 0 75%, #3f7fdb 0); }
+      .ucard.wild .uc-big{ color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.65); font-size:calc(var(--uw)*.3); }
+      .ucard.back{ background:linear-gradient(150deg,#2b2b30,#101014); display:grid; place-items:center; }
+      .ucard .uc-backoval{ width:85%; height:56%; transform:rotate(-18deg); background:linear-gradient(150deg,#e2493a,#b71f14); border-radius:50%; display:grid; place-items:center; color:#ffd94d; font-style:italic; font-weight:900; font-size:calc(var(--uw)*.25); letter-spacing:.02em; box-shadow:inset 0 0 0 2px rgba(255,255,255,.25); }
+      .cards.fan .ucard + .ucard{ margin-left:calc(var(--uno-w, 48px) * -0.42); }
+      .you-cards .ucard{ cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; }
+      .you-cards .ucard.playable{ transform:translateY(-7px); box-shadow:0 0 0 2.5px var(--gold-bright), 0 10px 14px rgba(0,0,0,.45); }
+      .you-cards .ucard.dim{ opacity:.5; filter:saturate(.55) brightness(.85); cursor:not-allowed; }
+      .uno-center{ text-align:center; padding:2px 0 0; }
+      .uno-piles{ display:flex; justify-content:center; align-items:flex-start; gap:18px; }
+      .uno-pile{ display:flex; flex-direction:column; align-items:center; gap:4px; }
+      .uno-dir{ margin-top:7px; font-size:13px; color:var(--ink); display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap; }
+      .uno-chip{ width:14px; height:14px; border-radius:50%; display:inline-block; box-shadow:inset 0 0 0 2px rgba(255,255,255,.5), 0 1px 3px rgba(0,0,0,.4); vertical-align:-2px; margin-right:4px; }
+      .uno-chip.red{ background:#d23b2e; } .uno-chip.yellow{ background:#f2b705; } .uno-chip.green{ background:#3d9e46; } .uno-chip.blue{ background:#2b62c4; }
+      .uno-colorbtn.red{ background:#c1271a; border-color:#8f1a10; color:#fff; }
+      .uno-colorbtn.yellow{ background:#f2b705; border-color:#b97f00; color:#3a2a00; }
+      .uno-colorbtn.green{ background:#2e7d32; border-color:#1d5521; color:#fff; }
+      .uno-colorbtn.blue{ background:#1e56b8; border-color:#143d80; color:#fff; }
       .you-cards .card{ cursor:pointer; transition:transform .15s ease, box-shadow .15s ease; }
       .you-cards .card.sel{ transform:translateY(-11px); box-shadow:0 0 0 2.5px var(--danger), 0 10px 14px rgba(0,0,0,.4); }
       .you-cards .card.sugg{ box-shadow:0 0 0 2.5px var(--gold-bright), 0 6px 10px rgba(0,0,0,.35); }
@@ -479,6 +517,7 @@
         .ctl-note{ font-size:12.5px; }
         .cards.stud-cards{ --card-w:clamp(19px,5.4vw,26px); }
         .cards.spades-cards{ --card-w:clamp(15px,4.4vw,22px); }
+        .cards.uno-cards{ --uno-w:clamp(24px,7.2vw,36px); }
         .roomlist .tag{ font-size:9.5px; padding:1px 6px; }
         .die{ width:37px; height:37px; border-radius:7px; }
         .die i{ width:7px; height:7px; }
@@ -495,7 +534,7 @@
     <header class="topbar">
       <div>
         <h1>Nate&rsquo;s <span class="thin">Poker Room</span></h1>
-        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Seven Card Stud, Five Card Draw, Blackjack, Spades &amp; Farkle. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
+        <div class="sub">One digital table, a shelf of house games — Five Card 3/2 Draw, Texas Hold'em, Omaha, Seven Card Stud, Five Card Draw, Blackjack, Spades, Farkle &amp; Uno. Play solo vs AI, or host a live room and play with friends anywhere. Play chips only, just for fun.</div>
       </div>
       <div class="bar-controls">
         <div class="seg" role="tablist" aria-label="Game">
@@ -508,6 +547,7 @@
           <button id="seg-bj" type="button">Blackjack</button>
           <button id="seg-spades" type="button">Spades</button>
           <button id="seg-farkle" type="button">Farkle</button>
+          <button id="seg-uno" type="button">Uno</button>
         </div>
         <div class="seg" id="spades-variant-seg" style="display:none" aria-label="Spades variant">
           <span class="seg-label">Spades</span>
@@ -796,6 +836,22 @@
             </table>
           </details>
         </div>
+
+        <div class="panel">
+          <details class="rules">
+            <summary>House rules — Uno</summary>
+            <ul>
+              <li><b>Deck:</b> the standard <b>108 cards</b> — in each color (Red, Yellow, Green, Blue): one 0, two each of 1–9, and two each of Skip, Reverse and Draw Two — plus <b>4 Wilds</b> and <b>4 Wild Draw Fours</b>. Seven cards each; the discard pile starts on a <b>number card</b> (action starters are buried and re-flipped).</li>
+              <li><b>Matching:</b> play a card that matches the top card by <b>color, number, or symbol</b> — or any <b>Wild</b>. A Wild names the new active color.</li>
+              <li><b>Draw one:</b> nothing to play (or you'd rather not)? Draw <b>one</b> card. If it plays, you <b>may</b> drop it right away; if it doesn't, your turn ends.</li>
+              <li><b>Skip</b> — the next player loses their turn. <b>Reverse</b> — play flips direction (heads-up, it plays like a Skip). <b>Draw Two</b> — the next player draws 2 and loses their turn. <b>Wild Draw Four</b> — the next player draws 4, loses their turn, and you name the color.</li>
+              <li><b>No stacking, no challenges</b> at this table — a Draw Two can't be answered with another Draw Two, and a Wild Draw Four is never challenged.</li>
+              <li><b>UNO!</b> — play down to one card and the table calls it for you. No call-out penalties among friends.</li>
+              <li><b>Going out:</b> play your last card and you score <b>everything left in everyone else's hands</b> — numbers at face value, Skip / Reverse / Draw Two at <b>20</b>, Wilds at <b>50</b>. If your last card is a Draw Two or Wild Draw Four, the next player still draws before the count.</li>
+              <li><b>No chips in Uno</b> — your seat shows your session points; the room list keeps your games and score.</li>
+            </ul>
+          </details>
+        </div>
       </aside>
     </div>
 
@@ -959,7 +1015,7 @@
                  sub:"No wilds — a straight 52-card deck · one draw, up to 5 cards.",
                  tip:"Classic draw, the old-school way — <b>no wilds</b>, one draw of up to 5. Made hands are scarcer here, so a pair is a real start. Hit <b>Deal</b> and I’ll size up your hand." },
     };
-    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", stud:"Seven Card Stud", bj:"Blackjack", spades:"Spades", farkle:"Farkle" };
+    const GAME_NAMES = { draw:"Five Card 3/2 Draw", classic:"Five Card Draw", holdem:"Texas Hold'em", omaha:"Omaha", stud:"Seven Card Stud", bj:"Blackjack", spades:"Spades", farkle:"Farkle", uno:"Uno" };
     /* Spades variant: "teams" = 4P partnership (partners across, 13 cards,
        match to 500); "cut" = 3P cutthroat (2♣ removed, 17 cards each,
        every player for themselves, match to 300). The host picks it in a
@@ -1020,7 +1076,7 @@
       else { el.textContent = ""; el.classList.remove("on"); }
     }
     /* ================= turn timer, notices, tap binding ================= */
-    const TURN_MS = 90000, DRAW_MS = 120000, AWAY_MS = 5000, SPADES_MS = 60000, FARKLE_MS = 60000;
+    const TURN_MS = 90000, DRAW_MS = 120000, AWAY_MS = 5000, SPADES_MS = 60000, FARKLE_MS = 60000, UNO_MS = 60000;
     function fmtClock(ms){ const s = Math.max(0, Math.ceil(ms/1000)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); }
     let _ttIv = null;
     /* Turn nudge: if the player whose turn it is hasn't acted in 20s,
@@ -1079,6 +1135,7 @@
       if(kind === "spadesbid") return "Time ran out — the table bid your counted tricks for you.";
       if(kind === "spadesplay") return "Time ran out — your lowest legal card was played.";
       if(kind === "farkleturn") return ctx && ctx.step === "decide" ? "Time ran out — the table banked what it safely could for you." : "Time ran out — the table rolled for you.";
+      if(kind === "unoturn") return "Time ran out — the table played your Uno turn for you.";
       return "Time ran out — the table moved on.";
     }
     /* One tap = one toggle, in every browser (incl. in-app webviews): fire on
@@ -2003,6 +2060,259 @@ function spadesTargetFor(variant){ return variant === "cut" ? 300 : 500; }
       else if(!view.onBoard && view.turnPts + best.points < FARKLE_ONBOARD) L.push(`Still short of the <b>500</b> you need to get on the board — banking's locked, so the pick is about setting up the next roll.`);
       else if(!view.onBoard) L.push(`That pick gets you <b>on the board</b> if you bank it — a clean place to stop.`);
       else if(view.myScore + view.turnPts + best.points >= view.target) L.push(`Banking this opens the <b>final round</b> — everyone else gets one turn to steal it, so a bigger cushion is worth real risk here.`);
+      return L.join("<br>");
+    }
+
+    /* ================= UNO CORE (shared: solo + host MP + tests) =================
+       The color/number matching game. A card is { c, v }: c is "red" |
+       "yellow" | "green" | "blue" | "wild"; v is 0–9 for number cards,
+       or "skip" | "rev" | "draw2" on colored cards, "wild" | "wild4"
+       on the black cards. House rules for v1 (Nate's table): the
+       discard pile starts on a NUMBER card (action starters are
+       buried and re-flipped, so the first turn is always clean);
+       draw ONE card when you can't or won't play — if it plays you
+       MAY drop it right away, otherwise the turn ends; NO stacking
+       and NO Wild Draw Four challenge; the table calls UNO! for you
+       (no call-out penalty); going out scores every card left in the
+       other hands (numbers at face, actions 20, wilds 50), and a
+       last-card Draw Two / Wild Draw Four still deals its draw
+       before the count. One game = one hand; the session keeps the
+       running points. */
+    const UNO_COLORS = ["red", "yellow", "green", "blue"];
+    const UNO_COLOR_NAMES = { red: "Red", yellow: "Yellow", green: "Green", blue: "Blue", wild: "Wild" };
+    /* Test seam: when set, buildUnoDeck returns the hook's array
+       (a rigged deck for the harness); production leaves it null. */
+    let unoDeckHook = null;
+    function buildUnoDeck(){
+      if(unoDeckHook){
+        const d = unoDeckHook();
+        if(Array.isArray(d) && d.length) return d.slice();
+      }
+      const deck = [];
+      for(const c of UNO_COLORS){
+        deck.push({ c, v: 0 });
+        for(let v = 1; v <= 9; v++){ deck.push({ c, v }); deck.push({ c, v }); }
+        for(const v of ["skip", "rev", "draw2"]){ deck.push({ c, v }); deck.push({ c, v }); }
+      }
+      for(let k = 0; k < 4; k++){ deck.push({ c: "wild", v: "wild" }); deck.push({ c: "wild", v: "wild4" }); }
+      return shuffle(deck);   // 25 per color × 4 + 8 wilds = 108
+    }
+    function unoCardKey(card){ return card.c + ":" + card.v; }
+    function unoCardName(card){
+      if(!card) return "";
+      if(card.c === "wild") return card.v === "wild4" ? "Wild Draw Four" : "Wild";
+      if(typeof card.v === "number") return UNO_COLOR_NAMES[card.c] + " " + card.v;
+      return UNO_COLOR_NAMES[card.c] + " " + ({ skip: "Skip", rev: "Reverse", draw2: "Draw Two" })[card.v];
+    }
+    function unoCardPoints(card){
+      if(card.c === "wild") return 50;
+      if(typeof card.v === "number") return card.v;
+      return 20;   // Skip / Reverse / Draw Two
+    }
+    function unoHandPoints(hand){ return (hand || []).reduce((sum, c)=> sum + unoCardPoints(c), 0); }
+    /* A card plays if it's a Wild, matches the ACTIVE color, or
+       matches the top card's number/symbol. (Against a Wild on top,
+       only the active color — or another Wild — answers.) */
+    function unoPlayable(card, top, activeColor){
+      if(!card) return false;
+      if(card.c === "wild") return true;
+      if(card.c === activeColor) return true;
+      return !!top && top.c !== "wild" && card.v === top.v;
+    }
+    function unoPlayableIdx(hand, top, activeColor){
+      const out = [];
+      (hand || []).forEach((c, i)=>{ if(unoPlayable(c, top, activeColor)) out.push(i); });
+      return out;
+    }
+    const UNO_SORT_COLOR = { red: 0, yellow: 1, green: 2, blue: 3, wild: 4 };
+    const UNO_SORT_VAL = { skip: 10, rev: 11, draw2: 12, wild: 13, wild4: 14 };
+    function unoSortHand(hand){
+      return (hand || []).slice().sort((a, b)=>{
+        const dc = UNO_SORT_COLOR[a.c] - UNO_SORT_COLOR[b.c];
+        if(dc) return dc;
+        const va = typeof a.v === "number" ? a.v : UNO_SORT_VAL[a.v];
+        const vb = typeof b.v === "number" ? b.v : UNO_SORT_VAL[b.v];
+        return va - vb;
+      });
+    }
+    /* The color a Wild names when nobody thinks too hard: the color
+       the hand holds most of (ties break Red → Yellow → Green → Blue). */
+    function unoChooseColor(hand){
+      const counts = { red: 0, yellow: 0, green: 0, blue: 0 };
+      (hand || []).forEach(c=>{ if(counts[c.c] != null) counts[c.c]++; });
+      let best = "red";
+      UNO_COLORS.forEach(c=>{ if(counts[c] > counts[best]) best = c; });
+      return best;
+    }
+    /* ---- turn-state transitions on a plain state object ----
+       S = { hands: [[card]...], draw: [card], discard: [card],
+             color: activeColor, dir: 1 | -1 }. The engines (solo +
+       host MP) keep their own rendering and logging; every rule
+       about what a play DOES lives here. */
+    function unoTop(S){ return S.discard[S.discard.length - 1]; }
+    function unoAdvance(S, idx, steps){ const n = S.hands.length; return (((idx + S.dir * steps) % n) + n) % n; }
+    /* When the draw pile runs dry, the discard pile (minus its top
+       card) shuffles into a new draw pile. Returns true if it did. */
+    function unoEnsureDraw(S){
+      if(S.draw.length || S.discard.length <= 1) return false;
+      const top = S.discard[S.discard.length - 1];
+      S.draw = shuffle(S.discard.slice(0, -1));
+      S.discard = [top];
+      return true;
+    }
+    function unoDrawCards(S, idx, n){
+      const drawn = []; let reshuffled = false;
+      for(let k = 0; k < n; k++){
+        if(!S.draw.length){ if(unoEnsureDraw(S)) reshuffled = true; if(!S.draw.length) break; }
+        const c = S.draw.pop();
+        S.hands[idx].push(c); drawn.push(c);
+      }
+      return { drawn, reshuffled };
+    }
+    /* Play hand[handIdx] from seat idx. Applies the discard, the
+       active color, action effects (Skip / Reverse / Draw Two /
+       Wild Draw Four — the draw lands BEFORE any scoring, so a
+       last-card Draw Two still feeds the winner's count) and whose
+       turn is next. Returns an events object for the engines' logs. */
+    function unoApplyPlay(S, idx, handIdx, colorChoice){
+      const hand = S.hands[idx];
+      const card = hand.splice(handIdx, 1)[0];
+      S.discard.push(card);
+      const ev = { card, unoCalled: hand.length === 1, winner: hand.length === 0,
+                   penalty: null, skippedIdx: null, reversed: false, reshuffled: false, nextIdx: idx };
+      S.color = card.c === "wild" ? (UNO_COLORS.includes(colorChoice) ? colorChoice : unoChooseColor(hand)) : card.c;
+      let steps = 1;
+      if(card.v === "draw2" || card.v === "wild4"){
+        const target = unoAdvance(S, idx, 1);
+        const got = unoDrawCards(S, target, card.v === "draw2" ? 2 : 4);
+        ev.penalty = { idx: target, cards: got.drawn };
+        ev.reshuffled = got.reshuffled;
+        ev.skippedIdx = target;
+        steps = 2;
+      } else if(card.v === "skip"){
+        ev.skippedIdx = unoAdvance(S, idx, 1);
+        steps = 2;
+      } else if(card.v === "rev"){
+        S.dir = -S.dir;
+        ev.reversed = true;
+        steps = S.hands.length === 2 ? 2 : 1;   // heads-up, a Reverse plays like a Skip
+        if(steps === 2) ev.skippedIdx = unoAdvance(S, idx, 1);
+      }
+      ev.nextIdx = unoAdvance(S, idx, steps);
+      return ev;
+    }
+    /* The house AI (shared: solo AI, MP AI fill, AWAY seats, prompt
+       defaults). view = { hand, top, activeColor, nextCount } where
+       nextCount is the card count of the player who'd play next.
+       Heuristic, in order:
+       - the next player sits on UNO (1 card): stop them — Wild Draw
+         Four, then Draw Two, then Skip, then Reverse.
+       - otherwise shed points: the priciest playable non-Wild card
+         (actions and high numbers go first; Wilds stay pocketed).
+       - only Wilds play: the plain Wild before the Draw Four.
+       A Wild names the color the REST of the hand holds most of. */
+    function unoAIPick(view){
+      const hand = view.hand || [];
+      const playable = unoPlayableIdx(hand, view.top, view.activeColor);
+      if(!playable.length) return { type: "draw" };
+      const finish = (idx)=>{
+        const card = hand[idx];
+        if(card.c === "wild") return { type: "play", idx, color: unoChooseColor(hand.filter((_, j)=> j !== idx)) };
+        return { type: "play", idx, color: null };
+      };
+      if(view.nextCount === 1){
+        const rank = { wild4: 0, draw2: 1, skip: 2, rev: 3 };
+        const stoppers = playable.filter(i=> rank[hand[i].v] != null).sort((a, b)=> rank[hand[a].v] - rank[hand[b].v]);
+        if(stoppers.length) return finish(stoppers[0]);
+      }
+      const nonWild = playable.filter(i=> hand[i].c !== "wild");
+      if(nonWild.length){
+        let best = nonWild[0];
+        nonWild.forEach(i=>{ if(unoCardPoints(hand[i]) > unoCardPoints(hand[best])) best = i; });
+        return finish(best);
+      }
+      const plain = playable.find(i=> hand[i].v === "wild");
+      return finish(plain != null ? plain : playable[0]);
+    }
+    /* After a draw: play the drawn card when it plays (the AI always
+       does — a playable card in hand beats a bigger hand at scoring). */
+    function unoAIDrawnPlay(hand, drawn, top, activeColor){
+      if(!drawn || !unoPlayable(drawn, top, activeColor)) return { play: false, color: null };
+      return { play: true, color: drawn.c === "wild" ? unoChooseColor(hand) : null };
+    }
+    function unoCardGlyph(card){
+      if(card.c === "wild") return card.v === "wild4" ? { big: "+4", corner: "+4", sym: true } : { big: "WILD", corner: "W", sym: true };
+      if(typeof card.v === "number") return { big: String(card.v), corner: String(card.v), sym: false };
+      if(card.v === "skip") return { big: "⊘", corner: "⊘", sym: true };
+      if(card.v === "rev") return { big: "⇄", corner: "⇄", sym: true };
+      return { big: "+2", corner: "+2", sym: true };   // draw2
+    }
+    /* An Uno card in pure CSS (see the .ucard styles): color field,
+       tilted white oval, big glyph, corner indices. opts.back (or a
+       null card) renders the classic black back. Names/glyphs are
+       internal constants — nothing user-supplied reaches this. */
+    function unoCardHTML(card, opts){
+      opts = opts || {};
+      if(opts.back || !card) return `<div class="ucard back ${opts.cls || ""}" ${opts.attrs || ""}><span class="uc-backoval">UNO</span></div>`;
+      const g = unoCardGlyph(card);
+      return `<div class="ucard ${card.c} ${opts.cls || ""}" ${opts.attrs || ""}><span class="uc-corner tl">${g.corner}</span><span class="uc-oval"><span class="uc-big${g.sym ? " sym" : ""}">${g.big}</span></span><span class="uc-corner br">${g.corner}</span></div>`;
+    }
+    /* The table center for Uno, shared by solo and every MP screen:
+       the draw pile (count only — its contents never leave the
+       host), the discard top, the direction of play and the ACTIVE
+       COLOR chip (the thing that matters after a Wild). turnName
+       must arrive display-safe (MP callers pass escaped names). */
+    function unoCenterHTML(view){
+      if(!view || !view.top) return `<div class="uno-center"><div class="dice-lbl">Uno</div><div class="dice-meta">Seven cards each — first to empty their hand scores the table.</div></div>`;
+      return `<div class="uno-center">
+        <div class="uno-piles">
+          <div class="uno-pile">${unoCardHTML(null, { back: true })}<span class="dice-lbl">Draw · ${view.drawCount}</span></div>
+          <div class="uno-pile">${unoCardHTML(view.top, {})}<span class="dice-lbl">Discard</span></div>
+        </div>
+        <div class="uno-dir"><span>${view.dir === 1 ? "↻ Clockwise" : "↺ Counter-clockwise"}</span><span>·</span><span><span class="uno-chip ${view.activeColor}"></span>Active color: <b>${UNO_COLOR_NAMES[view.activeColor] || ""}</b></span></div>
+        ${view.turnName ? `<div class="dice-meta"><b>${view.turnName}</b> to play</div>` : ""}
+      </div>`;
+    }
+    /* Apprentice coach for Uno. view = { hand, top, activeColor,
+       nextName, nextCount, step: "play" | "drawn", drawn }.
+       nextName must arrive display-safe. */
+    function unoCoachHTML(view){
+      const L = [];
+      const topName = unoCardName(view.top);
+      if(view.step === "drawn"){
+        const d = view.drawn;
+        if(!d) return "The draw came up empty — your turn ends.";
+        if(unoPlayable(d, view.top, view.activeColor)){
+          L.push(`You drew the <b>${unoCardName(d)}</b> — it plays on the <b>${topName}</b> (${UNO_COLOR_NAMES[view.activeColor]} is active). Drop it now, or keep it and pass.`);
+          if(d.c === "wild") L.push(`It's a Wild — if you drop it, name the color you hold most: <b>${UNO_COLOR_NAMES[unoChooseColor(view.hand)]}</b>.`);
+        } else {
+          L.push(`You drew the <b>${unoCardName(d)}</b> — it doesn't match the <b>${topName}</b> or the active color (${UNO_COLOR_NAMES[view.activeColor]}), so your turn ends here.`);
+        }
+        return L.join("<br>");
+      }
+      const playable = unoPlayableIdx(view.hand, view.top, view.activeColor);
+      L.push(`The pile shows <b>${topName}</b> — active color <b>${UNO_COLOR_NAMES[view.activeColor]}</b>.`);
+      if(!playable.length){
+        L.push(`Nothing in your hand matches by color, number, or symbol — and no Wild to bail you out. <b>Draw one</b>: if it plays, you may drop it right away.`);
+      } else {
+        const names = playable.slice(0, 5).map(i=> `<b>${unoCardName(view.hand[i])}</b>`).join(", ") + (playable.length > 5 ? `, and ${playable.length - 5} more` : "");
+        L.push(`You can play: ${names}.`);
+        const sugg = unoAIPick({ hand: view.hand, top: view.top, activeColor: view.activeColor, nextCount: view.nextCount });
+        if(sugg.type === "play"){
+          const sc = view.hand[sugg.idx];
+          let why;
+          if(view.nextCount === 1 && (sc.v === "draw2" || sc.v === "wild4")) why = `${view.nextName || "The next player"} is on <b>UNO</b> — this makes them draw instead of going out. Play it.`;
+          else if(view.nextCount === 1 && (sc.v === "skip" || sc.v === "rev")) why = `${view.nextName || "The next player"} is on <b>UNO</b> — this skips their turn. Play it.`;
+          else if(sc.c === "wild" && playable.every(i=> view.hand[i].c === "wild")) why = `it's your only play — name <b>${UNO_COLOR_NAMES[sugg.color || "red"]}</b>, the color you hold most.`;
+          else if(sc.c === "wild") why = `the Wild always plays — but it also always waits. The coach would keep it pocketed unless you're going out.`;
+          else if(playable.some(i=> view.hand[i].c === "wild")) why = `it sheds <b>${unoCardPoints(sc)}</b> points and keeps your Wild pocketed for when nothing else plays.`;
+          else why = `it sheds <b>${unoCardPoints(sc)}</b> points — if someone else goes out, what's left in your hand is what you pay.`;
+          L.push(`The coach's play: <b>${unoCardName(sc)}</b> — ${why}`);
+        }
+      }
+      if(view.nextCount === 1 && playable.length) L.push(`Careful — <b>${view.nextName || "the next player"}</b> is sitting on <b>UNO</b> (one card). If they get a turn and can play it, they go out and score your whole hand.`);
+      if(view.hand.length === 2) L.push(`You're two cards from out yourself — play one and the table calls <b>UNO!</b> for you.`);
+      if(view.hand.length === 1) L.push(`You're on <b>UNO</b> — if this card plays, you're out and the table's hands are yours.`);
       return L.join("<br>");
     }
 
@@ -3532,6 +3842,246 @@ function finishFarkleGameSolo(seq){
   wireBtn("btn-deal", startFarkleGame);
 }
 
+/* ================= UNO (solo) =================
+   Points across games, not chips: seats show the session score,
+   the pot box stays dark, and there's no top-up. UN holds ONE game
+   (hands and piles reset on every Start); the session totals run
+   across games until the table resets. All rules — deck, matching,
+   action effects, AI, scoring — come from the shared Uno core in
+   the first script block. Your hand renders sorted (the core's
+   order); taps answer by card key, so the two identical copies of
+   a card are interchangeable, exactly as they are in the hand. */
+let UN = null;   // uno state (solo)
+let unoStarter = 0;
+function unoScoreLineSolo(){
+  if(!UN || !UN.state) return "";
+  return UN.state.map(st=> `${st.p.name} ${st.hand.length}`).join(" · ") + " — cards in hand";
+}
+function paintUnoSoloPlates(){
+  if(!UN) return;
+  players.forEach((p, i)=>{
+    const el = document.querySelector("#seat-" + p.id + " .stk");
+    if(el) el.textContent = "Score " + fmt(UN.totals[i]);
+    if(UN.state) setStatus(p.id, UN.state[i].hand.length === 1 ? "UNO!" : UN.state[i].hand.length + " cards");
+  });
+  $("bank-amt").textContent = fmt(UN.totals[0]);
+}
+function resetUnoTable(){
+  hideTurnTimer(); paintWinBanner(null); resetSoloStats(); paintScorePanel(null);
+  UN = { phase: "idle", totals: [0, 0, 0, 0], state: null, core: null, turnIdx: 0, winner: -1, playUI: null };
+  seatsEl.innerHTML = players.map(p=> seatShell(p, { button: false })).join("");
+  players.forEach(p=>{ setStatus(p.id, ""); setBetBadge(p.id, 0); const c = $("cards-" + p.id); if(c) c.innerHTML = ""; });
+  setPot(0); paintBoard([]); refreshPlates(); paintUnoSoloPlates();
+  setTurn(null, "Uno — match the pile by color, number, or symbol. First to empty their hand scores the table.");
+  setControls(`<button class="btn primary" id="btn-deal">Start a game</button>`);
+  wireBtn("btn-deal", startUnoGame);
+  setCenter("Uno", "108 cards · 7 each · match color, number, or symbol · action cards bite · first to go out scores what's left in everyone's hands.");
+  if(mode === "apprentice" && tipsOn) setTip("Uno in one breath: <b>match the top card by color, number, or symbol</b> — or drop a <b>Wild</b> and name the color. <b>Skip</b> and <b>Reverse</b> bend the turn order; <b>Draw Two</b> and the <b>Wild Draw Four</b> feed the next player cards and cost them their turn. Nothing to play? Draw <b>one</b> — if it plays, you may drop it right away. Down to one card, the table calls <b>UNO!</b> for you. Go out and you score everything left in everyone else's hands: numbers at face value, actions 20, Wilds 50.");
+}
+function paintUnoCenterSolo(){
+  const b = $("board"); if(!b || !UN) return;
+  if(!UN.core){ b.innerHTML = unoCenterHTML(null); return; }
+  const st = UN.state[UN.turnIdx];
+  b.innerHTML = unoCenterHTML({ top: unoTop(UN.core), activeColor: UN.core.color, dir: UN.core.dir,
+    drawCount: UN.core.draw.length, turnName: UN.phase === "play" && st ? st.p.name : "" });
+}
+function renderUnoHandsSolo(){
+  if(!UN || !UN.state) return;
+  UN.state.forEach(st=>{
+    const el = $("cards-" + st.p.id); if(!el) return;
+    el.classList.add("uno-cards"); el.classList.add("fan");
+    if(st.p.id === "you"){
+      const ui = UN.playUI;
+      el.innerHTML = unoSortHand(st.hand).map(c=>{
+        const key = unoCardKey(c);
+        if(ui && ui.legalKeys.has(key)) return unoCardHTML(c, { cls: "playable", attrs: `data-unoplay="${key}"` });
+        if(ui) return unoCardHTML(c, { cls: "dim" });
+        return unoCardHTML(c, {});
+      }).join("");
+      if(ui) el.querySelectorAll("[data-unoplay]").forEach(cardEl=> bindTap(cardEl, ()=>{
+        if(!UN || !UN.playUI) return;
+        UN.playUI.pick(cardEl.dataset.unoplay);
+      }));
+    } else {
+      el.innerHTML = st.hand.map(()=> unoCardHTML(null, { back: true })).join("");
+    }
+  });
+  paintUnoSoloPlates();
+  paintUnoCenterSolo();
+}
+function paintUnoHumanControls(step, done){
+  if(step === "drawn"){
+    setControls(`<span class="ctl-note" style="font-size:14.5px"><b>You drew — tap the glowing card to play it, or keep it.</b></span>
+      <button class="btn" id="btn-uno-pass">Keep it — pass</button>`);
+    wireBtn("btn-uno-pass", ()=> done({ type: "pass" }));
+  } else {
+    setControls(`<span class="ctl-note" style="font-size:14.5px"><b>Your turn — tap a glowing card to play it.</b></span>
+      <button class="btn primary" id="btn-uno-draw">Draw a card</button>
+      <span class="ctl-note">Nothing you want to play? Draw one — if it plays, you may drop it right away.</span>`);
+    wireBtn("btn-uno-draw", ()=> done({ type: "draw" }));
+  }
+}
+function humanUnoPlayPrompt(seq, st, step, drawn){
+  return new Promise(res=>{
+    const top = unoTop(UN.core), color = UN.core.color;
+    const nextIdx = unoAdvance(UN.core, 0, 1);
+    if(mode === "apprentice" && tipsOn) setTip(unoCoachHTML({ hand: st.hand, top, activeColor: color,
+      nextName: UN.state[nextIdx].p.name, nextCount: UN.state[nextIdx].hand.length, step, drawn }));
+    let settled = false;
+    const done = (out)=>{ if(settled) return; settled = true; clearTimeout(tmo); hideTurnTimer(); UN.playUI = null; setControls(""); res(out); };
+    const tmo = setTimeout(()=>{
+      if(seq === handSeq) showNotice("Time ran out — the table played your turn for you.");
+      if(step === "drawn"){
+        const d = unoAIDrawnPlay(st.hand, drawn, top, color);
+        if(d.play){ const hi = st.hand.findIndex(c=> unoCardKey(c) === unoCardKey(drawn)); done({ type: "play", handIdx: hi, color: d.color }); return; }
+        done({ type: "pass" }); return;
+      }
+      const pick = unoAIPick({ hand: st.hand, top, activeColor: color, nextCount: UN.state[nextIdx].hand.length });
+      done(pick.type === "play" ? { type: "play", handIdx: pick.idx, color: pick.color } : { type: "draw" });
+    }, UNO_MS);
+    showTurnTimer(UNO_MS, step === "drawn" ? "Play it or pass" : "Your turn");
+    const legalKeys = new Set();
+    if(step === "drawn"){ if(drawn && unoPlayable(drawn, top, color)) legalKeys.add(unoCardKey(drawn)); }
+    else st.hand.forEach(c=>{ if(unoPlayable(c, top, color)) legalKeys.add(unoCardKey(c)); });
+    UN.playUI = { legalKeys, picking: false,
+      pick: (key)=>{
+        if(!UN.playUI || UN.playUI.picking) return;
+        const hi = st.hand.findIndex(c=> unoCardKey(c) === key);
+        if(hi < 0) return;
+        const card = st.hand[hi];
+        if(card.c !== "wild"){ done({ type: "play", handIdx: hi, color: null }); return; }
+        UN.playUI.picking = true;
+        setControls(`<span class="ctl-note" style="font-size:14.5px"><b>${unoCardName(card)} — pick the new color:</b></span>
+          ${UNO_COLORS.map(c=> `<button class="btn uno-colorbtn ${c}" data-unocolor="${c}">${UNO_COLOR_NAMES[c]}</button>`).join("")}
+          <button class="btn" id="btn-uno-back">← Different card</button>`);
+        document.querySelectorAll("[data-unocolor]").forEach(b=> b.addEventListener("click", ()=>{ clickSound(600); done({ type: "play", handIdx: hi, color: b.dataset.unocolor }); }));
+        wireBtn("btn-uno-back", ()=>{ if(UN && UN.playUI){ UN.playUI.picking = false; paintUnoHumanControls(step, done); renderUnoHandsSolo(); } });
+      } };
+    paintUnoHumanControls(step, done);
+    renderUnoHandsSolo();
+  });
+}
+function unoSoloApplyAndLog(idx, handIdx, colorChoice){
+  const st = UN.state[idx];
+  const ev = unoApplyPlay(UN.core, idx, handIdx, colorChoice);
+  let line = `<b>${st.p.name}</b> played the <b>${unoCardName(ev.card)}</b>.`;
+  if(ev.card.c === "wild") line += ` Color is now <b>${UNO_COLOR_NAMES[UN.core.color]}</b>.`;
+  if(ev.reversed) line += ` Play <b>reverses</b> — ${UN.core.dir === 1 ? "clockwise" : "counter-clockwise"} now.`;
+  if(ev.penalty) line += ` <b>${UN.state[ev.penalty.idx].p.name}</b> draws ${ev.penalty.cards.length} and loses their turn.`;
+  else if(ev.skippedIdx != null) line += ` <b>${UN.state[ev.skippedIdx].p.name}</b> is skipped.`;
+  log(line);
+  if(ev.reshuffled) log("The discard pile was shuffled into a new draw pile.");
+  if(ev.unoCalled){ log(`<b>${st.p.name}</b> — <b>UNO!</b> One card left.`, true); paintWinBanner(`UNO! ${st.p.name} has one card left`); }
+  if(ev.winner) UN.winner = idx;
+  UN.turnIdx = ev.nextIdx;
+  renderUnoHandsSolo();
+}
+async function unoHumanTurnSolo(seq){
+  const st = UN.state[0];
+  const act = await humanUnoPlayPrompt(seq, st, "play", null);
+  if(seq !== handSeq || !UN) return;
+  if(act.type === "play"){ unoSoloApplyAndLog(0, act.handIdx, act.color); return; }
+  const got = unoDrawCards(UN.core, 0, 1);
+  if(got.reshuffled) log("The discard pile was shuffled into a new draw pile.");
+  const drawn = got.drawn[0];
+  log(`<b>You</b> draw a card.`);
+  renderUnoHandsSolo();
+  if(!drawn){ UN.turnIdx = unoAdvance(UN.core, 0, 1); return; }
+  if(!unoPlayable(drawn, unoTop(UN.core), UN.core.color)){
+    await sleep(1000); if(seq !== handSeq || !UN) return;
+    log(`The <b>${unoCardName(drawn)}</b> doesn't play — your turn ends.`);
+    UN.turnIdx = unoAdvance(UN.core, 0, 1);
+    return;
+  }
+  const act2 = await humanUnoPlayPrompt(seq, st, "drawn", drawn);
+  if(seq !== handSeq || !UN) return;
+  if(act2.type === "play") unoSoloApplyAndLog(0, act2.handIdx, act2.color);
+  else { log(`<b>You</b> keep the <b>${unoCardName(drawn)}</b> and pass.`); UN.turnIdx = unoAdvance(UN.core, 0, 1); }
+}
+async function unoAITurnSolo(seq, idx){
+  const st = UN.state[idx];
+  await sleep(650 + Math.random() * 450); if(seq !== handSeq || !UN) return;
+  const nextIdx = unoAdvance(UN.core, idx, 1);
+  const pick = unoAIPick({ hand: st.hand, top: unoTop(UN.core), activeColor: UN.core.color, nextCount: UN.state[nextIdx].hand.length });
+  if(pick.type === "play"){ unoSoloApplyAndLog(idx, pick.idx, pick.color); return; }
+  const got = unoDrawCards(UN.core, idx, 1);
+  if(got.reshuffled) log("The discard pile was shuffled into a new draw pile.");
+  const drawn = got.drawn[0];
+  log(`<b>${st.p.name}</b> draws a card.`);
+  renderUnoHandsSolo();
+  await sleep(850); if(seq !== handSeq || !UN) return;
+  if(drawn){
+    const d = unoAIDrawnPlay(st.hand, drawn, unoTop(UN.core), UN.core.color);
+    if(d.play){ const hi = st.hand.findIndex(c=> unoCardKey(c) === unoCardKey(drawn)); unoSoloApplyAndLog(idx, hi, d.color); return; }
+  }
+  log(`<b>${st.p.name}</b> keeps it and passes.`);
+  UN.turnIdx = unoAdvance(UN.core, idx, 1);
+}
+async function startUnoGame(){
+  const seq = ++handSeq;
+  paintWinBanner(null); paintScorePanel(null); paintBoard([]);
+  setControls("");
+  const deck = buildUnoDeck();
+  UN.state = players.map(p=> ({ p, hand: [] }));
+  for(let k = 0; k < 7; k++) for(const st of UN.state) st.hand.push(deck.pop());
+  // the discard starts on a number card: action/wild flips are
+  // buried at the bottom of the draw pile and the next card flips
+  let starterCard = deck.pop();
+  let guard = 0;
+  while(starterCard && typeof starterCard.v !== "number" && guard++ < 120){ deck.unshift(starterCard); starterCard = deck.pop(); }
+  UN.core = { hands: UN.state.map(s=> s.hand), draw: deck, discard: [starterCard], color: starterCard.c, dir: 1 };
+  UN.winner = -1; UN.phase = "play";
+  const n = UN.state.length;
+  const starterIdx = unoStarter % n; unoStarter++;
+  UN.turnIdx = starterIdx;
+  seatsEl.innerHTML = players.map((p, i)=> seatShell(p, { button: i === starterIdx })).join("");
+  players.forEach(p=>{ setStatus(p.id, ""); setBetBadge(p.id, 0); });
+  renderUnoHandsSolo();
+  clickSound(440);
+  log(`Uno dealt — 7 cards each. The pile starts on the <b>${unoCardName(starterCard)}</b>; <b>${UN.state[starterIdx].p.name}</b> plays first.`);
+  setCenter("Uno", unoScoreLineSolo());
+  while(UN.winner < 0){
+    if(seq !== handSeq || !UN) return;
+    paintWinBanner(null);   // an UNO! flash lasts one turn, then clears
+    const idx = UN.turnIdx;
+    const st = UN.state[idx];
+    setTurn(st.p, idx === 0 ? "Your turn." : "Playing their hand.");
+    setCenter("Uno", unoScoreLineSolo());
+    renderUnoHandsSolo();
+    if(idx === 0) await unoHumanTurnSolo(seq); else await unoAITurnSolo(seq, idx);
+    if(seq !== handSeq || !UN) return;
+    renderUnoHandsSolo();
+  }
+  finishUnoGameSolo(seq);
+}
+function finishUnoGameSolo(seq){
+  if(seq !== handSeq || !UN) return;
+  UN.phase = "done";
+  const wi = UN.winner;
+  const winner = UN.state[wi];
+  let points = 0;
+  const lines = [`<span class="sp-title">Game over — ${winner.p.name} went out:</span>`];
+  UN.state.forEach((st, i)=>{
+    if(i === wi) return;
+    const pts = unoHandPoints(st.hand);
+    points += pts;
+    lines.push(`<b>${st.p.name}</b> — ${st.hand.length} card${st.hand.length === 1 ? "" : "s"} left, worth <b>${pts}</b>.`);
+  });
+  UN.totals[wi] += points;
+  winner.p.handsWon = (winner.p.handsWon || 0) + 1;
+  winner.p.chipsWon = (winner.p.chipsWon || 0) + points;   // solo "Won" tracks Uno points, like Spades/Farkle
+  lines.push(`<b>${winner.p.name}</b> scores <b>${fmt(points)}</b>. Session: ${UN.state.map((s, i)=> `${s.p.name} ${fmt(UN.totals[i])}`).join(" · ")}.`);
+  paintScorePanel(lines);
+  const banner = `${winner.p.name} won the game with ${fmt(points)} points`;
+  paintWinBanner(banner);
+  log(`<b>${banner}</b>`, true);
+  setCenter("Game over", unoScoreLineSolo());
+  setTurn(null, "Game over — start a new one when you're ready.");
+  renderUnoHandsSolo();
+  setControls(`<button class="btn primary" id="btn-deal">Start a new game</button>`);
+  wireBtn("btn-deal", startUnoGame);
+}
+
 /* ================= BLACKJACK ================= */
 const BJ_SEATS = ["don","you","layton"];
 let bjShoe = [];
@@ -3765,6 +4315,7 @@ function paintGameSegs(){
   $("seg-bj").classList.toggle("on", game==="bj");
   $("seg-spades").classList.toggle("on", game==="spades");
   $("seg-farkle").classList.toggle("on", game==="farkle");
+  $("seg-uno").classList.toggle("on", game==="uno");
   const vseg = $("spades-variant-seg");
   if(vseg) vseg.style.display = game === "spades" ? "" : "none";
   const fseg = $("farkle-target-seg");
@@ -3830,13 +4381,14 @@ function setFarkleTarget(v){
 function setGame(g){
   game = g; handSeq++;
   paintGameSegs();
-  if(isDrawGame(g)){ B=null; H=null; O=null; ST=null; SP=null; FK=null; resetDrawTable(); }
-  else if(g==="holdem"){ D=null; B=null; O=null; ST=null; SP=null; FK=null; resetHoldemTable(); }
-  else if(g==="omaha"){ D=null; B=null; H=null; ST=null; SP=null; FK=null; resetOmahaTable(); }
-  else if(g==="stud"){ D=null; B=null; H=null; O=null; SP=null; FK=null; resetStudTable(); }
-  else if(g==="spades"){ D=null; B=null; H=null; O=null; ST=null; FK=null; resetSpadesTable(); }
-  else if(g==="farkle"){ D=null; B=null; H=null; O=null; ST=null; SP=null; resetFarkleTable(); }
-  else { D=null; H=null; O=null; ST=null; SP=null; FK=null; resetBJTable(); }
+  if(isDrawGame(g)){ B=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; resetDrawTable(); }
+  else if(g==="holdem"){ D=null; B=null; O=null; ST=null; SP=null; FK=null; UN=null; resetHoldemTable(); }
+  else if(g==="omaha"){ D=null; B=null; H=null; ST=null; SP=null; FK=null; UN=null; resetOmahaTable(); }
+  else if(g==="stud"){ D=null; B=null; H=null; O=null; SP=null; FK=null; UN=null; resetStudTable(); }
+  else if(g==="spades"){ D=null; B=null; H=null; O=null; ST=null; FK=null; UN=null; resetSpadesTable(); }
+  else if(g==="farkle"){ D=null; B=null; H=null; O=null; ST=null; SP=null; UN=null; resetFarkleTable(); }
+  else if(g==="uno"){ D=null; B=null; H=null; O=null; ST=null; SP=null; FK=null; resetUnoTable(); }
+  else { D=null; H=null; O=null; ST=null; SP=null; FK=null; UN=null; resetBJTable(); }
   log("Switched the table to <b>" + GAME_NAMES[g] + "</b>.");
 }function setMode(m){
   mode = m;
@@ -3856,6 +4408,7 @@ $("seg-stud").addEventListener("click", ()=>{ clickSound(500); setGame("stud"); 
 $("seg-bj").addEventListener("click", ()=>{ clickSound(500); setGame("bj"); });
 $("seg-spades").addEventListener("click", ()=>{ clickSound(500); setGame("spades"); });
 $("seg-farkle").addEventListener("click", ()=>{ clickSound(500); setGame("farkle"); });
+$("seg-uno").addEventListener("click", ()=>{ clickSound(500); setGame("uno"); });
 $("seg-sp-teams").addEventListener("click", ()=>{ clickSound(500); setSpadesVariant("teams"); });
 $("seg-sp-cut").addEventListener("click", ()=>{ clickSound(500); setSpadesVariant("cut"); });
 $("seg-fk-5000").addEventListener("click", ()=>{ clickSound(500); setFarkleTarget(5000); });
@@ -3953,6 +4506,7 @@ const mp = {
   drawUI: null,            // open draw prompt's selection state {sel, cap, sugg, cards} — lives outside the card DOM so snapshot re-renders can't kill it
   spadesUI: null,          // open spades-play prompt's state {legal:Set of card keys, cards, respond} — same outside-the-DOM pattern as drawUI
   farkleUI: null,          // open farkle-decide prompt's state {roll, sel:Set of roll indices, ctx, respond} — same outside-the-DOM pattern
+  unoUI: null,             // open uno-turn prompt's state {step, cards, top, activeColor, drawnKey, pendingWild, respond} — same outside-the-DOM pattern
   invites: new Map(),      // host: inviteId -> {id, name, seatPid}
   pendingInvite: null, pendingRejoin: null,   // guest: tokens from the link they opened
   urlRoom: null, urlInvite: null, urlRejoin: null,   // parsed from the invite link at load
@@ -4088,6 +4642,7 @@ let MO = null;             // host omaha hand state
 let MS = null;             // host stud hand state
 let MSP = null;            // host spades state (match scores/bags/dealer persist across hands)
 let MF = null;             // host farkle state (one whole game per Deal — scores live and die inside it)
+let MU = null;             // host uno state (one whole game per Deal — hands/piles live and die inside it; session points ride the seats)
 const AI_DEFS = [
   { name:"Don",    themeText:"crimson with gold trim and diamonds" },
   { name:"Thomas", themeText:"orange sunset stripes with black trim" },
@@ -4368,7 +4923,7 @@ function mpLeave(silent){
   mp.guestSeated = false; mp.heartbeatSeen = false; mp.lastHeartbeat = 0; mp.hostQuietShown = false; mp.claiming = false;
   mpTeardownChannel();
   mp.conns.clear();
-  mp.roster = []; mp.snap = null; mp.drawUI = null; MD = null; MB = null; MH = null; MO = null; MS = null;
+  mp.roster = []; mp.snap = null; mp.drawUI = null; mp.unoUI = null; MD = null; MB = null; MH = null; MO = null; MS = null; MU = null;
   mpStopHelloRetry(); mp.joining = false;
   const _jg = $("join-go"); if(_jg){ _jg.disabled = false; _jg.textContent = "Join Table"; }
   mp.myToken = null; mp.pendingInvite = null; mp.pendingRejoin = null;
@@ -4394,10 +4949,10 @@ function mpRoomEnded(msg){
   setGame(game);
 }
 function mpRenderRoomList(list){
-  const rows = list || mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0 }));
+  const rows = list || mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0 }));
   const houseDealing = mpDisplayHostMode() === "deal";
   $("net-roomlist").innerHTML = rows.map(s=>
-    `<li>${chipSVG(mpSanTheme(s.theme), 24, mpEsc(s.short || ""))}<span><b>${mpEsc(s.name)}</b></span><span class="tag${s.away ? " awaytag" : ""}">${s.away ? "AWAY — SEAT HELD" : s.kind === "host" ? (houseDealing ? "THE HOUSE · DEALER" : "HOST · DEALER") : s.kind === "ai" ? "AI FILL" : "PLAYER"}</span>${s.ready && !s.away && s.kind === "guest" ? `<span class="tag" style="background:#2e9e5b;color:#fff">READY</span>` : ""}${game === "spades" ? ((s.handsWon || s.spadesScore) ? `<span class="tag">Hands ${s.handsWon || 0} · Score ${fmt(s.spadesScore || 0)}</span>` : "") : game === "farkle" ? ((s.handsWon || s.farkleScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.farkleScore || 0)}</span>` : "") : ((s.handsWon || s.chipsWon) ? `<span class="tag">Hands ${s.handsWon || 0} · Won ${fmt(s.chipsWon || 0)}</span>` : "")}${mp.role === "host" && s.away && s.pid && s.kind !== "host" ? `<button class="rmseat" type="button" data-remove-seat="${mpEsc(s.pid)}">Free seat</button>` : ""}</li>`).join("");
+    `<li>${chipSVG(mpSanTheme(s.theme), 24, mpEsc(s.short || ""))}<span><b>${mpEsc(s.name)}</b></span><span class="tag${s.away ? " awaytag" : ""}">${s.away ? "AWAY — SEAT HELD" : s.kind === "host" ? (houseDealing ? "THE HOUSE · DEALER" : "HOST · DEALER") : s.kind === "ai" ? "AI FILL" : "PLAYER"}</span>${s.ready && !s.away && s.kind === "guest" ? `<span class="tag" style="background:#2e9e5b;color:#fff">READY</span>` : ""}${game === "spades" ? ((s.handsWon || s.spadesScore) ? `<span class="tag">Hands ${s.handsWon || 0} · Score ${fmt(s.spadesScore || 0)}</span>` : "") : game === "farkle" ? ((s.handsWon || s.farkleScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.farkleScore || 0)}</span>` : "") : game === "uno" ? ((s.handsWon || s.unoScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.unoScore || 0)}</span>` : "") : ((s.handsWon || s.chipsWon) ? `<span class="tag">Hands ${s.handsWon || 0} · Won ${fmt(s.chipsWon || 0)}</span>` : "")}${mp.role === "host" && s.away && s.pid && s.kind !== "host" ? `<button class="rmseat" type="button" data-remove-seat="${mpEsc(s.pid)}">Free seat</button>` : ""}</li>`).join("");
   document.querySelectorAll("[data-remove-seat]").forEach(b=> b.addEventListener("click", ()=> mpFreeSeat(b.dataset.removeSeat)));
 }
 function mpFreeSeat(pid){
@@ -4545,6 +5100,7 @@ function mpSeatsForHand(){
   if(game === "stud" && MS) return MS.state.map(s=>s.seat);
   if(game === "spades" && MSP) return MSP.state.map(s=>s.seat);
   if(game === "farkle" && MF) return MF.state.map(s=>s.seat);
+  if(game === "uno" && MU) return MU.state.map(s=>s.seat);
   if(game === "bj" && MB) return MB.order.map(pid=> MB.seats[pid].seat);
   // no hand on the table: in deal-only mode the host is the House, not a seat
   const disp = (mp.phase === "lobby" || mp.phase === "done") ? mp.hostMode : mp.activeHostMode;
@@ -4552,7 +5108,7 @@ function mpSeatsForHand(){
 }
 function mpBuildSnap(forPid){
   const seats = mpSeatsForHand();
-  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "omaha" && MO) || (game === "stud" && MS) || (game === "bj" && MB);
+  const inHand = (isDrawGame(game) && MD) || (game === "holdem" && MH) || (game === "omaha" && MO) || (game === "stud" && MS) || (game === "bj" && MB) || (game === "uno" && MU);
   const snapSeats = seats.map(seat=>{
     const rseat = mp.roster.find(x=>x.pid === seat.pid);
     const base = { pid: seat.pid, name: seat.name, short: seat.short, theme: seat.theme, stack: seat.stack,
@@ -4622,6 +5178,20 @@ function mpBuildSnap(forPid){
         base.status = farkleStatusLine(st);
       }
     }
+    if(game === "uno" && MU){
+      const st = MU.state.find(s=>s.seat.pid === seat.pid);
+      if(st){
+        /* Uno privacy, same discipline as hole cards: a hand rides
+           ONLY in its owner's copy of the snapshot. Everyone else
+           gets the count (and the public status). The plate score is
+           the seat's SESSION points, which ride the seat itself. */
+        base.score = seat.unoScore || 0;
+        base.cardCount = st.hand.length;
+        base.status = st.hand.length === 1 ? "UNO!" : st.hand.length + " cards";
+        if(seat.pid === forPid) base.cards = st.hand.slice();   // own hand only
+      }
+    }
+    if(game === "uno" && base.score == null) base.score = seat.unoScore || 0;
     if(game === "bj" && MB){
       const st = MB.seats[seat.pid];
       if(st){
@@ -4652,7 +5222,7 @@ function mpBuildSnap(forPid){
     dealer: (game === "bj" && MB) ? { cards: MB.dealer.map((c, i)=> (i === 1 && !MB.reveal) ? null : c), reveal: MB.reveal,
              shown: MB.dealer.length ? (MB.dealer[0].r === 14 ? 11 : MB.dealer[0].r > 10 ? 10 : MB.dealer[0].r) : null,
              total: MB.reveal && MB.dealer.length ? bjValue(MB.dealer) : null } : null,
-    room: mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: !!s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0 })),
+    room: mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: !!s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0 })),
     lastLog: mp._lastLog || null,
     iAmSeated: seats.some(s=>s.pid === forPid),
     spadesVariant,
@@ -4693,6 +5263,23 @@ function mpBuildSnap(forPid){
                hot: MF ? !!MF.hot : false,
                final: MF && MF.final ? { leaderPid: MF.state[MF.final.leaderIdx].seat.pid, leaderScore: MF.final.leaderScore, triggerPid: MF.state[MF.final.triggerIdx].seat.pid } : null,
                scoreBreak: (MF && MF.scoreBreak) ? MF.scoreBreak : null };
+    })(),
+    uno: (()=> {
+      if(game !== "uno") return null;
+      // the local session score of each seat (roster fallback keeps
+      // the scoreboard honest between games too). The draw pile
+      // itself NEVER rides the snapshot — only its count; the
+      // discard top and the active color are public table state.
+      let seatScores;
+      if(MU) seatScores = snapSeats.map(s=> s.score != null ? s.score : 0);
+      else seatScores = snapSeats.map(s=>{ const rs = mp.roster.find(x=>x.pid === s.pid); return rs ? (rs.unoScore || 0) : 0; });
+      return { top: MU ? unoTop(MU.core) : null,
+               activeColor: MU ? MU.core.color : null,
+               dir: MU ? MU.core.dir : 1,
+               drawCount: MU ? MU.core.draw.length : 0,
+               turnPid: MU && mp.phase === "play" ? MU.state[MU.turnIdx].seat.pid : null,
+               seatScores,
+               scoreBreak: (MU && MU.scoreBreak) ? MU.scoreBreak : null };
     })(),
   };
 }
@@ -4739,7 +5326,7 @@ function mpRenderSnap(snap, isHost){
   else if(mine === -1){ /* spectator: keep table order, bottom seat is just a seat */ }
   const posFor = (seatIdx)=>{
     if(snap.game === "bj") return ["pos-you", "pos-left", "pos-right", "pos-top"][order.indexOf(seatIdx)] || "pos-top";
-    if(snap.game === "spades" || snap.game === "farkle") return (snap.house && snap.seats.length < 4 ? MP_HOUSE_POS : MP_POS)[order.indexOf(seatIdx)] || "pos-top";
+    if(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno") return (snap.house && snap.seats.length < 4 ? MP_HOUSE_POS : MP_POS)[order.indexOf(seatIdx)] || "pos-top";
     if(snap.house) return MP_HOUSE_POS[order.indexOf(seatIdx)] || "pos-right";
     return MP_POS[order.indexOf(seatIdx)] || "pos-top";
   };
@@ -4748,7 +5335,7 @@ function mpRenderSnap(snap, isHost){
     // The House seat: dealer only — no cards, no stack, never a player.
     // In 4P Spades all four player spots are taken, so the House label
     // tucks into the top-right corner instead of the top spot.
-    html += `<div class="seat ${(snap.game === "spades" || snap.game === "farkle") && snap.seats.length >= 4 ? "pos-housecorner" : "pos-dealer"}" id="seat-house"><div class="seat-inner">
+    html += `<div class="seat ${(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno") && snap.seats.length >= 4 ? "pos-housecorner" : "pos-dealer"}" id="seat-house"><div class="seat-inner">
       <div class="cards" id="cards-mp-house"></div>
       <div><span class="plate">${chipSVG(snap.house.theme, 26, "H")}
         <span class="nm">The House — dealer</span><span class="aibadge">HOUSE</span>
@@ -4776,16 +5363,22 @@ function mpRenderSnap(snap, isHost){
       if(s.cards) cardsHtml = s.cards.map((c, ci)=> cardHTML(c, { cls: studIsDownIdx(ci) ? "holecard" : "", hole: studIsDownIdx(ci) })).join("");
       else { let ui = 0; const ups = s.upCards || []; for(let k = 0; k < s.cardCount; k++) cardsHtml += studIsDownIdx(k) ? cardHTML(null, { back: true }) : cardHTML(ups[ui++], {}); }
     }
+    else if(snap.game === "uno"){
+      /* Uno: my own hand face-up (sorted, Uno cards), everyone else
+         as fanned backs — the snapshot only ever carries my cards. */
+      if(s.cards) cardsHtml = unoSortHand(s.cards).map(c=> unoCardHTML(c, {})).join("");
+      else for(let k = 0; k < s.cardCount; k++) cardsHtml += unoCardHTML(null, { back: true });
+    }
     else if(s.cards) cardsHtml = (snap.game === "spades" ? spadesSortHand(s.cards) : s.cards).map(c=>cardHTML(c, {})).join("");
     else for(let k = 0; k < s.cardCount; k++) cardsHtml += cardHTML(null, { back: true });
     let status = s.status || "";
     if(snap.game === "bj" && s.handTotal && !status) status = (s.handTotal.soft ? "Soft " : "") + s.handTotal.total;
     html += `<div class="seat ${pos}${s.folded || s.bust ? " folded" : ""}" id="seat-${s.pid}">
       <div class="seat-inner">
-        <div class="cards ${isMine ? "you-cards" : ""}${snap.game === "stud" ? " stud-cards" : ""}${snap.game === "spades" ? " spades-cards" + (s.cards ? "" : " fan") : ""}" id="cards-mp-${s.pid}">${cardsHtml}</div>
+        <div class="cards ${isMine ? "you-cards" : ""}${snap.game === "stud" ? " stud-cards" : ""}${snap.game === "spades" ? " spades-cards" + (s.cards ? "" : " fan") : ""}${snap.game === "uno" ? " uno-cards fan" : ""}" id="cards-mp-${s.pid}">${cardsHtml}</div>
         <div><span class="plate">${chipSVG(s.theme, 26, mpEsc(s.short || ""))}
           <span class="nm">${mpEsc(s.name)}${isMine ? " (you)" : ""}${s.kind === "ai" ? '<span class="aibadge">AI</span>' : ""}${s.away ? '<span class="aibadge">AWAY</span>' : ""}${s.ready && !s.away ? '<span class="aibadge readybadge">READY</span>' : ""}</span>
-          <span class="stk">${(snap.game === "spades" || snap.game === "farkle") ? "Score " + fmt(s.score != null ? s.score : 0) : fmt(s.stack) + " chips"}</span>
+          <span class="stk">${(snap.game === "spades" || snap.game === "farkle" || snap.game === "uno") ? "Score " + fmt(s.score != null ? s.score : 0) : fmt(s.stack) + " chips"}</span>
           ${s.bet > 0 ? `<span class="betbadge">${fmt(s.bet)}</span>` : ""}
         </span><div class="status">${status}</div></div>
       </div></div>`;
@@ -4821,6 +5414,19 @@ function mpRenderSnap(snap, isHost){
     if(fk.scoreBreak) paintScorePanel(fk.scoreBreak);
     else paintScorePanel(null);
   }
+  if(snap.game === "uno" && snap.uno){
+    // the center of the table is the two piles: the draw pile (count
+    // only), the discard top, the direction and the active color;
+    // the game-over breakdown rides the shared score panel
+    const u = snap.uno;
+    const turnSeat = u.turnPid ? snap.seats.find(s=>s.pid === u.turnPid) : null;
+    $("board").innerHTML = unoCenterHTML({
+      top: u.top, activeColor: u.activeColor, dir: u.dir, drawCount: u.drawCount,
+      turnName: turnSeat ? mpEsc(turnSeat.name) : ""
+    });
+    if(u.scoreBreak) paintScorePanel(u.scoreBreak);
+    else paintScorePanel(null);
+  }
   if(snap.center) setCenter(snap.center[0], snap.center[1]);
   paintWinBanner(snap.winBanner || null);
   const activeSeat = (snap.phase !== "done" && snap.activePid) ? snap.seats.find(s=>s.pid === snap.activePid) : null;
@@ -4829,7 +5435,7 @@ function mpRenderSnap(snap, isHost){
   else if(snap.phase === "done") $("tb-who").textContent = snap.center ? snap.center[0] : "Hand over";   // showdown/result state — never a stale "X's turn"
   if(snap.lastLog && snap.lastLog.id !== mp.lastLogId){ mp.lastLogId = snap.lastLog.id; if(!isHost) log(snap.lastLog.msg, snap.lastLog.win); }
   if(isHost) mpRenderHostControls(); else mpRenderGuestIdle(snap);
-  mpRenderRoomList(snap.room.concat(snap.seats.filter(s=>s.kind === "ai" && !snap.room.some(r=>r.name === s.name)).map(s=>({ name: s.name, kind: "ai", theme: s.theme, short: s.short, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.score != null ? s.score : (s.spadesScore || 0), farkleScore: s.score != null ? s.score : (s.farkleScore || 0) }))));
+  mpRenderRoomList(snap.room.concat(snap.seats.filter(s=>s.kind === "ai" && !snap.room.some(r=>r.name === s.name)).map(s=>({ name: s.name, kind: "ai", theme: s.theme, short: s.short, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.score != null ? s.score : (s.spadesScore || 0), farkleScore: s.score != null ? s.score : (s.farkleScore || 0), unoScore: s.score != null ? s.score : (s.unoScore || 0) }))));
   // my stack in the top bar follows the room stack — except the House,
   // which deals only and holds no stack at all
   if(snap.house && snap.house.pid === mp.myPid){ $("bank-amt").textContent = "—"; }
@@ -4843,6 +5449,11 @@ function mpRenderSnap(snap, isHost){
     if(myIdx >= 0) $("bank-amt").textContent = fmt(snap.farkle.seatScores[myIdx] || 0);
     else { const me = mp.roster.find(s=>s.pid === mp.myPid); if(me) $("bank-amt").textContent = fmt(me.farkleScore || 0); }
   }
+  else if(snap.game === "uno" && snap.uno){
+    const myIdx = snap.seats.findIndex(s=>s.pid === mp.myPid);
+    if(myIdx >= 0) $("bank-amt").textContent = fmt(snap.uno.seatScores[myIdx] || 0);
+    else { const me = mp.roster.find(s=>s.pid === mp.myPid); if(me) $("bank-amt").textContent = fmt(me.unoScore || 0); }
+  }
   else {
     const mySeat = snap.seats.find(s=>s.pid === mp.myPid) || mp.roster.find(s=>s.pid === mp.myPid);
     if(mySeat){ $("bank-amt").textContent = fmt(mySeat.stack); }
@@ -4852,6 +5463,7 @@ function mpRenderSnap(snap, isHost){
   if(mp.drawUI) mpPaintDrawCards();
   if(mp.spadesUI) mpPaintSpadesCards();
   if(mp.farkleUI) mpPaintFarkleDice();
+  if(mp.unoUI) mpPaintUnoCards();
   mpOffTurnCoach(snap, isHost);
   reapplyReactions();   // the rebuild above wiped the seat DOM — repaint any reaction floats still inside their TTL
 }
@@ -4895,6 +5507,12 @@ function mpReadyGate(){
     // passes on the present players' readiness alone.
     return { ok: true, players, readyCount, needCount: present.length, awayNames, reason: "ok" };
   }
+  if(!ok && game === "uno" && reason === "players" && aiFillOn() && players >= 1 && present.length > 0 && readyCount === present.length){
+    // Uno plays with 2–4, same as Farkle: one present player plus
+    // AI fill is a legal table, so the gate passes on the present
+    // players' readiness alone.
+    return { ok: true, players, readyCount, needCount: present.length, awayNames, reason: "ok" };
+  }
   return { ok, players, readyCount, needCount: present.length, awayNames, reason };
 }
 function mpAwayLabel(awayNames){
@@ -4930,7 +5548,7 @@ function mpAutoDealCancel(sync){
 function mpHostDealNow(){
   mpAutoDealCancel(false);
   mp.gateOkSince = 0;
-  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else if(game === "stud") mpStartStud(); else if(game === "spades") mpStartSpades(); else if(game === "farkle") mpStartFarkle(); else mpStartBJ();
+  if(isDrawGame(game)) mpStartDraw(); else if(game === "holdem") mpStartHoldem(); else if(game === "omaha") mpStartOmaha(); else if(game === "stud") mpStartStud(); else if(game === "spades") mpStartSpades(); else if(game === "farkle") mpStartFarkle(); else if(game === "uno") mpStartUno(); else mpStartBJ();
 }function mpAutoDealTick(){
   if(mp.role !== "host"){ mp.gateOkSince = 0; return; }
   if(mp.phase !== "lobby" && mp.phase !== "done"){ mp.gateOkSince = 0; mpAutoDealCancel(true); return; }
@@ -4963,7 +5581,7 @@ function mpRenderHostControls(){
     // the label ALWAYS matches the gate's verdict + reason (incl. AWAY)
     const dealLabel = cdSec != null
       ? `Dealing in ${cdSec}… — tap to deal now`
-      : gate.ok ? `${other}${(isDrawGame(game) || game === "stud") ? " — ante 10" : (game === "holdem" || game === "omaha") ? " — blinds 5/10" : game === "farkle" ? " — first to " + fmt(farkleTarget) : ""}`
+      : gate.ok ? `${other}${(isDrawGame(game) || game === "stud") ? " — ante 10" : (game === "holdem" || game === "omaha") ? " — blinds 5/10" : game === "farkle" ? " — first to " + fmt(farkleTarget) : game === "uno" ? " — 7 cards each" : ""}`
       : gate.reason === "away" ? mpAwayLabel(gate.awayNames)
       : gate.reason === "players" ? `Waiting for players — ${gate.players} of ${gate.needTotal || 2} seated`
       : `Waiting for ready — ${gate.readyCount} of ${gate.needCount} ready`;
@@ -5020,6 +5638,11 @@ function mpDefaultAction(kind, ctx){
     if(ctx && ctx.step === "decide") return { type: "decide", sel: (ctx.defSel || []).slice(), action: ctx.defAction || "roll" };
     return { type: "roll" };
   }
+  if(kind === "unoturn"){
+    // the host computed the AI-heuristic move for this exact spot
+    // (ctx.defAction) — an AWAY seat or a timeout plays on with it
+    return (ctx && ctx.defAction) || { type: "draw" };
+  }
   return { type: "stand" };
 }
 async function mpPrompt(seat, kind, ctx){
@@ -5042,6 +5665,7 @@ async function mpPrompt(seat, kind, ctx){
         else if(kind === "spadesbid") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — auto-bid ${def.bid} (their counted tricks).`);
         else if(kind === "spadesplay") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — played their lowest legal card.`);
         else if(kind === "farkleturn") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — the table is playing their Farkle turns for them.`);
+        else if(kind === "unoturn") mp._lastLog = mpLogBoth(`<b>${seat.name}</b> is away — the table is playing their Uno turns for them.`);
         mpSync();
       } else {
         mpSendTo(seat.pid, { t: "timeout-note", promptId, text: turnTimeoutText(kind, ctx) });
@@ -5059,13 +5683,13 @@ function mpLocalPrompt(kind, ctx){
     showTurnTimer(ms, kind === "draw" ? "Your draw" : "Your turn");
     const timer = setTimeout(()=>{
       if(settled) return; settled = true;
-      hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null;
+      hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null;
       showNotice(turnTimeoutText(kind, ctx));
       resolve(mpDefaultAction(kind, ctx));
     }, ms);
     mpBuildPromptUI(kind, ctx, (action)=>{
       if(settled) return; settled = true;
-      clearTimeout(timer); hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null;
+      clearTimeout(timer); hideTurnTimer(); setControls(""); mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null;
       resolve(action || mpDefaultAction(kind, ctx));
     });
   });
@@ -5113,6 +5737,7 @@ function gameIntroTip(g){
   if(g === "stud") return "Stud in one breath: <b>two cards down, one up</b> to start, then one more card a street — three more up, and the last one down. Best five of your seven wins. Half the table's cards sit face-up for everyone: <b>what you can see is what nobody can hold</b> — the coach counts the visible cards with you.";
   if(g === "spades") return "Spades in one breath: <b>bid</b> how many tricks you'll take, then play them out — <b>follow suit</b> if you can, and remember <b>spades are trump</b> but can't be led until they're broken. Make your number for <b>10 points a trick</b> plus a point a bag; miss it and you're set. <b>Nil</b> — promising to take nothing at all — is worth ±100. The coach counts your hand with you.";
   if(g === "farkle") return "Farkle in one breath: roll all six and set aside the dice that score — <b>1s are 100, 5s are 50</b>, three of a kind pays face × 100 (three 1s = 1,000), and the six-dice combos pay big: a <b>straight 1–6</b> or <b>three pairs</b> pays <b>1,500</b>, <b>two triplets</b> <b>2,500</b>, four of a kind <b>1,000</b>, six of a kind <b>3,000</b>. Then <b>bank</b> the turn total or roll what's left and press on. A roll with <b>nothing</b> scoring is a <b>farkle</b>: the unbanked points vanish. Score with all six and they're <b>hot</b> — they all come back and the points ride along. Your first bank needs <b>500</b>, and three farkles in a row cost <b>1,000</b>.";
+  if(g === "uno") return "Uno in one breath: <b>match the top card by color, number, or symbol</b> — or drop a <b>Wild</b> and name the color. <b>Skip</b> and <b>Reverse</b> bend the turn order; <b>Draw Two</b> and the <b>Wild Draw Four</b> feed the next player cards and cost them their turn. Nothing to play? Draw <b>one</b> — if it plays, you may drop it right away. Down to one card, the table calls <b>UNO!</b> for you. Go out and you score everything left in everyone else's hands: numbers at face value, actions 20, Wilds 50.";
   if(g === "bj") return "Blackjack in one sentence: <b>get closer to 21 than the dealer without going over</b>. The dealer’s face-up card is your crystal ball — the coach reads it for you on every decision while Apprentice mode is on.";
   const V = DRAW_VARIANTS[g] || DRAW_VARIANTS.draw;
   return V.tip;
@@ -5151,6 +5776,25 @@ function mpOffTurnCoach(snap, isHost){
     return;
   }
   if(!mySeat || !mySeat.cards || !mySeat.cards.length) return;
+  if(snap.game === "uno"){
+    /* Uno off-turn read: my own hand from my snapshot copy + the
+       PUBLIC pile (top card, active color) and hand counts. Keyed
+       on hand + pile + turn so it speaks as the game develops. */
+    if(!snap.uno || !snap.uno.top) return;
+    const ukey = "uno|" + mySeat.cards.map(unoCardKey).join(",") + "|" + unoCardKey(snap.uno.top) + "|" + snap.uno.activeColor + "|" + snap.uno.dir + "|" + (snap.activePid || "") + "|" + snap.seats.map(s=> s.cardCount).join(",");
+    if(mp._coachKey === ukey) return;
+    mp._coachKey = ukey;
+    const myIdx = snap.seats.findIndex(s=> s.pid === mp.myPid);
+    const nSeats = snap.seats.length;
+    const nextSeat = snap.seats[(((myIdx + snap.uno.dir) % nSeats) + nSeats) % nSeats];
+    const playable = mySeat.cards.filter(c=> unoPlayable(c, snap.uno.top, snap.uno.activeColor));
+    const L = [];
+    L.push(`The pile shows <b>${unoCardName(snap.uno.top)}</b> — active color <b>${UNO_COLOR_NAMES[snap.uno.activeColor]}</b>. You hold <b>${mySeat.cards.length}</b> card${mySeat.cards.length === 1 ? "" : "s"}, <b>${playable.length}</b> of them playable right now${playable.length ? ": " + playable.slice(0, 4).map(c=> `<b>${unoCardName(c)}</b>`).join(", ") + (playable.length > 4 ? ", …" : "") : " — you'd draw"}.`);
+    if(nextSeat && nextSeat.cardCount === 1) L.push(`Careful — <b>${mpEsc(nextSeat.name)}</b>, who plays after you, is on <b>UNO</b>. If you hold a Draw Two, a Wild Draw Four, or a Skip, your turn is the time to use it.`);
+    if(mySeat.cards.length === 1) L.push(`You're on <b>UNO</b> yourself — one playable card on your turn and you're out.`);
+    setTip(L.join("<br>"));
+    return;
+  }
   if(snap.game === "spades"){
     /* Spades off-turn read: my own hand + the PUBLIC trick and bids.
        Keyed on hand + bid + tricks + the trick itself, so it speaks
@@ -5367,6 +6011,74 @@ function mpBuildPromptUI(kind, ctx, respond){
     wireBtn("mp-fk-bank", ()=>{ const ui = mp.farkleUI; if(!ui) return; mp.farkleUI = null; respond({ type: "decide", sel: [...ui.sel], action: "bank" }); });
     mpPaintFarkleDice();
   }
+  if(kind === "unoturn"){
+    if(mode === "apprentice" && tipsOn) setTip(unoCoachHTML({ hand: myCards, top: ctx.top, activeColor: ctx.activeColor,
+      nextName: ctx.nextName ? mpEsc(ctx.nextName) : null, nextCount: ctx.nextCount, step: ctx.step, drawn: ctx.drawn || null }));
+    mp.unoUI = { step: ctx.step, cards: myCards, top: ctx.top, activeColor: ctx.activeColor,
+                 drawnKey: ctx.drawn ? unoCardKey(ctx.drawn) : null, pendingWild: null, respond };
+    paintUnoPromptControls();
+    mpPaintUnoCards();
+  }
+}
+/* The Uno prompt's control row, re-rendered as its state changes
+   (a tapped Wild swaps it for the color picker; Back swaps back). */
+function paintUnoPromptControls(){
+  const ui = mp.unoUI; if(!ui) return;
+  if(ui.pendingWild){
+    setControls(`<span class="ctl-note" style="font-size:14.5px"><b>${ui.pendingWild === "wild:wild4" ? "Wild Draw Four" : "Wild"} — pick the new color:</b></span>
+      ${UNO_COLORS.map(c=> `<button class="btn uno-colorbtn ${c}" data-unocolor="${c}">${UNO_COLOR_NAMES[c]}</button>`).join("")}
+      <button class="btn" id="mp-uno-back">← Different card</button>`);
+    document.querySelectorAll("[data-unocolor]").forEach(b=> b.addEventListener("click", ()=>{
+      clickSound(600);
+      const u = mp.unoUI; if(!u) return;
+      const key = u.pendingWild, step = u.step, col = b.dataset.unocolor;
+      mp.unoUI = null;
+      u.respond(step === "drawn" ? { type: "playdrawn", color: col } : { type: "play", key, color: col });
+    }));
+    wireBtn("mp-uno-back", ()=>{ const u = mp.unoUI; if(!u) return; u.pendingWild = null; paintUnoPromptControls(); mpPaintUnoCards(); });
+    return;
+  }
+  if(ui.step === "drawn"){
+    setControls(`<span class="ctl-note" style="font-size:14.5px"><b>You drew — tap the glowing card to play it, or keep it.</b></span>
+      <button class="btn" id="mp-uno-pass">Keep it — pass</button>
+      <span class="ctl-note">Live Uno — your cards and coach show only on your screen.</span>`);
+    wireBtn("mp-uno-pass", ()=>{ const u = mp.unoUI; if(!u) return; mp.unoUI = null; u.respond({ type: "pass" }); });
+    return;
+  }
+  setControls(`<span class="ctl-note" style="font-size:14.5px"><b>Your turn — tap a glowing card to play it.</b></span>
+    <button class="btn primary" id="mp-uno-draw">Draw a card</button>
+    <span class="ctl-note">Live Uno — match the <b>${unoCardName(ui.top)}</b> by color, number, or symbol. Nothing you want to play? Draw one — if it plays, you may drop it right away.</span>`);
+  wireBtn("mp-uno-draw", ()=>{ const u = mp.unoUI; if(!u) return; mp.unoUI = null; u.respond({ type: "draw" }); });
+}
+/* Same outside-the-DOM pattern as the Spades play prompt: an Uno
+   turn prompt lives in mp.unoUI, and this repaint runs after every
+   snapshot re-render while the prompt is open, so the sorted hand,
+   its playable/dim states and its tap handlers survive the seats
+   DOM being rebuilt. Taps answer by card KEY (the two copies of a
+   card are identical, so first-match is the card you tapped). */
+function mpPaintUnoCards(){
+  const ui = mp.unoUI; if(!ui) return;
+  const snap = mp.snap;
+  const mySeat = snap ? snap.seats.find(s=>s.pid === mp.myPid) : null;
+  const myCards = (mySeat && mySeat.cards) || ui.cards || [];
+  if(myCards.length) ui.cards = myCards;
+  const el = $("cards-mp-" + mp.myPid); if(!el) return;
+  el.innerHTML = unoSortHand(myCards).map(c=>{
+    const key = unoCardKey(c);
+    const playable = ui.step === "drawn"
+      ? (key === ui.drawnKey && unoPlayable(c, ui.top, ui.activeColor))
+      : unoPlayable(c, ui.top, ui.activeColor);
+    return unoCardHTML(c, { cls: playable ? "playable" : "dim", attrs: playable ? `data-unoplay="${key}"` : "" });
+  }).join("");
+  el.querySelectorAll("[data-unoplay]").forEach(cardEl=> bindTap(cardEl, ()=>{
+    if(mp.unoUI !== ui) return;
+    const card = (ui.cards || []).find(c=> unoCardKey(c) === cardEl.dataset.unoplay);
+    if(!card) return;
+    if(card.c === "wild"){ ui.pendingWild = unoCardKey(card); paintUnoPromptControls(); return; }
+    const step = ui.step;
+    mp.unoUI = null;
+    ui.respond(step === "drawn" ? { type: "playdrawn", color: null } : { type: "play", key: unoCardKey(card), color: null });
+  }));
 }
 /* Same outside-the-DOM pattern as mpPaintDrawCards: a Spades play
    prompt lives in mp.spadesUI, and this repaint runs after every
@@ -5449,6 +6161,11 @@ function mpPaintFarkleDice(){
   }
 }
 function mpAIAction(seat, kind, ctx){
+  if(kind === "unoturn"){
+    if(!MU) return { type: "draw" };
+    const idx = MU.state.findIndex(s=>s.seat.pid === seat.pid);
+    return unoHostDefault(idx, ctx.step, ctx.drawn || null);
+  }
   if(kind === "farkleturn"){
     if(ctx.step === "decide"){
       const best = farkleBestSelection(ctx.roll || []);
@@ -5554,12 +6271,12 @@ function mpGuestOnData(msg){
     if(mp.guestPromptTimer) clearTimeout(mp.guestPromptTimer);
     mp.guestPromptTimer = setTimeout(()=>{
       if(mp.guestPrompt !== msg.promptId) return;
-      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; hideTurnTimer();
+      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; hideTurnTimer();
       setControls(`<span class="ctl-note">Time ran out — the host played the safe move for you.</span>`);
       showNotice(turnTimeoutText(msg.kind, msg.ctx));
     }, ms + 2500);
     mpBuildPromptUI(msg.kind, msg.ctx, (action)=>{
-      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null;
+      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null;
       if(mp.guestPromptTimer){ clearTimeout(mp.guestPromptTimer); mp.guestPromptTimer = null; }
       hideTurnTimer();
       mpToHost({ t: "action", promptId: msg.promptId, action });
@@ -5568,7 +6285,7 @@ function mpGuestOnData(msg){
   }
   if(msg.t === "timeout-note"){
     if(mp.guestPrompt === msg.promptId){
-      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null;
+      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null;
       if(mp.guestPromptTimer){ clearTimeout(mp.guestPromptTimer); mp.guestPromptTimer = null; }
       hideTurnTimer();
       setControls(`<span class="ctl-note">Time ran out — the host played the safe move for you.</span>`);
@@ -5641,7 +6358,7 @@ function mpResetTableMP(){
   hideTurnTimer();
   mp.cdEndsAt = 0; mp.cdShownSec = null; mp.gateOkSince = 0;
   mp.winBanner = null; paintWinBanner(null); mpResetReady();
-  MD = null; MB = null; MH = null; MO = null; MS = null; MSP = null; MF = null; mp.phase = "lobby"; mp.activeSeatPid = null;
+  MD = null; MB = null; MH = null; MO = null; MS = null; MSP = null; MF = null; MU = null; mp.phase = "lobby"; mp.activeSeatPid = null;
   paintScorePanel(null);
   const info = game === "holdem"
     ? ["Texas Hold'em — live room", "Blinds 5/10 · two hole cards · flop, turn, river · best 5 of 7 · the host deals."]
@@ -5655,6 +6372,8 @@ function mpResetTableMP(){
       : ["Spades — 3P Cutthroat · live room", "Everyone for themselves · 17 cards each (the 2♣ sits out) · spades are trump · first to 300 · the host deals."]
     : game === "farkle"
     ? ["Farkle — live room", "Six dice · 1s are 100, 5s are 50, three of a kind and up · a straight 1–6 pays 1,500 · 500 to get on the board · three farkles running cost 1,000 · first to " + fmt(farkleTarget) + ", then one final round · the host deals."]
+    : game === "uno"
+    ? ["Uno — live room", "108 cards · 7 each · match color, number, or symbol · Skip, Reverse, Draw Two and Wilds bite · first to go out scores the table · the host deals."]
     : isDrawGame(game)
     ? [drawVariant().name + " — live room", drawVariant().wilds ? "Jokers & deuces wild · two draws — up to 3, then up to 2 · the host deals." : "No wilds · one draw — up to 5 · the host deals."]
     : ["Blackjack — live room", "Dealer stands on 17 · blackjack pays 3:2 · the host deals."];
@@ -5668,7 +6387,7 @@ function mpResetTableMP(){
   // Spades is the exception: a 4P partnership game NEEDS its 4 players
   // even with the House dealing (the dealer renders in its own spot),
   // so Spades always seats its full count.
-  const capSeats = (game === "spades" || game === "farkle") ? maxSeats : (mp.hostMode === "deal" ? Math.min(maxSeats, 3) : maxSeats);   // the House dealer seat takes the top spot, so a deal-only table seats at most 3 players (Blackjack already caps at 3) — Spades and Farkle keep their full count: their tables seat 4 with the House in its own spot
+  const capSeats = (game === "spades" || game === "farkle" || game === "uno") ? maxSeats : (mp.hostMode === "deal" ? Math.min(maxSeats, 3) : maxSeats);   // the House dealer seat takes the top spot, so a deal-only table seats at most 3 players (Blackjack already caps at 3) — Spades, Farkle and Uno keep their full count: their tables seat 4 with the House in its own spot
   const humans = mp.roster.filter(s=>!s.away && !(mp.hostMode === "deal" && s.pid === mp.myPid)).slice(0, capSeats);
   const seats = humans.map(s=> Object.assign({}, s));
   if(aiFillOn()){
@@ -5680,7 +6399,7 @@ function mpResetTableMP(){
       // AI seat starts at 1,000
       const stack = (mp.aiStacks[def.name] != null) ? mp.aiStacks[def.name] : 1000;
       const ast = mp.aiStats[def.name] || { hands: 0, chips: 0 };
-      seats.push({ pid: "ai-" + def.name.toLowerCase(), name: def.name, short: def.name[0], theme: parseChipPrompt(def.themeText, def.name), stack, kind: "ai", handsWon: ast.hands, chipsWon: ast.chips, spadesScore: ast.spades || 0, farkleScore: ast.farkle || 0 });
+      seats.push({ pid: "ai-" + def.name.toLowerCase(), name: def.name, short: def.name[0], theme: parseChipPrompt(def.themeText, def.name), stack, kind: "ai", handsWon: ast.hands, chipsWon: ast.chips, spadesScore: ast.spades || 0, farkleScore: ast.farkle || 0, unoScore: ast.uno || 0 });
     }
   }
   return seats;
@@ -5691,9 +6410,9 @@ function mpSeatStackSync(){
   // seats (they keep both across hands, like a seated player does)
   const seats = mpSeatsForHand();
   seats.forEach(seat=>{
-    if(seat.kind === "ai"){ mp.aiStacks[seat.name] = seat.stack; mp.aiStats[seat.name] = { hands: seat.handsWon || 0, chips: seat.chipsWon || 0, spades: seat.spadesScore || 0, farkle: seat.farkleScore || 0 }; return; }
+    if(seat.kind === "ai"){ mp.aiStacks[seat.name] = seat.stack; mp.aiStats[seat.name] = { hands: seat.handsWon || 0, chips: seat.chipsWon || 0, spades: seat.spadesScore || 0, farkle: seat.farkleScore || 0, uno: seat.unoScore || 0 }; return; }
     const r = mp.roster.find(x=>x.pid === seat.pid);
-    if(r){ r.stack = seat.stack; r.handsWon = seat.handsWon || 0; r.chipsWon = seat.chipsWon || 0; if(game === "spades") r.spadesScore = seat.spadesScore || 0; if(game === "farkle") r.farkleScore = seat.farkleScore || 0; }
+    if(r){ r.stack = seat.stack; r.handsWon = seat.handsWon || 0; r.chipsWon = seat.chipsWon || 0; if(game === "spades") r.spadesScore = seat.spadesScore || 0; if(game === "farkle") r.farkleScore = seat.farkleScore || 0; if(game === "uno") r.unoScore = seat.unoScore || 0; }
   });
 }
 
@@ -6464,6 +7183,172 @@ function mpFarkleFinish(){
   $("tb-what").textContent = "Game over — the host starts the next game when everyone's ready.";
   mpSeatStackSync();
   MF.phase = "done";
+  mp.phase = "done"; mp.activeSeatPid = null;
+  mpResetReady();
+  mpSync();
+}
+
+/* ----- Uno (host authority) -----
+   Points across games, not chips: MU holds ONE whole game per
+   Deal (hands and piles live and die inside it); session points
+   ride the seats as unoScore and mpSeatStackSync writes them back
+   to the roster / AI stats like Spades and Farkle. Turns are
+   prompts ("unoturn", step "play" then step "drawn" after a draw);
+   every guest answer is re-validated host-side (the card must be
+   in hand AND playable; a Wild's color must be a real color),
+   otherwise the prompt's default — the AI heuristic for that exact
+   spot — stands in. AWAY seats play on with that same default.
+   Privacy: a hand rides only in its owner's snapshot; the draw
+   pile never leaves the host at all (only its count does), and a
+   drawn card is named only to the player who drew it (their
+   prompt) — the table log never reveals it. */
+let unoMpStarter = 0;
+function unoScoreLineMP(){
+  return MU.state.map(s=> `${mpEsc(s.seat.name)} ${s.hand.length}`).join(" · ") + " — cards in hand";
+}
+function unoViewFor(idx){
+  const nextIdx = unoAdvance(MU.core, idx, 1);
+  return { hand: MU.state[idx].hand, top: unoTop(MU.core), activeColor: MU.core.color, nextCount: MU.state[nextIdx].hand.length };
+}
+function unoHostDefault(idx, step, drawn){
+  const st = MU.state[idx];
+  if(step === "drawn"){
+    const d = unoAIDrawnPlay(st.hand, drawn, unoTop(MU.core), MU.core.color);
+    return d.play ? { type: "playdrawn", color: d.color } : { type: "pass" };
+  }
+  const pick = unoAIPick(unoViewFor(idx));
+  if(pick.type === "play") return { type: "play", key: unoCardKey(st.hand[pick.idx]), color: pick.color };
+  return { type: "draw" };
+}
+function unoMpApplyAndLog(idx, handIdx, colorChoice){
+  const st = MU.state[idx];
+  const ev = unoApplyPlay(MU.core, idx, handIdx, colorChoice);
+  let line = `<b>${mpEsc(st.seat.name)}</b> played the <b>${unoCardName(ev.card)}</b>.`;
+  if(ev.card.c === "wild") line += ` Color is now <b>${UNO_COLOR_NAMES[MU.core.color]}</b>.`;
+  if(ev.reversed) line += ` Play <b>reverses</b> — ${MU.core.dir === 1 ? "clockwise" : "counter-clockwise"} now.`;
+  if(ev.penalty) line += ` <b>${mpEsc(MU.state[ev.penalty.idx].seat.name)}</b> draws ${ev.penalty.cards.length} and loses their turn.`;
+  else if(ev.skippedIdx != null) line += ` <b>${mpEsc(MU.state[ev.skippedIdx].seat.name)}</b> is skipped.`;
+  mp._lastLog = mpLogBoth(line);
+  if(ev.reshuffled) mp._lastLog = mpLogBoth("The discard pile was shuffled into a new draw pile.");
+  if(ev.unoCalled){ mp._lastLog = mpLogBoth(`<b>${mpEsc(st.seat.name)}</b> — <b>UNO!</b> One card left.`, true); mp.winBanner = `UNO! ${st.seat.name} has one card left`; }
+  if(ev.winner) MU.winner = idx;
+  MU.turnIdx = ev.nextIdx;
+  setCenter("Uno", unoScoreLineMP());
+}
+async function unoMpTakeTurn(seq, idx){
+  const st = MU.state[idx];
+  MU.turnIdx = idx;
+  mp.activeSeatPid = st.seat.pid;
+  if(mp.winBanner && /^UNO!/.test(mp.winBanner)) mp.winBanner = null;   // the UNO! flash lasts one turn
+  $("tb-what").textContent = st.seat.pid === mp.myPid ? "Your turn — match the pile." : `${st.seat.name} to play.`;
+  setCenter("Uno", unoScoreLineMP());
+  mpSync();
+  const nextIdx = unoAdvance(MU.core, idx, 1);
+  const ctxBase = { ms: UNO_MS, top: unoTop(MU.core), activeColor: MU.core.color, dir: MU.core.dir,
+    nextName: MU.state[nextIdx].seat.name, nextCount: MU.state[nextIdx].hand.length };
+  const act = await mpPrompt(st.seat, "unoturn", Object.assign({}, ctxBase, { step: "play", defAction: unoHostDefault(idx, "play", null) }));
+  if(seq !== mp.seq || !MU) return false;
+  if(act && act.type === "play"){
+    const hi = st.hand.findIndex(c=> unoCardKey(c) === act.key);
+    if(hi >= 0 && unoPlayable(st.hand[hi], unoTop(MU.core), MU.core.color)){
+      unoMpApplyAndLog(idx, hi, act.color);
+      mpSync();
+      await sleep(650);
+      return seq === mp.seq && !!MU;
+    }
+    // an illegal answer falls back to the heuristic default
+    const def = unoHostDefault(idx, "play", null);
+    if(def.type === "play"){
+      const hi2 = st.hand.findIndex(c=> unoCardKey(c) === def.key);
+      if(hi2 >= 0){ unoMpApplyAndLog(idx, hi2, def.color); mpSync(); await sleep(650); return seq === mp.seq && !!MU; }
+    }
+  }
+  // draw one card (the house rule: play it right away if it plays)
+  const got = unoDrawCards(MU.core, idx, 1);
+  if(got.reshuffled) mp._lastLog = mpLogBoth("The discard pile was shuffled into a new draw pile.");
+  const drawn = got.drawn[0];
+  mp._lastLog = mpLogBoth(`<b>${mpEsc(st.seat.name)}</b> draws a card.`);
+  mpSync();
+  if(!drawn){ MU.turnIdx = unoAdvance(MU.core, idx, 1); return seq === mp.seq && !!MU; }
+  if(!unoPlayable(drawn, unoTop(MU.core), MU.core.color)){
+    await sleep(900);
+    if(seq !== mp.seq || !MU) return false;
+    mp._lastLog = mpLogBoth(`<b>${mpEsc(st.seat.name)}</b>'s drawn card doesn't play — their turn ends.`);
+    MU.turnIdx = unoAdvance(MU.core, idx, 1);
+    mpSync();
+    return seq === mp.seq && !!MU;
+  }
+  await sleep(350);
+  if(seq !== mp.seq || !MU) return false;
+  const act2 = await mpPrompt(st.seat, "unoturn", Object.assign({}, ctxBase, { step: "drawn", drawn, defAction: unoHostDefault(idx, "drawn", drawn) }));
+  if(seq !== mp.seq || !MU) return false;
+  if(act2 && act2.type === "playdrawn"){
+    const hi = st.hand.findIndex(c=> unoCardKey(c) === unoCardKey(drawn));
+    if(hi >= 0){ unoMpApplyAndLog(idx, hi, act2.color); mpSync(); await sleep(650); return seq === mp.seq && !!MU; }
+  }
+  mp._lastLog = mpLogBoth(`<b>${mpEsc(st.seat.name)}</b> keeps the drawn card and passes.`);
+  MU.turnIdx = unoAdvance(MU.core, idx, 1);
+  mpSync();
+  return seq === mp.seq && !!MU;
+}
+async function mpStartUno(){
+  if(!mpReadyGate().ok){ mp._lastLog = mpLogBoth("Deal held — every seated player has to tap <b>I’m Ready</b> first."); mpSync(); return; }
+  const seq = ++mp.seq; handSeq++;
+  mp.winBanner = null;
+  mp.activeHostMode = mp.hostMode;   // the mode is locked in for this game
+  const seats = mpTableSeats(4);
+  if(seats.length < 2){
+    mp.phase = "lobby";
+    mp._lastLog = mpLogBoth("Uno needs <b>2–4 players</b> — invite a friend, or turn <b>Fill empty seats with AI</b> on.");
+    mpSync();
+    return;
+  }
+  const deck = buildUnoDeck();
+  const state = seats.map(seat=> ({ seat, hand: [] }));
+  for(let k = 0; k < 7; k++) for(const st of state) st.hand.push(deck.pop());
+  // the discard starts on a number card: action/wild flips are
+  // buried at the bottom of the draw pile and the next card flips
+  let starterCard = deck.pop();
+  let guard = 0;
+  while(starterCard && typeof starterCard.v !== "number" && guard++ < 120){ deck.unshift(starterCard); starterCard = deck.pop(); }
+  MU = { state, core: { hands: state.map(s=> s.hand), draw: deck, discard: [starterCard], color: starterCard.c, dir: 1 },
+         turnIdx: 0, winner: -1, scoreBreak: null };
+  mp.phase = "play";
+  const n = state.length;
+  const starterIdx = unoMpStarter % n; unoMpStarter++;
+  MU.turnIdx = starterIdx;
+  mp._lastLog = mpLogBoth(`Live Uno dealt — 7 cards each. The pile starts on the <b>${unoCardName(starterCard)}</b>; <b>${mpEsc(state[starterIdx].seat.name)}</b> plays first.`);
+  setCenter("Uno", unoScoreLineMP());
+  mpSync();
+  while(MU.winner < 0){
+    if(seq !== mp.seq || !MU) return;
+    const okTurn = await unoMpTakeTurn(seq, MU.turnIdx);
+    if(!okTurn || seq !== mp.seq || !MU) return;
+    mpSeatStackSync();
+  }
+  mpUnoFinish();
+}
+function mpUnoFinish(){
+  const wi = MU.winner;
+  const winner = MU.state[wi];
+  let points = 0;
+  const lines = [`<span class="sp-title">Game over — ${mpEsc(winner.seat.name)} went out:</span>`];
+  MU.state.forEach((st, i)=>{
+    if(i === wi) return;
+    const pts = unoHandPoints(st.hand);
+    points += pts;
+    lines.push(`<b>${mpEsc(st.seat.name)}</b> — ${st.hand.length} card${st.hand.length === 1 ? "" : "s"} left, worth <b>${pts}</b>.`);
+  });
+  winner.seat.handsWon = (winner.seat.handsWon || 0) + 1;
+  winner.seat.unoScore = (winner.seat.unoScore || 0) + points;
+  lines.push(`<b>${mpEsc(winner.seat.name)}</b> scores <b>${fmt(points)}</b>. Session: ${MU.state.map(s=> `${mpEsc(s.seat.name)} ${fmt(s.seat.unoScore || 0)}`).join(" · ")}.`);
+  MU.scoreBreak = lines;
+  const banner = `${winner.seat.name} won the game with ${fmt(points)} points`;
+  mp.winBanner = banner;
+  mp._lastLog = mpLogBoth(`<b>${mpEsc(banner)}</b>`, true);
+  setCenter("Game over", unoScoreLineMP());
+  $("tb-what").textContent = "Game over — the host starts the next game when everyone's ready.";
+  mpSeatStackSync();
   mp.phase = "done"; mp.activeSeatPid = null;
   mpResetReady();
   mpSync();
