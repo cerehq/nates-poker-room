@@ -583,6 +583,218 @@
         *{ transition:none !important; }
       }
     </style>
+    <style>
+      /* ================================================================
+         HOLOGRAM OVERHAUL — Nov 15, 2026. Presentation ONLY: this block
+         is appended after the base styles and wins at equal specificity.
+         No ids, hooks, snapshot shapes or game rules are touched.
+         Identity kept: dark room, green felt, gold accents, per-player
+         LED colors. Effects favor transform/opacity; backdrop blur is
+         limited to static chrome (panels, bars, cards).
+         ================================================================ */
+      :root{
+        --holo:#0e7d96;   /* hologram cyan — darker cut for the light room */
+        --glass-edge:color-mix(in srgb, var(--holo) 42%, var(--line));
+      }
+      @media (prefers-color-scheme: dark){
+        :root{ --holo:#5ee7ff; }
+      }
+
+      /* ---- glassy chrome: panels, room shell, top-bar controls ---- */
+      .panel{
+        background:linear-gradient(180deg, color-mix(in srgb, var(--panel) 93%, #ffffff 5%), color-mix(in srgb, var(--panel) 97%, transparent));
+        border-color:var(--glass-edge);
+        box-shadow:0 14px 30px -14px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.35), 0 0 22px -8px color-mix(in srgb, var(--holo) 45%, transparent);
+        backdrop-filter:blur(7px) saturate(1.15);
+        -webkit-backdrop-filter:blur(7px) saturate(1.15);
+        position:relative;
+      }
+      .joincard{
+        background:linear-gradient(180deg, color-mix(in srgb, var(--panel) 93%, #ffffff 5%), color-mix(in srgb, var(--panel) 97%, transparent));
+        box-shadow:0 18px 36px -14px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.35), 0 0 24px -8px color-mix(in srgb, var(--good) 45%, transparent);
+        backdrop-filter:blur(7px) saturate(1.15);
+        -webkit-backdrop-filter:blur(7px) saturate(1.15);
+      }
+      .room{
+        border-color:color-mix(in srgb, var(--holo) 30%, var(--line));
+        box-shadow:0 22px 44px -18px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.3), 0 0 34px -10px color-mix(in srgb, var(--glow) 55%, transparent);
+      }
+      .seg, .bank, .switch{
+        background:color-mix(in srgb, var(--panel) 88%, transparent);
+        border-color:var(--glass-edge);
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 6px 16px -8px rgba(0,0,0,.35), 0 0 14px -6px color-mix(in srgb, var(--holo) 50%, transparent);
+        backdrop-filter:blur(7px) saturate(1.15);
+        -webkit-backdrop-filter:blur(7px) saturate(1.15);
+      }
+      .seg button.on{ box-shadow:0 0 10px -2px color-mix(in srgb, var(--holo) 60%, transparent); }
+      .coach{ box-shadow:0 14px 30px -14px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.35), 0 0 22px -8px color-mix(in srgb, var(--gold-bright) 50%, transparent); }
+      @media (prefers-color-scheme: dark){
+        .topbar h1{ text-shadow:0 0 24px color-mix(in srgb, var(--holo) 35%, transparent); }
+        .topbar h1 .thin{ text-shadow:0 0 16px color-mix(in srgb, var(--gold-bright) 45%, transparent); }
+      }
+
+      /* ---- holographic banners: a slow light sweep, readable first ---- */
+      .turnbanner{ position:relative; overflow:hidden; }
+      .turnbanner::after{
+        content:""; position:absolute; inset:0; pointer-events:none;
+        background:linear-gradient(105deg, transparent 32%, rgba(255,255,255,.13) 48%, color-mix(in srgb, var(--holo) 15%, transparent) 53%, transparent 70%);
+        transform:translateX(-110%);
+        animation:holoSweep 5.6s ease-in-out infinite;
+      }
+      @keyframes holoSweep{ 0%,55%{ transform:translateX(-110%); } 88%,100%{ transform:translateX(110%); } }
+      .win-banner{ position:relative; overflow:hidden; box-shadow:0 6px 22px rgba(0,0,0,.4), 0 0 28px -4px rgba(245,197,66,.55), inset 0 1px 0 rgba(255,255,255,.7); }
+      .win-banner::after{
+        content:""; position:absolute; inset:0; pointer-events:none;
+        background:linear-gradient(105deg, transparent 35%, rgba(255,255,255,.35) 50%, transparent 65%);
+        transform:translateX(-110%);
+        animation:holoSweep 3.8s ease-in-out infinite;
+      }
+
+      /* ---- futuristic numerals: tabular figures wherever a score lives ---- */
+      .pot, .bank .amt, .roomcode, .plate .stk, .tt-txt, .tb-chip, .scorepanel, .roomlist{ font-variant-numeric:tabular-nums; }
+      .pot{ letter-spacing:.02em; }
+
+      /* ---- the table: brighter LED rim in the active player's color,
+             deeper under-glow, a whisper of hologram light on the felt ---- */
+      .table{
+        box-shadow:
+          0 30px 55px -18px rgba(0,0,0,.6),
+          0 22px 50px -10px var(--glow),
+          0 0 88px -4px var(--glow),
+          inset 0 2px 3px rgba(255,255,255,.35),
+          inset 0 -3px 6px rgba(0,0,0,.5);
+      }
+      .table::before{
+        border-width:3px;
+        box-shadow:0 0 26px var(--glow), 0 0 64px color-mix(in srgb, var(--glow) 60%, transparent), 0 0 110px color-mix(in srgb, var(--glow) 32%, transparent), inset 0 0 20px color-mix(in srgb, var(--glow) 65%, transparent);
+      }
+      .felt::before{
+        background:
+          radial-gradient(60% 42% at 50% 40%, color-mix(in srgb, var(--holo) 7%, transparent), transparent 70%),
+          repeating-linear-gradient(0deg, rgba(255,255,255,.028) 0 2px, rgba(0,0,0,.028) 2px 4px),
+          repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 2px, rgba(0,0,0,.022) 2px 4px);
+      }
+
+      /* ---- motion: dealt cards flip in (2.5D), revealed plays settle.
+             Purely visual — nothing in the game waits on these. ---- */
+      @keyframes cardIn{
+        from{ transform:perspective(720px) rotateY(42deg) translateY(-9px) scale(.95); opacity:0; }
+        to{ transform:perspective(720px) rotateY(0deg) translateY(0) scale(1); opacity:1; }
+      }
+      .card, .ucard{ animation-duration:.34s; animation-timing-function:cubic-bezier(.25,.8,.35,1); }
+      .ccard{ animation:cardIn .34s cubic-bezier(.25,.8,.35,1) backwards; }
+      .cards .card:nth-child(2), .cards .ucard:nth-child(2), .cards .ccard:nth-child(2){ animation-delay:.035s; }
+      .cards .card:nth-child(3), .cards .ucard:nth-child(3), .cards .ccard:nth-child(3){ animation-delay:.07s; }
+      .cards .card:nth-child(4), .cards .ucard:nth-child(4), .cards .ccard:nth-child(4){ animation-delay:.105s; }
+      .cards .card:nth-child(5), .cards .ucard:nth-child(5), .cards .ccard:nth-child(5){ animation-delay:.14s; }
+      .cards .card:nth-child(6), .cards .ucard:nth-child(6), .cards .ccard:nth-child(6){ animation-delay:.175s; }
+      .cards .card:nth-child(7), .cards .ucard:nth-child(7), .cards .ccard:nth-child(7){ animation-delay:.21s; }
+      .cah-sub, .bcard{ animation:subIn .32s ease backwards; }
+      .cah-subs .cah-sub:nth-child(2){ animation-delay:.05s; }
+      .cah-subs .cah-sub:nth-child(3){ animation-delay:.1s; }
+      .cah-subs .cah-sub:nth-child(4){ animation-delay:.15s; }
+      @keyframes subIn{ from{ transform:translateY(8px) scale(.97); opacity:0; } to{ transform:translateY(0) scale(1); opacity:1; } }
+
+      /* ---- Farkle dice: the table's dice tumble and settle on the true
+             faces the logic rolled. The shooter's pick dice only nudge —
+             the decide board rebuilds on every tap, so a full spin there
+             would re-fire per tap and fight the decision. ---- */
+      .dice-row .die:not(.pick){ animation:dieTumble .55s cubic-bezier(.25,.8,.35,1) backwards; }
+      .dice-row .die:not(.pick):nth-child(2){ animation-delay:.04s; }
+      .dice-row .die:not(.pick):nth-child(3){ animation-delay:.08s; }
+      .dice-row .die:not(.pick):nth-child(4){ animation-delay:.12s; }
+      .dice-row .die:not(.pick):nth-child(5){ animation-delay:.16s; }
+      .dice-row .die:not(.pick):nth-child(6){ animation-delay:.2s; }
+      @keyframes dieTumble{
+        0%{ transform:rotate(0deg) translateY(0) scale(1); }
+        30%{ transform:rotate(150deg) translateY(-8px) scale(1.07); }
+        55%{ transform:rotate(262deg) translateY(1px) scale(.99); }
+        78%{ transform:rotate(344deg) translateY(-2px) scale(1.01); }
+        100%{ transform:rotate(360deg) translateY(0) scale(1); }
+      }
+      .die.pick{ animation:dieSettle .18s ease backwards; }
+      .dice-aside .die{ animation:dieSettle .22s ease backwards; }
+      @keyframes dieSettle{ from{ transform:translateY(-5px) scale(.94); opacity:.35; } to{ transform:translateY(0) scale(1); opacity:1; } }
+
+      /* ---- buttons: one futuristic system, 44px touch floor ---- */
+      .btn{ min-height:44px; }
+      .btn.primary{ box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 6px 18px -6px color-mix(in srgb, var(--gold-bright) 75%, transparent), 0 0 14px -4px color-mix(in srgb, var(--gold-bright) 65%, transparent); }
+      @media (prefers-color-scheme: dark){
+        .btn{ border-color:color-mix(in srgb, var(--holo) 26%, var(--line)); }
+        .btn:hover:not(:disabled){ border-color:color-mix(in srgb, var(--holo) 60%, var(--line)); box-shadow:0 0 12px -4px color-mix(in srgb, var(--holo) 70%, transparent); }
+      }
+
+      /* ---- house-rules summaries: a clear full-width toggle row
+             (the panels are native <details>, already collapsed) ---- */
+      details.rules summary, .panel details summary{
+        list-style:none; display:flex; align-items:center; gap:8px; min-height:40px; padding:6px 2px;
+      }
+      details.rules summary::-webkit-details-marker, .panel details summary::-webkit-details-marker{ display:none; }
+      details.rules summary::after, .panel details summary::after{
+        content:"\25B8"; margin-left:auto; color:var(--holo); font-size:15px; transition:transform .2s ease;
+      }
+      details.rules[open] summary::after, .panel details[open] summary::after{ transform:rotate(90deg); }
+
+      /* ---- mobile panel collapse: toggle pills are added by the small
+             view-only script at the end of the page; on desktop they
+             never render and nothing changes ---- */
+      .m-toggle{ display:none; }
+      @media (max-width:940px){
+        .m-toggle{
+          display:inline-flex; align-items:center; position:absolute; top:10px; right:10px; z-index:2;
+          font-size:12px; font-weight:700; padding:6px 11px; min-height:32px; border-radius:999px; cursor:pointer;
+          border:1px solid var(--glass-edge); background:color-mix(in srgb, var(--panel-2) 88%, transparent); color:var(--muted);
+        }
+        .side .panel h2{ padding-right:72px; }
+        .panel.m-collapsed{ min-height:54px; }
+        .panel.m-collapsed > *:not(.m-toggle){ display:none !important; }
+      }
+
+      /* ---- game switcher: one scrollable strip on narrow screens ---- */
+      @media (max-width:760px){
+        .bar-controls{ width:100%; }
+        .topbar .seg, .joincard .seg{
+          max-width:100%; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden;
+          scrollbar-width:none; -webkit-overflow-scrolling:touch;
+        }
+        .topbar .seg::-webkit-scrollbar, .joincard .seg::-webkit-scrollbar{ display:none; }
+        .topbar .seg button{ padding:7px 11px; }
+      }
+
+      /* ---- portrait / small-screen fixes ---- */
+      @media (max-width:640px){
+        .betpick{ flex-wrap:wrap; justify-content:center; }
+        .react-btn{ min-height:44px; min-width:44px; }
+        .controls .btn{ min-height:44px; }
+        .turntimer .tt-track{ height:8px; }
+        .tt-txt{ font-size:13px; }
+        /* Cards Against the Table (field fix): the reveal becomes a
+           two-column grid of smaller plays inside a widened center
+           instead of one tall stack over the seats, and your own
+           white-card hand gets a wider seat so it wraps in two rows.
+           Browsers without :has() simply keep the previous layout. */
+        .center-info:has(.cah-center){ width:94%; top:53%; }
+        .cah-center .bcard{ max-width:290px; padding:12px 14px 20px; }
+        .cah-center .bcard .bc-text{ font-size:15px; line-height:1.4; }
+        .cah-subs{ display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:8px; }
+        .cah-sub{ flex:none; max-width:none; font-size:12.5px; line-height:1.38; padding:8px 10px; border-radius:10px; }
+        .cah-subslot{ width:100%; max-width:54px; justify-self:center; }
+        .seat.pos-you:has(.cah-cards){ width:88%; max-width:350px; }
+        .cards.cah-cards:not(.backs){ --cah-w:clamp(47px,12.6vw,60px); gap:5px; justify-content:center; }
+      }
+      @media (max-width:480px){
+        .turnbanner .who{ font-size:15px; }
+        .turnbanner .what{ font-size:12.5px; }
+        .center-sub{ font-size:12px; }
+        body.game-pool .center-sub{ font-size:12px; }
+        .trickslot .tsname{ max-width:54px; font-size:9.5px; }
+      }
+
+      /* ---- reduced motion: every animation in the room stands down ---- */
+      @media (prefers-reduced-motion: reduce){
+        *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+      }
+    </style>
   </head>
   <body>
     <header class="topbar">
@@ -3258,6 +3470,8 @@ function spadesTargetFor(variant){ return variant === "cut" ? 300 : 500; }
       if(out.reason === "eight-early") L.push({ html: `<b>${me}</b> sank the <b>8 too soon</b> — that loses the game.`, win: true });
       if(out.reason === "eight-scratch") L.push({ html: `<b>${me}</b> sank the 8 but <b>scratched</b> with it — that loses the game.`, win: true });
       if(out.isBreak && others.length && !out.eight) L.push({ html: `Breaker shoots on — the table's still open.`, win: false });
+      if(!out.keepTurn && !out.foul && !out.eight && !out.rerack && others.length === 0)
+        L.push({ html: `<b>${me}</b> comes up empty — <b>${opp}</b> to shoot.`, win: false });
       return L;
     }
     /* The Apprentice coach. view: { core (balls/groups/bih/shotNo),
@@ -3407,7 +3621,15 @@ function spadesTargetFor(variant){ return variant === "cut" ? 300 : 500; }
     const poolView = { shotId: 0, anim: null, raf: 0 };
     function poolAnimDuration(sim){ return Math.min(5200, Math.max(700, sim.frames.length * (1000 / 60))); }
     function poolPaintFrame(frame){
-      const cv = document.getElementById("pool-canvas");
+      let cv = document.getElementById("pool-canvas");
+      if(!cv && frame && document.body.classList.contains("game-pool")){
+        // A snapshot re-render wiped the table center mid-shot (on the
+        // House's own screen this happened on EVERY shot, so the host
+        // never saw the table): rebuild the canvas and let the replay
+        // carry on instead of losing the table for the whole shot.
+        const b = $("board");
+        if(b){ b.innerHTML = poolCanvasHTML(); cv = document.getElementById("pool-canvas"); }
+      }
       if(!cv || !frame) return;
       poolDrawTable(cv, frame.map((p, n)=> ({ n, x: p ? p[0] : -100, y: p ? p[1] : -100, down: !p })), null);
     }
@@ -3422,6 +3644,7 @@ function spadesTargetFor(variant){ return variant === "cut" ? 300 : 500; }
        rules on the SAME result every other screen is watching. */
     function poolStartAnim(beforeBalls, shot){
       const sim = poolSimulate(beforeBalls, shot);
+      if(!document.getElementById("pool-canvas") && document.body.classList.contains("game-pool")) poolPaintStatic(beforeBalls);
       const dur = poolAnimDuration(sim);
       poolView.anim = { frames: sim.frames, t0: (typeof performance !== "undefined" ? performance.now() : Date.now()), dur };
       if(poolView.raf) cancelAnimationFrame(poolView.raf);
@@ -3520,7 +3743,9 @@ function spadesTargetFor(variant){ return variant === "cut" ? 300 : 500; }
         <button class="btn" data-poolnudge="-0.01745" aria-label="Aim left one degree">⟨⟨</button>
         <button class="btn" data-poolnudge="-0.001745" aria-label="Aim left a touch">⟨</button>
         <span class="ctl-note"><b>Power</b></span>
+        <button class="btn" data-poolpower="-5" aria-label="Power down five percent">−</button>
         <input type="range" class="pool-power" id="pool-power" min="5" max="100" value="${Math.round(aim.power * 100)}" aria-label="Shot power" />
+        <button class="btn" data-poolpower="5" aria-label="Power up five percent">+</button>
         <button class="btn" data-poolnudge="0.001745" aria-label="Aim right a touch">⟩</button>
         <button class="btn" data-poolnudge="0.01745" aria-label="Aim right one degree">⟩⟩</button>
         <button class="btn primary" id="pool-shoot">SHOOT</button>
@@ -3532,6 +3757,12 @@ function spadesTargetFor(variant){ return variant === "cut" ? 300 : 500; }
       }));
       const pw = $("pool-power");
       if(pw) pw.addEventListener("input", ()=>{ const a = poolAim; if(!a) return; a.power = +pw.value / 100; poolPaintAim(); });
+      document.querySelectorAll("[data-poolpower]").forEach(btn=> btn.addEventListener("click", ()=>{
+        const a = poolAim; if(!a) return;
+        a.power = Math.max(0.05, Math.min(1, a.power + (+btn.dataset.poolpower) / 100));
+        const p2 = $("pool-power"); if(p2) p2.value = Math.round(a.power * 100);
+        clickSound(600); poolPaintAim();
+      }));
       wireBtn("pool-place-mode", ()=>{ const a = poolAim; if(!a) return; a.placing = !a.placing; poolPaintAimControls(); poolPaintAim(); });
       wireBtn("pool-shoot", ()=>{
         const a = poolAim; if(!a) return;
@@ -7115,7 +7346,7 @@ function mpRenderSnap(snap, isHost){
     if(pl.shot && pl.shot.id > poolView.shotId){
       poolView.shotId = pl.shot.id;
       poolStartAnim(pl.shot.balls, pl.shot);
-    } else if(!poolView.anim){
+    } else if(!poolView.anim || !document.getElementById("pool-canvas")){
       poolPaintStatic(pl.balls);
     }
     if(pl.scoreBreak) paintScorePanel(pl.scoreBreak);
@@ -9751,5 +9982,40 @@ window.addEventListener("focus", ()=>{
 if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo vs the AI seats below.", "");
 </script>
 
+  <script>
+    "use strict";
+    /* Mobile panel collapse — pure view state, added Nov 15, 2026 with the
+       hologram overhaul. On narrow screens the tall side panels (room,
+       coach, table log) get a small Hide/Show pill so the table can own
+       the screen; on desktop the pills never render (CSS) and nothing
+       changes. No game state, storage or protocol is touched, and a
+       failure here must never break the room — hence the guard. */
+    (function(){
+      try{
+        var targets = [];
+        var np = document.getElementById("netpanel");
+        if(np) targets.push([np, "Room"]);
+        var co = document.getElementById("coach");
+        if(co) targets.push([co, "Coach"]);
+        var lg = document.getElementById("log");
+        if(lg && lg.closest){ var lp = lg.closest(".panel"); if(lp) targets.push([lp, "Table log"]); }
+        targets.forEach(function(pair){
+          var panel = pair[0];
+          if(!panel || panel.querySelector(".m-toggle")) return;
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "m-toggle";
+          b.setAttribute("aria-expanded", "true");
+          b.textContent = "Hide \u25B4";
+          b.addEventListener("click", function(){
+            var collapsed = panel.classList.toggle("m-collapsed");
+            b.setAttribute("aria-expanded", collapsed ? "false" : "true");
+            b.textContent = collapsed ? pair[1] + " \u25BE" : "Hide \u25B4";
+          });
+          panel.appendChild(b);
+        });
+      }catch(e){ /* view garnish only — never a blocker */ }
+    })();
+    </script>
   </body>
 </html>
