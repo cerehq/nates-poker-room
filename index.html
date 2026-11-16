@@ -1010,7 +1010,7 @@
             <p class="netnote" id="net-autodeal-note">On — once every seated player has tapped Ready, the next hand deals itself after a short countdown. Turn it off to deal by hand.</p>
             <p class="netnote" id="net-host-note">Send friends the code above — they open Nate&rsquo;s Poker Room and tap <b>Join room</b>. Your cards and coach tips stay on your screen only; theirs stay on theirs.</p>
           </div>
-          <p class="netnote"><b>How it works:</b> every device connects out to a <b>game relay server</b> over an ordinary secure connection — no phone or computer has to be reachable by another, so guests on cellular or any network can join. The host&rsquo;s browser is still the dealer — it holds the deck, pot, and turn order — and the relay just carries the messages between the table and the host. That still means <b>if the host closes their tab, the room ends</b> for everyone — but now you&rsquo;ll see it happen: the host sends a heartbeat about every ten seconds, and if it goes quiet, your screen says so instead of hanging. Keep the host tab open all game night.</p>
+          <p class="netnote"><b>How it works:</b> every device connects out to a <b>game relay server</b> over an ordinary secure connection — no phone or computer has to be reachable by another, so guests on cellular or any network can join. The host&rsquo;s browser is still the dealer — it holds the deck, pot, and turn order — and the relay just carries the messages between the table and the host. The host sends a heartbeat about every ten seconds; if it goes quiet for about thirty seconds, the seated players <b>take over hosting</b>: one of them steps up with everyone&rsquo;s stacks and scores intact, the hand in progress is voided, and play resumes from the lobby. The old host can rejoin as a player. (A host who closes their tab on purpose still ends the room — that goodbye is final.) Keep the host tab open all game night.</p>
         </div>
 
         <div class="panel coach" id="coach">
@@ -6364,6 +6364,28 @@ const mp = {
   lastHeartbeat: 0, heartbeatSeen: false, hostQuietShown: false,   // guest: host liveness
   guestWatchTimer: null, guestHelloTimer: null, guestSeated: false, guestPromptTimer: null, returnedNotice: false,
   helloRetryTimer: null, joining: false, holdemButton: -1, omahaButton: -1, studButton: -1, _coachKey: null, _reactAt: {},
+  /* --- Tier-2 host resilience (Nov 16): session rescue. A guest's
+     snapshots are per-seat filtered — other players' hidden cards and
+     every deck/shoe/pile live ONLY in the host tab — so a dead host's
+     hand can never honestly change hands. What a guest DOES hold in
+     full is the session: roster, stacks, session scores. So on host
+     death the seated guests elect one of their own, who rebuilds the
+     room at the LOBBY with stacks and scores intact; the interrupted
+     hand is void. See mpElectionTick / mpPromoteToHost. --- */
+  hostPid: null,           // guest: pid of the host this room currently answers to (learned from snapshots)
+  retiredHosts: [],        // guest: pids of hosts replaced by a takeover — their late traffic is ignored
+  expectHostPid: null,     // guest: pid named by a host-takeover event, adopted even mid-snapshot-race
+  election: null,          // guest: {deadPid, rank, phase, acks, timer, ackTimer} while a takeover election runs
+  hostBeatMs: 10000,       // host: heartbeat interval — the schedule guests judge host silence against
+  adoptGraceUntil: 0,      // guest: after adopting a successor, no election until its first heartbeat has had time to arrive
+  hostQuietMs: 30000,      // guest: host silence that starts the election (the old "room ends" threshold)
+  tkClaimBaseMs: 1500,     // election: first (senior-most) candidate claims this long after the quiet trip
+  tkClaimStaggerMs: 4000,  // election: each next candidate in seat order waits this much longer
+  tkAckWindowMs: 2500,     // election: claim -> promotion window (competing senior claims stand the claimer down)
+  stackBook: {},           // guest: pid -> last stack seen in any snapshot (rescue fallback if room.stack is absent)
+  aiBook: {},              // guest: AI name -> {stack, hands, chips, scores:{game:score}} from snapshots (the host's aiStacks/aiStats are host-only; this is the rescue copy)
+  tookOver: false,         // host: true when THIS host won the room by takeover (never heartbeat-abdicates to a zombie)
+  suppressBye: false,      // an abdicating host leaves quietly — its host-bye must not end the rescued room
 };
 /* --- relay transport helpers --- */
 function mpChannelName(code){ return "poker-room-" + code; }
@@ -6417,8 +6439,8 @@ function mpTeardownChannel(){
 }
 function mpStartHeartbeat(){
   mpStopHeartbeat();
-  mpChannelSend("host-alive", { ts: Date.now() });
-  mp.heartbeatTimer = setInterval(()=>{ if(mp.role === "host") mpChannelSend("host-alive", { ts: Date.now() }); }, 10000);
+  mpChannelSend("host-alive", { ts: Date.now(), pid: mp.myPid });
+  mp.heartbeatTimer = setInterval(()=>{ if(mp.role === "host") mpChannelSend("host-alive", { ts: Date.now(), pid: mp.myPid }); }, mp.hostBeatMs);
 }
 function mpStopHeartbeat(){ if(mp.heartbeatTimer){ clearInterval(mp.heartbeatTimer); mp.heartbeatTimer = null; } }
 function mpNoteHeartbeat(){
@@ -6432,13 +6454,296 @@ function mpStartGuestWatch(){
   mpStopGuestWatch();
   mp.guestWatchTimer = setInterval(()=>{
     if(mp.role !== "guest" || !mp.lastHeartbeat) return;
-    if(Date.now() - mp.lastHeartbeat > 30000 && !mp.hostQuietShown){
-      mp.hostQuietShown = true;
-      netStatus("The host\u2019s connection has gone quiet \u2014 their tab may have closed or fallen asleep. Your seat and chips are held if they come back; the room ends if they don\u2019t.", "err");
+    if(mp.adoptGraceUntil && Date.now() < mp.adoptGraceUntil) return;   // a successor host's first heartbeat isn't due yet — its takeover was the last sign of life, so there is no silence to judge
+    if(Date.now() - mp.lastHeartbeat > mp.hostQuietMs){
+      if(!mp.hostQuietShown){
+        mp.hostQuietShown = true;
+        netStatus("The host\u2019s connection has gone quiet \u2014 their tab may have closed or fallen asleep. Hang tight: if they don\u2019t come back, a seated player takes over hosting \u2014 stacks and scores carry over, and the game goes on.", "err");
+      }
+      mpElectionTick();
     }
-  }, 5000);
+  }, 2000);
 }
 function mpStopGuestWatch(){ if(mp.guestWatchTimer){ clearInterval(mp.guestWatchTimer); mp.guestWatchTimer = null; } }
+
+/* ================= Tier-2: host takeover election =================
+   Trigger: the guest watch sees the host silent past mp.hostQuietMs
+   (30s — the same threshold that used to mean "the room ends").
+   Candidates: the seated, non-AWAY human guests in the last snapshot's
+   roster order (seat order = seniority). The senior-most candidate
+   claims first; each next candidate waits one stagger longer, and
+   claims at once if a claim it hears is JUNIOR to its own — so exactly
+   one claimer leads, ranked by (rank, pid). The leader waits one ack
+   window for a senior competitor to stand it down, then promotes:
+   it rebuilds the room at the lobby from its last snapshot (roster,
+   stacks, session scores — the hand in progress is VOID, announced in
+   the log; hidden cards and decks were never in any snapshot, so
+   nothing hidden is fabricated or leaked) and deals on from Ready.
+   The replaced host NEVER resumes: guests ignore its traffic by pid,
+   and if its tab wakes it hears the claim/takeover (or a successor's
+   heartbeat) and abdicates — rejoining as a player like anyone else. */
+function mpElectionClear(){
+  const el = mp.election;
+  if(el){ if(el.timer) clearTimeout(el.timer); if(el.ackTimer) clearTimeout(el.ackTimer); if(el.reTimer) clearTimeout(el.reTimer); }
+  mp.election = null;
+}
+function mpElectionCandidates(){
+  // seated, present human guests, in roster (seat) order
+  if(!mp.snap || !mp.snap.room) return [];
+  return mp.snap.room.filter(s=> s.kind === "guest" && !s.away).map(s=> s.pid);
+}
+function mpMySnapName(){
+  const me = mp.snap && mp.snap.room ? mp.snap.room.find(s=> s.pid === mp.myPid) : null;
+  return me ? me.name : mpMyName();
+}
+function mpElectionTick(){
+  if(mp.role !== "guest" || !mp.guestSeated || !mp.snap) return;
+  if(mp.adoptGraceUntil && Date.now() < mp.adoptGraceUntil) return;   // fresh successor: no election until its first heartbeat has had a full interval to arrive
+  if(mp.election) return;   // already running (or decided)
+  const deadPid = mp.hostPid || mp.snap.hostPid || null;
+  if(!deadPid || deadPid === mp.myPid) return;
+  const cands = mpElectionCandidates();
+  const rank = cands.indexOf(mp.myPid);
+  if(rank < 0) return;      // not a candidate (unseated, or my seat is held AWAY): I follow the others' election via takeover events + snapshots
+  mp.election = { deadPid, rank, phase: "waiting", acks: new Set(), timer: null, ackTimer: null, reTimer: null };
+  // Ask the channel, don't assume: a live host answers a probe with a
+  // heartbeat at once. This is what saves a merely-SLEEPING guest (its
+  // clock ran ahead while its tab was paused) from electing against a
+  // healthy host — the answer cancels the election while it's "waiting".
+  mpChannelSend("host-probe", { ts: Date.now() });
+  setTimeout(()=>{ if(mp.election && mp.election.phase === "waiting") mpChannelSend("host-probe", { ts: Date.now() }); }, 900);
+  const delay = mp.tkClaimBaseMs + rank * mp.tkClaimStaggerMs;
+  mp.election.timer = setTimeout(()=> mpElectionClaim(), delay);
+}
+function mpElectionClaim(){
+  const el = mp.election;
+  if(!el || el.phase === "promoted" || mp.role !== "guest") return;
+  el.phase = "claimed";
+  const payload = { pid: mp.myPid, name: mpMySnapName(), rank: el.rank, deadPid: el.deadPid, at: Date.now() };
+  mpChannelSend("host-claim", payload);
+  // one re-send for relay luck, then the ack window runs from the first claim
+  if(el.reTimer) clearTimeout(el.reTimer);
+  el.reTimer = setTimeout(()=>{ if(mp.election === el && el.phase === "claimed") mpChannelSend("host-claim", payload); }, 1200);
+  if(el.ackTimer) clearTimeout(el.ackTimer);
+  el.ackTimer = setTimeout(()=> mpPromoteToHost(), mp.tkAckWindowMs);
+}
+function mpElectionStandDown(betterPid){
+  const el = mp.election;
+  if(!el) return;
+  if(el.timer) clearTimeout(el.timer);
+  if(el.ackTimer) clearTimeout(el.ackTimer);
+  if(el.reTimer) clearTimeout(el.reTimer);
+  el.phase = "stood-down";
+  if(betterPid) mpChannelSend("host-ack", { pid: mp.myPid, forPid: betterPid, deadPid: el.deadPid });
+  // revive: if the claimer I stood down for dies before promoting, the
+  // room is still hostless — re-claim rather than sit out the night.
+  el.reTimer = setTimeout(()=>{
+    if(mp.election !== el || mp.role !== "guest") return;
+    if(mp.hostPid !== el.deadPid){ mpElectionClear(); return; }   // a takeover landed meanwhile
+    if(Date.now() - mp.lastHeartbeat <= mp.hostQuietMs){ mpElectionClear(); return; }   // the old host came back to life meanwhile
+    el.phase = "waiting";
+    mpElectionClaim();
+  }, mp.tkAckWindowMs + 3000);
+}
+function mpClaimIsBetter(theirRank, theirPid){
+  // total order over claims: lower rank wins; pid breaks ties (two guests
+  // can hold slightly different roster views and both think they're senior)
+  const el = mp.election;
+  const myRank = el ? el.rank : Number.POSITIVE_INFINITY;
+  if(theirRank !== myRank) return theirRank < myRank;
+  return String(theirPid) < String(mp.myPid);
+}
+function mpOnHostClaim(p){
+  if(!p || typeof p.pid !== "string" || !p.pid || p.pid === mp.myPid) return;
+  if(mp.role === "host"){
+    // a claim naming ME as the dead host: my tab was asleep while the
+    // table replaced me. Abdicate — never fight the room for the table.
+    // A host that itself TOOK OVER is different: it is the room's chosen
+    // successor, and a lone claim can rest on one guest's skewed clock
+    // or on a heartbeat that simply isn't due yet — that must not depose
+    // it. It re-asserts its heartbeat instead, and stands down only for
+    // a COMPLETED takeover (mpOnHostTakeover), like any replaced host.
+    if(p.deadPid === mp.myPid){
+      if(mp.tookOver) mpChannelSend("host-alive", { ts: Date.now(), pid: mp.myPid });
+      else mpAbdicateToGuest();
+    }
+    return;
+  }
+  if(mp.role !== "guest") return;
+  if(mp.adoptGraceUntil && Date.now() < mp.adoptGraceUntil && mp.hostPid && p.deadPid === mp.hostPid) return;   // fresh successor: this claim judges a heartbeat schedule it never had a chance to meet
+  if(Date.now() - mp.lastHeartbeat <= mp.hostQuietMs) return;   // MY host is alive and talking — this election isn't mine to join
+  const deadPid = mp.election ? mp.election.deadPid : mp.hostPid;
+  if(!deadPid || p.deadPid !== deadPid) return;   // a claim about some other (older) host — not this room's election
+  if(mp.election && mp.election.phase === "promoted") return;
+  if(mpClaimIsBetter(p.rank, p.pid)){
+    mpElectionStandDown(p.pid);
+    return;
+  }
+  // I outrank the claimer: claim NOW (don't wait out my stagger) — or,
+  // if my claim is already out, re-send it once so they hear it and stand down.
+  if(!mp.election){
+    const cands = mpElectionCandidates();
+    const rank = cands.indexOf(mp.myPid);
+    if(rank < 0){ mpChannelSend("host-ack", { pid: mp.myPid, forPid: p.pid, deadPid: p.deadPid }); return; }
+    mp.election = { deadPid: p.deadPid, rank, phase: "waiting", acks: new Set(), timer: null, ackTimer: null, reTimer: null };
+  }
+  if(mp.election.phase === "waiting"){ if(mp.election.timer) clearTimeout(mp.election.timer); mpElectionClaim(); }
+  else if(mp.election.phase === "claimed") mpChannelSend("host-claim", { pid: mp.myPid, name: mpMySnapName(), rank: mp.election.rank, deadPid: mp.election.deadPid, at: Date.now() });
+  else if(mp.election.phase === "stood-down") mpChannelSend("host-ack", { pid: mp.myPid, forPid: p.pid, deadPid: p.deadPid });
+}
+function mpOnHostAck(p){
+  if(!p || p.forPid !== mp.myPid) return;
+  const el = mp.election;
+  if(el && el.phase === "claimed" && p.deadPid === el.deadPid && typeof p.pid === "string") el.acks.add(p.pid);
+}
+function mpGuestAdoptHost(newPid, newName){
+  // a successor host is live: follow it, and only it, from here on
+  if(mp.hostPid && mp.hostPid !== newPid && !mp.retiredHosts.includes(mp.hostPid)) mp.retiredHosts.push(mp.hostPid);
+  mp.hostPid = newPid; mp.expectHostPid = null;
+  mpElectionClear();
+  mp.lastHeartbeat = Date.now(); mp.hostQuietShown = false;
+  mp.adoptGraceUntil = Date.now() + mp.hostBeatMs + 2000;   // the successor's first regular heartbeat is up to one beat interval away — no election may judge its silence before then
+  netStatus((newName || "A player") + " has taken over as host in room " + mp.code + " \u2014 the game goes on.", "live");
+  mpSendHello();   // re-register with the new host; my seat matches by pid, the ack refreshes my rejoin token
+}
+function mpOnHostTakeover(p){
+  if(!p || typeof p.pid !== "string" || !p.pid || p.pid === mp.myPid) return;
+  if(mp.role === "host"){
+    if(p.deadPid === mp.myPid) mpAbdicateToGuest();
+    return;
+  }
+  if(mp.role !== "guest") return;
+  const deadPid = mp.election ? mp.election.deadPid : mp.hostPid;
+  if(deadPid && p.deadPid !== deadPid) return;
+  mpGuestAdoptHost(p.pid, p.name);
+}
+/* The rescue itself: this guest becomes the host. State comes from the
+   last snapshot — roster, stacks (snap.room carries each seat's stack
+   at the last hand boundary, so a voided hand's antes/bets rewind
+   exactly), session scores — plus the AI book kept from snapshots.
+   NOT carried: the hand in progress (void), the old host's invites
+   (its personal links degrade to ordinary code joins), the seats' old
+   rejoin tokens (fresh ones are minted and delivered by seat ack), and
+   the old host's panel toggles (the new host's own panel rules). */
+function mpRescueStackFor(entry, snap){
+  if(entry && typeof entry.stack === "number") return entry.stack;
+  const seat = snap && snap.seats ? snap.seats.find(s=> s.pid === entry.pid) : null;
+  if(seat && typeof seat.stack === "number") return seat.stack;
+  if(entry && typeof mp.stackBook[entry.pid] === "number") return mp.stackBook[entry.pid];
+  return 1000;
+}
+function mpPromoteToHost(){
+  const el = mp.election;
+  if(!el || el.phase === "promoted" || mp.role !== "guest") return;
+  const snap = mp.snap;
+  if(!snap || !snap.room){ mpElectionClear(); return; }
+  el.phase = "promoted";
+  const deadPid = el.deadPid;
+  const wasDeal = snap.hostMode === "deal" || !!snap.house;
+  const myEntry = snap.room.find(s=> s.pid === mp.myPid);
+  const iWasSeated = !!(myEntry && myEntry.kind === "guest");
+  const scoresOf = (s)=>({ handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0, cahScore: s.cahScore || 0, poolScore: s.poolScore || 0 });
+  const roster = [];
+  snap.room.forEach(s=>{
+    if(s.pid === deadPid && s.kind === "host"){
+      if(wasDeal) return;   // the House persona held no player stack — it leaves with its tab
+      // a PLAYING host's seat survives as a held seat (AWAY): they can
+      // rejoin and adopt it by token, invite or typed name (Tier-1 paths)
+      roster.push(Object.assign({ pid: s.pid, name: s.name, short: s.short, theme: mpSanTheme(s.theme), stack: mpRescueStackFor(s, snap), kind: "guest", away: true, ready: false, sessionToken: mpGenToken(12) }, scoresOf(s)));
+      return;
+    }
+    if(s.pid === mp.myPid){
+      roster.push(Object.assign({ pid: s.pid, name: s.name, short: s.short, theme: mpSanTheme(s.theme), stack: mpRescueStackFor(s, snap), kind: "host", away: false, ready: false, sessionToken: mpGenToken(12) }, scoresOf(s)));
+      return;
+    }
+    roster.push(Object.assign({ pid: s.pid, name: s.name, short: s.short, theme: mpSanTheme(s.theme), stack: mpRescueStackFor(s, snap), kind: "guest", away: !!s.away, ready: false, sessionToken: mpGenToken(12) }, scoresOf(s)));
+  });
+  if(!roster.some(s=> s.pid === mp.myPid)){
+    // I somehow held no seat (shouldn't happen — only seated guests are
+    // candidates): enter as a fresh host entry, exactly like mpCreate.
+    const prof = mpProfile();
+    roster.unshift({ pid: mp.myPid, name: prof.name, short: prof.short, theme: mpSanTheme(prof.theme), stack: 1000, kind: "host", away: false, ready: false, sessionToken: mpGenToken(12), handsWon: 0, chipsWon: 0, spadesScore: 0, farkleScore: 0, unoScore: 0, cahScore: 0, poolScore: 0 });
+  }
+  mp.roster = roster;
+  mp.conns = new Map();
+  roster.forEach(s=>{ if(s.kind === "guest" && !s.away) mp.conns.set(s.pid, true); });
+  // AI fill state, rebuilt from what snapshots legitimately showed me
+  mp.aiStacks = {}; mp.aiStats = {};
+  Object.keys(mp.aiBook).forEach(name=>{
+    const b = mp.aiBook[name];
+    mp.aiStacks[name] = b.stack;
+    mp.aiStats[name] = { hands: b.hands || 0, chips: b.chips || 0, spades: (b.scores && b.scores.spades) || 0, farkle: (b.scores && b.scores.farkle) || 0, uno: (b.scores && b.scores.uno) || 0, cah: (b.scores && b.scores.cah) || 0, pool: (b.scores && b.scores.pool) || 0 };
+  });
+  mp.invites = new Map();   // the old host's personal invites died with its tab
+  mp.pending.forEach((pend, id)=>{ clearTimeout(pend.timer); });
+  mp.pending.clear();
+  mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null;
+  if(mp.guestPromptTimer){ clearTimeout(mp.guestPromptTimer); mp.guestPromptTimer = null; }
+  hideTurnTimer();
+  // host mode: a seated claimer KEEPS their seat and hosts as a player
+  // (the room converts from House-dealt to host-played — nobody loses
+  // their stack to a rescue); an unseated claimer becomes the House.
+  mp.hostMode = iWasSeated ? "play" : "deal";
+  mp.activeHostMode = mp.hostMode;
+  mp.role = "host"; mp.tookOver = true; mp.guestSeated = true;
+  if(deadPid && !mp.retiredHosts.includes(deadPid)) mp.retiredHosts.push(deadPid);
+  mp.hostPid = mp.myPid;
+  mpStopGuestWatch(); mpStopHelloRetry();
+  // wire the host duties onto the channel I joined as a guest (broadcast
+  // bindings match at delivery time, so late .on() is effective)
+  const channel = mp.channel;
+  if(channel){
+    channel.on("broadcast", { event: "to-host" }, (payload)=>{
+      if(mp.role !== "host" || !payload || !payload.payload) return;
+      mpHostHandleMsg(payload.payload.pid, payload.payload.msg);
+    });
+    // a probe is answered only by a host whose heartbeat loop is actually
+    // running: a tab that stopped heartbeating (asleep, throttled) must not
+    // be able to veto its own replacement by answering probes alone
+    channel.on("broadcast", { event: "host-probe" }, ()=>{ if(mp.role === "host" && mp.heartbeatTimer) mpChannelSend("host-alive", { ts: Date.now(), pid: mp.myPid }); });
+    mpWirePresence(channel);
+    try{ const tr = channel.track({ pid: mp.myPid, role: "host" }); if(tr && tr.catch) tr.catch(()=>{}); }catch(e){}
+  }
+  // panel: become visibly the host
+  $("net-lobby").style.display = "none";
+  $("net-room").style.display = "";
+  $("net-invites-wrap").style.display = "";
+  $("net-host-controls").style.display = "";
+  $("net-aifill-wrap").style.display = "";
+  $("net-aifill-note").style.display = "";
+  $("net-autodeal-wrap").style.display = "";
+  $("net-autodeal-note").style.display = "";
+  $("net-host-note").innerHTML = "You <b>took over hosting</b> room <b>" + mpEsc(mp.code || "") + "</b> after the previous host dropped \u2014 stacks and scores carried over. You deal and pick the game now; your cards and coach tips show <b>only on this screen</b>.";
+  mpUpdateHostModeUI(); mpAIFillNote(); mpRenderInvites(); mpRenderRoomList();
+  mpStartHeartbeat();
+  const myName = mpMySnapName();
+  const tkPayload = { pid: mp.myPid, name: myName, deadPid, at: Date.now() };
+  mpChannelSend("host-takeover", tkPayload);
+  setTimeout(()=>{ if(mp.role === "host") mpChannelSend("host-takeover", tkPayload); }, 700);
+  setTimeout(()=>{ if(mp.role === "host") mpChannelSend("host-takeover", tkPayload); }, 1500);
+  const wasInHand = snap.phase !== "lobby" && snap.phase !== "done";
+  mpResetTableMP();   // back to the lobby: hand states voided, ready flags cleared, first lobby sync
+  mp.winBanner = myName + " has taken over as host \u2014 the game goes on.";
+  mp._lastLog = mpLogBoth(wasInHand
+    ? "The host dropped \u2014 <b>this hand is void</b>; stacks and scores carry over. <b>" + mpEsc(myName) + "</b> has taken over as host \u2014 the game goes on."
+    : "<b>" + mpEsc(myName) + "</b> has taken over as host \u2014 the game goes on.");
+  mpSync();
+  mpElectionClear();
+  netStatus("You\u2019re hosting room " + mp.code + " now \u2014 the table carried over, stacks and scores intact.", "live");
+}
+/* A replaced host that wakes up: stand down and rejoin as a player.
+   Its seat waits in the rescued roster as a held seat — the hello's
+   typed-name adoption (or the new host's rejoin link) restores it. */
+function mpAbdicateToGuest(){
+  if(mp.role !== "host") return;
+  const code = mp.code;
+  mp.suppressBye = true;      // my goodbye must not end the rescued room
+  mpLeave(true);
+  mp.suppressBye = false;
+  if(code) $("net-code-in").value = code;
+  showNotice("This tab was replaced as host while it was away \u2014 you\u2019re rejoining as a player.", false);
+  mpJoin();
+}
 function mpWirePresence(channel){
   try{
     channel.on("presence", { event: "leave" }, (payload)=>{
@@ -6608,8 +6913,20 @@ function mpCreate(){
   mp.claiming = true; mp.claimHeardHeartbeat = false;
   const channel = client.channel(mpChannelName(mp.code), { config: { broadcast: { self: false }, presence: { key: mp.myPid } } });
   mp.channel = channel;
-  channel.on("broadcast", { event: "host-alive" }, ()=>{ if(mp.claiming) mp.claimHeardHeartbeat = true; });
-  channel.on("broadcast", { event: "host-probe" }, ()=>{ if(mp.role === "host") mpChannelSend("host-alive", { ts: Date.now() }); });
+  channel.on("broadcast", { event: "host-alive" }, (payload)=>{
+    if(mp.claiming) mp.claimHeardHeartbeat = true;
+    // Tier-2: a live host that hears ANOTHER host's heartbeat on its own
+    // channel was replaced while asleep (a successor never heartbeat-
+    // abdicates — it knows it took over). Stand down to a player.
+    const pid = payload && payload.payload && payload.payload.pid;
+    if(mp.role === "host" && !mp.tookOver && pid && pid !== mp.myPid) mpAbdicateToGuest();
+  });
+  // a probe is answered only by a host whose heartbeat loop is actually
+  // running: a tab that stopped heartbeating (asleep, throttled) must not
+  // be able to veto its own replacement by answering probes alone
+  channel.on("broadcast", { event: "host-probe" }, ()=>{ if(mp.role === "host" && mp.heartbeatTimer) mpChannelSend("host-alive", { ts: Date.now(), pid: mp.myPid }); });
+  channel.on("broadcast", { event: "host-claim" }, (payload)=>{ if(payload && payload.payload) mpOnHostClaim(payload.payload); });
+  channel.on("broadcast", { event: "host-takeover" }, (payload)=>{ if(payload && payload.payload) mpOnHostTakeover(payload.payload); });
   channel.on("broadcast", { event: "to-host" }, (payload)=>{
     if(mp.role !== "host" || !payload || !payload.payload) return;
     mpHostHandleMsg(payload.payload.pid, payload.payload.msg);
@@ -6709,6 +7026,7 @@ function mpJoin(){
   mpTeardownChannel();
   mp.code = code;
   mp.heartbeatSeen = false; mp.hostQuietShown = false; mp.guestSeated = false; mp.lastHeartbeat = 0;
+  mp.hostPid = null; mp.retiredHosts = []; mp.expectHostPid = null; mp.tookOver = false; mp.adoptGraceUntil = 0; mpElectionClear();
   if(mp.guestHelloTimer){ clearTimeout(mp.guestHelloTimer); mp.guestHelloTimer = null; }
   netStatus("Looking for room " + code + "\u2026", "");
   const channel = client.channel(mpChannelName(code), { config: { broadcast: { self: false }, presence: { key: mp.myPid } } });
@@ -6721,10 +7039,35 @@ function mpJoin(){
     if(!payload || !payload.payload) return;
     mpGuestOnData(payload.payload.msg);
   });
-  channel.on("broadcast", { event: "host-alive" }, ()=> mpNoteHeartbeat());
-  channel.on("broadcast", { event: "host-bye" }, ()=>{
+  channel.on("broadcast", { event: "host-alive" }, (payload)=>{
+    const pid = payload && payload.payload && payload.payload.pid;
+    if(pid){
+      if(mp.retiredHosts.includes(pid)) return;                 // a replaced host's heartbeat changes nothing
+      if(mp.hostPid && pid !== mp.hostPid) return;              // not the host this room follows
+      if(mp.election && mp.election.deadPid === pid){
+        // The "dead" host just spoke. If nobody has CLAIMED yet, it was
+        // never really replaced (a sleeping guest's clock, a relay
+        // hiccup) — cancel the election and carry on. Once a claim is
+        // out, the room has committed: the old host rejoins as a guest.
+        if(mp.election.phase === "waiting") mpElectionClear();
+        else if(mp.election.phase === "stood-down"){ mp.lastHeartbeat = Date.now(); return; }
+        else return;
+      }
+    }
+    mpNoteHeartbeat();
+  });
+  channel.on("broadcast", { event: "host-bye" }, (payload)=>{
+    const pid = payload && payload.payload && payload.payload.pid;
+    if(pid){
+      if(mp.retiredHosts.includes(pid)) return;                 // a replaced host closing its tab can't end the rescued room
+      if(mp.hostPid && pid !== mp.hostPid) return;
+      if(mp.election && mp.election.deadPid === pid) return;    // mid-takeover: the election, not the goodbye, decides
+    }
     mpRoomEnded("The host ended the room. The game is over \u2014 the host\u2019s tab is the table, so when it goes, the room goes.");
   });
+  channel.on("broadcast", { event: "host-claim" }, (payload)=>{ if(payload && payload.payload) mpOnHostClaim(payload.payload); });
+  channel.on("broadcast", { event: "host-ack" }, (payload)=>{ if(payload && payload.payload) mpOnHostAck(payload.payload); });
+  channel.on("broadcast", { event: "host-takeover" }, (payload)=>{ if(payload && payload.payload) mpOnHostTakeover(payload.payload); });
   channel.subscribe((status)=>{
     if(mp.channel !== channel) return;
     if(status === "SUBSCRIBED"){
@@ -6765,11 +7108,12 @@ function mpLeave(silent){
   hideTurnTimer();
   mp.seq++;
   mp.cdEndsAt = 0; mp.cdShownSec = null; mp.gateOkSince = 0; mp.aiStats = {};
-  if(mp.role === "host") mpChannelSend("host-bye", { ts: Date.now() });
+  if(mp.role === "host" && !mp.suppressBye) mpChannelSend("host-bye", { ts: Date.now(), pid: mp.myPid });
   mp.role = "solo"; mp.phase = "lobby";
   mpStopHeartbeat(); mpStopGuestWatch();
   if(mp.guestHelloTimer){ clearTimeout(mp.guestHelloTimer); mp.guestHelloTimer = null; }
   mp.guestSeated = false; mp.heartbeatSeen = false; mp.lastHeartbeat = 0; mp.hostQuietShown = false; mp.claiming = false;
+  mpElectionClear(); mp.expectHostPid = null; mp.adoptGraceUntil = 0;
   mpTeardownChannel();
   mp.conns.clear();
   mp.roster = []; mp.snap = null; mp.drawUI = null; mp.unoUI = null; MD = null; MB = null; MH = null; MO = null; MS = null; MU = null;
@@ -6962,8 +7306,11 @@ function mpHostGuestGone(gonePid){
   mpRenderRoomList(); mpSync(); mpAutoDealTick();
 }
 function mpSendTo(pid, msg){
-  // host -> one guest, over the room channel; guests ignore payloads not addressed to them
-  mpChannelSend("to-guest", { pid, msg });
+  // host -> one guest, over the room channel; guests ignore payloads not addressed to them.
+  // Tier-2: every payload carries its sender (`from`) — after a takeover a guest
+  // accepts prompts/seat-acks/snapshots only from the host it currently follows,
+  // so a replaced host's late traffic can't reach its screen.
+  mpChannelSend("to-guest", { pid, msg: Object.assign({}, msg, { from: mp.myPid }) });
 }
 function mpSyncProfile(){
   if(mp.role === "guest") mpToHost({ t: "profile", profile: mpProfile() });
@@ -7123,6 +7470,7 @@ function mpBuildSnap(forPid){
   const hostSeat = mp.roster.find(s=>s.kind === "host");
   return {
     t: "state", game, phase: mp.phase,
+    hostPid: mp.myPid,   // Tier-2: guests track WHICH host a snapshot came from, so a replaced host's late snapshots are ignored and a successor's first snapshot adopts cleanly
     hostMode: dispMode,
     house: (dispMode === "deal" && hostSeat) ? { pid: hostSeat.pid, name: hostSeat.name, theme: hostSeat.theme } : null,
     pot: isDrawGame(game) && MD ? MD.pot : (game === "holdem" && MH ? MH.pot : (game === "omaha" && MO ? MO.pot : (game === "stud" && MS ? MS.pot : 0))),
@@ -7138,7 +7486,7 @@ function mpBuildSnap(forPid){
     dealer: (game === "bj" && MB) ? { cards: MB.dealer.map((c, i)=> (i === 1 && !MB.reveal) ? null : c), reveal: MB.reveal,
              shown: MB.dealer.length ? (MB.dealer[0].r === 14 ? 11 : MB.dealer[0].r > 10 ? 10 : MB.dealer[0].r) : null,
              total: MB.reveal && MB.dealer.length ? bjValue(MB.dealer) : null } : null,
-    room: mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: !!s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0, cahScore: s.cahScore || 0, poolScore: s.poolScore || 0 })),
+    room: mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: !!s.away, ready: !!s.ready, stack: s.stack, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0, cahScore: s.cahScore || 0, poolScore: s.poolScore || 0 })),
     lastLog: mp._lastLog || null,
     iAmSeated: seats.some(s=>s.pid === forPid),
     spadesVariant,
@@ -8439,6 +8787,33 @@ function mpAIAction(seat, kind, ctx){
 function mpGuestOnData(msg){
   if(!msg || typeof msg !== "object") return;
   if(msg.t === "state"){
+    /* Tier-2 host tracking: a snapshot names its host (hostPid). Learn
+       the first host I see; ignore snapshots from hosts this room has
+       already replaced; adopt a successor's snapshot when a takeover
+       was announced, an election is running, or the old host has gone
+       quiet — so the room heals even if a takeover event was missed. */
+    const hp = msg.hostPid || msg.from || null;
+    if(hp){
+      if(mp.retiredHosts.includes(hp)) return;
+      if(!mp.hostPid) mp.hostPid = hp;
+      else if(hp !== mp.hostPid){
+        if(mp.expectHostPid === hp || mp.election || mp.hostQuietShown){
+          const nm = msg.room ? (msg.room.find(s=> s.pid === hp) || {}).name : null;
+          mpGuestAdoptHost(hp, nm);
+        } else return;   // a host I don't follow, no takeover in flight — not my table
+      }
+    }
+    // rescue ledgers: remember every stack the snapshots show me, so a
+    // takeover can rebuild even the AI fill's stacks and session scores
+    (msg.seats || []).forEach(s=>{
+      if(typeof s.stack === "number") mp.stackBook[s.pid] = s.stack;
+      if(s.kind === "ai"){
+        const b = mp.aiBook[s.name] || (mp.aiBook[s.name] = { stack: 1000, hands: 0, chips: 0, scores: {} });
+        if(typeof s.stack === "number") b.stack = s.stack;
+        b.hands = s.handsWon || 0; b.chips = s.chipsWon || 0;
+        if(s.score != null && msg.game) b.scores[msg.game] = s.score;
+      }
+    });
     // A lobby/done snapshot means any prompt I still hold is dead (the
     // host ended or switched the game mid-turn): drop it, or
     // mpRenderGuestIdle would keep the stale prompt owning my controls
@@ -8450,6 +8825,10 @@ function mpGuestOnData(msg){
     }
     mpRenderSnap(msg, false);
   }
+  // Tier-2: anything else (prompts, seat acks, reactions) is accepted
+  // only from the host this room currently follows — a replaced host's
+  // late prompts and acks must never reach this screen.
+  if(msg.t !== "state" && msg.from && mp.hostPid && msg.from !== mp.hostPid) return;
   if(msg.t === "seat" && msg.token){
     mp.guestSeated = true; mp.joining = false; mpStopHelloRetry();
     if(mp.joinWatchTimer){ clearTimeout(mp.joinWatchTimer); mp.joinWatchTimer = null; }
@@ -10039,7 +10418,7 @@ $("net-autodeal").addEventListener("change", ()=>{
 mpUpdateHostModeUI(); mpAIFillNote();
 // best effort: a closing host says goodbye so guests get the room-ended flow at once;
 // if the send can't flush, the missing heartbeat shows the quiet-host status instead.
-window.addEventListener("beforeunload", ()=>{ if(mp.role === "host") mpChannelSend("host-bye", { ts: Date.now() }); });
+window.addEventListener("beforeunload", ()=>{ if(mp.role === "host" && !mp.suppressBye) mpChannelSend("host-bye", { ts: Date.now(), pid: mp.myPid }); });
 // arriving via an invite link / QR (?room=CODE, optionally &invite= / &rejoin= / &name=):
 // land straight on the one-tap join card — name, mode, chips, Join Table. No other setup.
 try{
