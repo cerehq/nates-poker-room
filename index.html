@@ -795,6 +795,43 @@
         *, *::before, *::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
       }
     </style>
+    <style>
+      /* ================================================================
+         TIER-1 FIX DAY — Nov 16, 2026. Presentation only in this block.
+         (1) Light-scheme parity: the Nov 16 verification (light room)
+         found the glass panels' cyan edges faint — only the game
+         selector read cyan — and the title glow existed only in the
+         dark scheme. The light room now gets defined cyan edges on
+         the main panels and a tasteful title glow of its own, using
+         the darker light-room cyan so text stays crisp.
+         (2) Pool seats: a seat's .cards block reserves a full card
+         height even when it shows no cards; Pool seats never hold
+         cards (the canvas is the table), so that phantom block pushed
+         the opponent's plate down onto the pool canvas's top rail.
+         Pool seats collapse the empty block and lift their anchors —
+         no other game's seat layout is touched.
+         ================================================================ */
+      @media (prefers-color-scheme: light){
+        :root{ --glass-edge:color-mix(in srgb, var(--holo) 68%, var(--line)); }
+        .panel{
+          border-color:var(--glass-edge);
+          box-shadow:0 14px 30px -14px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.5), 0 0 20px -6px color-mix(in srgb, var(--holo) 55%, transparent);
+        }
+        .room{
+          border-color:color-mix(in srgb, var(--holo) 52%, var(--line));
+          box-shadow:0 22px 44px -18px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.45), 0 0 30px -8px color-mix(in srgb, var(--glow) 55%, transparent);
+        }
+        .joincard{
+          border:1px solid color-mix(in srgb, var(--holo) 45%, var(--line));
+          box-shadow:0 18px 36px -14px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.5), 0 0 22px -6px color-mix(in srgb, var(--holo) 45%, transparent);
+        }
+        .topbar h1{ text-shadow:0 0 20px color-mix(in srgb, var(--holo) 38%, transparent), 0 1px 0 rgba(255,255,255,.55); }
+        .topbar h1 .thin{ text-shadow:0 0 14px color-mix(in srgb, var(--gold-bright) 50%, transparent); }
+      }
+      body.game-pool .seat .cards{ min-height:0; }
+      body.game-pool .seat.pos-top{ top:-42px; }
+      body.game-pool .seat.pos-you{ bottom:-38px; }
+    </style>
   </head>
   <body>
     <header class="topbar">
@@ -962,6 +999,10 @@
                 <button id="room-hm-deal" type="button">Deal only — the House</button>
               </div>
               <p class="netnote" id="room-hm-note">You&rsquo;re dealt in like everyone else — your own hand, stack, and turns.</p>
+              <div class="netnote" style="margin:12px 0 0"><b>End game now</b> — stops the current game mid-hand: no winner, straight back to the lobby. Session scores stay exactly as already recorded.</div>
+              <div class="netrow" style="margin-top:6px">
+                <button class="btn fold" id="mp-endgame" type="button">End game now</button>
+              </div>
             </div>
             <label class="aifill" id="net-aifill-wrap"><input type="checkbox" id="net-aifill" checked /> Fill empty seats with AI</label>
             <p class="netnote" id="net-aifill-note">On — empty seats fill with AI from the next deal.</p>
@@ -6434,6 +6475,12 @@ function mpInviteLinkFor(inv){
 function mpRejoinLink(){
   return mpBaseUrl() + "?room=" + encodeURIComponent(mp.code || "") + "&rejoin=" + encodeURIComponent(mp.myToken || "");
 }
+function mpRejoinLinkFor(seat){
+  // host-side rescue link for a held seat: the seat's session token
+  // lives in the host's roster state (it minted the token), so the
+  // host can hand the player their own rejoin link (Tier-1, Nov 16)
+  return mpBaseUrl() + "?room=" + encodeURIComponent(mp.code || "") + "&rejoin=" + encodeURIComponent((seat && seat.sessionToken) || "");
+}
 let MD = null;             // host draw hand state
 let MB = null;             // host blackjack hand state
 let MH = null;             // host hold'em hand state
@@ -6754,8 +6801,15 @@ function mpRenderRoomList(list){
   const rows = list || mp.roster.map(s=>({ name: s.name, kind: s.kind, theme: s.theme, short: s.short, pid: s.pid, away: s.away, ready: !!s.ready, handsWon: s.handsWon || 0, chipsWon: s.chipsWon || 0, spadesScore: s.spadesScore || 0, farkleScore: s.farkleScore || 0, unoScore: s.unoScore || 0, cahScore: s.cahScore || 0, poolScore: s.poolScore || 0 }));
   const houseDealing = mpDisplayHostMode() === "deal";
   $("net-roomlist").innerHTML = rows.map(s=>
-    `<li>${chipSVG(mpSanTheme(s.theme), 24, mpEsc(s.short || ""))}<span><b>${mpEsc(s.name)}</b></span><span class="tag${s.away ? " awaytag" : ""}">${s.away ? "AWAY — SEAT HELD" : s.kind === "host" ? (houseDealing ? "THE HOUSE · DEALER" : "HOST · DEALER") : s.kind === "ai" ? "AI FILL" : "PLAYER"}</span>${s.ready && !s.away && s.kind === "guest" ? `<span class="tag" style="background:#2e9e5b;color:#fff">READY</span>` : ""}${game === "spades" ? ((s.handsWon || s.spadesScore) ? `<span class="tag">Hands ${s.handsWon || 0} · Score ${fmt(s.spadesScore || 0)}</span>` : "") : game === "farkle" ? ((s.handsWon || s.farkleScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.farkleScore || 0)}</span>` : "") : game === "uno" ? ((s.handsWon || s.unoScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.unoScore || 0)}</span>` : "") : game === "cah" ? ((s.handsWon || s.cahScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.cahScore || 0)}</span>` : "") : game === "pool" ? ((s.handsWon || s.poolScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.poolScore || 0)}</span>` : "") : ((s.handsWon || s.chipsWon) ? `<span class="tag">Hands ${s.handsWon || 0} · Won ${fmt(s.chipsWon || 0)}</span>` : "")}${mp.role === "host" && s.away && s.pid && s.kind !== "host" ? `<button class="rmseat" type="button" data-remove-seat="${mpEsc(s.pid)}">Free seat</button>` : ""}</li>`).join("");
+    `<li>${chipSVG(mpSanTheme(s.theme), 24, mpEsc(s.short || ""))}<span><b>${mpEsc(s.name)}</b></span><span class="tag${s.away ? " awaytag" : ""}">${s.away ? "AWAY — SEAT HELD" : s.kind === "host" ? (houseDealing ? "THE HOUSE · DEALER" : "HOST · DEALER") : s.kind === "ai" ? "AI FILL" : "PLAYER"}</span>${s.ready && !s.away && s.kind === "guest" ? `<span class="tag" style="background:#2e9e5b;color:#fff">READY</span>` : ""}${game === "spades" ? ((s.handsWon || s.spadesScore) ? `<span class="tag">Hands ${s.handsWon || 0} · Score ${fmt(s.spadesScore || 0)}</span>` : "") : game === "farkle" ? ((s.handsWon || s.farkleScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.farkleScore || 0)}</span>` : "") : game === "uno" ? ((s.handsWon || s.unoScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.unoScore || 0)}</span>` : "") : game === "cah" ? ((s.handsWon || s.cahScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.cahScore || 0)}</span>` : "") : game === "pool" ? ((s.handsWon || s.poolScore) ? `<span class="tag">Games ${s.handsWon || 0} · Score ${fmt(s.poolScore || 0)}</span>` : "") : ((s.handsWon || s.chipsWon) ? `<span class="tag">Hands ${s.handsWon || 0} · Won ${fmt(s.chipsWon || 0)}</span>` : "")}${mp.role === "host" && s.away && s.pid && s.kind !== "host" ? `<button class="rmseat" type="button" data-remove-seat="${mpEsc(s.pid)}" title="Frees this held seat for good — its stack and scores are released, and the player rejoins as a FRESH seat. Prefer their rejoin link below: it restores this exact seat.">Free seat</button>` : ""}</li>` + ((mp.role === "host" && s.away && s.pid && s.kind === "guest" && (mp.roster.find(x=>x.pid === s.pid) || {}).sessionToken)
+    ? `<li style="gap:6px"><span class="tag">REJOIN</span><input class="invlink" readonly value="${mpEsc(mpRejoinLinkFor(mp.roster.find(x=>x.pid === s.pid)))}" aria-label="Rejoin link for ${mpEsc(s.name)}" /><button class="invcopy" type="button" data-rejoin-copy="${mpEsc(s.pid)}">Copy</button></li>`
+    : "")).join("");
   document.querySelectorAll("[data-remove-seat]").forEach(b=> b.addEventListener("click", ()=> mpFreeSeat(b.dataset.removeSeat)));
+  document.querySelectorAll("[data-rejoin-copy]").forEach(b=> b.addEventListener("click", ()=>{
+    const rs = mp.roster.find(x=>x.pid === b.dataset.rejoinCopy); if(!rs || !rs.sessionToken) return;
+    const done = ()=>{ b.textContent = "Copied"; setTimeout(()=>{ b.textContent = "Copy"; }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(mpRejoinLinkFor(rs)).then(done, done); else done();
+  }));
 }
 function mpFreeSeat(pid){
   const s = mp.roster.find(x=>x.pid === pid);
@@ -6808,6 +6862,13 @@ function mpHostHandleMsg(fromPid, msg){
         if(held && !held.away){ mpSendTo(p.pid, { t: "invite-taken" }); return; }
         if(held){ held.pid = p.pid; mpRebindPid(inv.seatPid, p.pid); inv.seatPid = p.pid; seat = held; }
       }
+      if(!seat && !inv.seatPid){
+        // the invite was never claimed, but a held seat already carries
+        // this invite's name (they sat earlier through another door):
+        // adopt it instead of seating the same person twice
+        const heldByName = mp.roster.find(s=> s.kind === "guest" && s.away && !s.inviteId && s.name === inv.name);
+        if(heldByName){ const oldPid = heldByName.pid; heldByName.pid = p.pid; mpRebindPid(oldPid, p.pid); heldByName.inviteId = inv.id; inv.seatPid = p.pid; seat = heldByName; }
+      }
       if(!seat){
         if(mp.roster.length >= 4){ mpSendTo(p.pid, { t: "full" }); return; }
         seat = { pid: p.pid, name: inv.name, short: inv.name[0].toUpperCase(), theme: cleanTheme, stack: 1000, kind: "guest", ready: false, inviteId: inv.id, handsWon: 0, chipsWon: 0 };
@@ -6815,11 +6876,30 @@ function mpHostHandleMsg(fromPid, msg){
       }
       cleanName = inv.name;
     }
-    // 3) shared link or typed code -> a fresh seat of their own
+    // 3) shared link or typed code -> their own seat: a held seat under
+    // the exact name they typed is THEIRS (new tab/device = new pid, no
+    // token) — adopt it rather than seating a duplicate. Duplicates are
+    // what filled room 8MUPY with phantom seats and locked rejoin out
+    // with "full" (Tier-1 fix, Nov 16). Fallback names never adopt:
+    // "Guest" proves nothing about who you are.
     if(!seat){
-      if(mp.roster.length >= 4){ mpSendTo(p.pid, { t: "full" }); return; }
-      seat = { pid: p.pid, name: cleanName, short: cleanName[0].toUpperCase(), theme: cleanTheme, stack: 1000, kind: "guest", ready: false, handsWon: 0, chipsWon: 0 };
-      mp.roster.push(seat);
+      if(cleanName !== "Guest" && cleanName !== "Player"){
+        const heldSeats = mp.roster.filter(s=> s.kind === "guest" && s.away && s.name === cleanName);
+        if(heldSeats.length === 1){ const oldPid = heldSeats[0].pid; heldSeats[0].pid = p.pid; mpRebindPid(oldPid, p.pid); seat = heldSeats[0]; }
+      }
+      if(!seat){
+        if(mp.roster.length >= 4){ mpSendTo(p.pid, { t: "full" }); return; }
+        seat = { pid: p.pid, name: cleanName, short: cleanName[0].toUpperCase(), theme: cleanTheme, stack: 1000, kind: "guest", ready: false, handsWon: 0, chipsWon: 0 };
+        mp.roster.push(seat);
+      }
+    }
+    // 4) late claim: this pid was ALREADY seated by an earlier hello
+    // that carried no invite (the lobby door dropped it). A valid
+    // invite in this hello still wins — bind it and take its name, so
+    // the seat becomes the invited seat it always should have been.
+    if(seat && !seat.inviteId && typeof msg.inviteId === "string" && mp.invites.has(msg.inviteId)){
+      const inv = mp.invites.get(msg.inviteId);
+      if(!inv.seatPid || inv.seatPid === p.pid){ seat.inviteId = inv.id; inv.seatPid = p.pid; seat.name = inv.name; }
     }
     if(!seat.inviteId) seat.name = cleanName;
     seat.short = seat.name[0].toUpperCase();
@@ -8358,7 +8438,18 @@ function mpAIAction(seat, kind, ctx){
 /* ---------------- guest: messages from the host ---------------- */
 function mpGuestOnData(msg){
   if(!msg || typeof msg !== "object") return;
-  if(msg.t === "state"){ mpRenderSnap(msg, false); }
+  if(msg.t === "state"){
+    // A lobby/done snapshot means any prompt I still hold is dead (the
+    // host ended or switched the game mid-turn): drop it, or
+    // mpRenderGuestIdle would keep the stale prompt owning my controls
+    // until its turn timer ran out (~90s of frozen Fold/Check buttons).
+    if((msg.phase === "lobby" || msg.phase === "done") && mp.guestPrompt){
+      mp.guestPrompt = null; mp.drawUI = null; mp.spadesUI = null; mp.farkleUI = null; mp.unoUI = null; poolAimClear();
+      if(mp.guestPromptTimer){ clearTimeout(mp.guestPromptTimer); mp.guestPromptTimer = null; }
+      hideTurnTimer();
+    }
+    mpRenderSnap(msg, false);
+  }
   if(msg.t === "seat" && msg.token){
     mp.guestSeated = true; mp.joining = false; mpStopHelloRetry();
     if(mp.joinWatchTimer){ clearTimeout(mp.joinWatchTimer); mp.joinWatchTimer = null; }
@@ -8471,6 +8562,24 @@ function sendReaction(emoji){
 document.querySelectorAll("[data-react]").forEach(b=> b.addEventListener("click", ()=>{ clickSound(660); sendReaction(b.dataset.react); }));
 
 /* ---------------- host: table reset & game flow ---------------- */
+/* End the current game NOW (host only): no winner, back to the lobby.
+   Mirrors the sanctioned game-switch teardown — generation bump plus
+   mpResetTableMP — so nothing leaks: pending prompts are dropped
+   WITHOUT resolving (their game loops are generation-dead and never
+   wake), the pot and the game's in-progress scores die with the hand
+   state, timers and the auto-deal countdown are cleared by the reset,
+   and session Games/Score counts stay exactly as already recorded.
+   The guests' next snapshot is a lobby snapshot, which repaints their
+   controls and clears any prompt they were holding. */
+function mpEndGameNow(){
+  if(mp.role !== "host") return;
+  if(mp.phase === "lobby" || mp.phase === "done"){ log("No game in progress to end."); return; }
+  handSeq++; mp.seq++;
+  mp.pending.forEach((pend, id)=>{ clearTimeout(pend.timer); mp.pending.delete(id); });
+  mpResetTableMP();
+  mp._lastLog = mpLogBoth("The host ended the game.");
+  mpSync();
+}
 function mpResetTableMP(){
   hideTurnTimer();
   mp.cdEndsAt = 0; mp.cdShownSec = null; mp.gateOkSince = 0;
@@ -9833,7 +9942,8 @@ const _soloSetMode = setMode;
 setMode = function(m){ _soloSetMode(m); /* mode is private per player — nothing to broadcast but the profile badge */ mpSyncProfile(); };
 $("net-name").addEventListener("change", ()=> mpSyncProfile());
 $("net-create").addEventListener("click", ()=>{ clickSound(520); mpCreate(); });
-$("net-join").addEventListener("click", ()=>{ clickSound(520); mp.pendingInvite = null; mp.pendingRejoin = null; mpJoin(); });
+$("net-join").addEventListener("click", ()=>{ clickSound(520); mp.pendingInvite = mp.urlInvite; mp.pendingRejoin = mp.urlRejoin; mpJoin(); });   // keep the link's claim on this door too — nulling it here seated personal-invite guests as "Guest" (Tier-1 fix, Nov 16); a plain visit has nulls, so typed-code joins are unchanged
+$("mp-endgame").addEventListener("click", ()=>{ clickSound(400); mpEndGameNow(); });
 $("net-invite-make").addEventListener("click", ()=>{
   if(mp.role !== "host") return;
   const name = mpSanName($("net-invite-name").value);
@@ -9941,7 +10051,7 @@ try{
     mp.urlRejoin = (q.get("rejoin") || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 24) || null;
     $("net-code-in").value = mp.urlRoom;
     const nm = q.get("name");
-    if(nm) $("join-name").value = mpSanName(nm);
+    if(nm){ $("join-name").value = mpSanName(nm); $("net-name").value = mpSanName(nm); }   // BOTH name fields: mpProfile() reads net-name, so a join through ANY door carries the invite name (Tier-1 fix, Nov 16)
     if(mp.urlRejoin){
       $("join-title").textContent = "Welcome back — your seat is held";
       $("join-sub").textContent = "This is your private rejoin link. Confirm your name, tap Join Table, and you sit back down in the same seat with the same chips.";
@@ -9962,13 +10072,13 @@ function mpGuestReturned(){
   if(!mp.channel || (st && st !== "joined")){
     mp.returnedNotice = true;
     $("net-code-in").value = mp.code;
-    mp.pendingInvite = null;
+    mp.pendingInvite = mp.urlInvite;
     mp.pendingRejoin = mp.myToken || null;
     mpJoin();
     showNotice("You’re back — reconnecting to room " + mp.code + "…", true);
     return;
   }
-  mpToHost({ t: "hello", profile: mpProfile(), inviteId: null, rejoinToken: mp.myToken || null });
+  mpToHost({ t: "hello", profile: mpProfile(), inviteId: mp.pendingInvite || null, rejoinToken: mp.myToken || null });
   showNotice("You’re back — seat restored.", true);
 }
 document.addEventListener("visibilitychange", ()=>{
