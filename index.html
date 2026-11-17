@@ -10626,17 +10626,23 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
       var V3D_SLOTS = {
         plain: {
           1: [[0,1.18]],
-          2: [[0,1.18],[0,-1.25]],
+          2: [[0,1.18],[0,-1.08]],
           3: [[0,1.18],[-1.85,-0.85],[1.85,-0.85]],
-          4: [[0,1.18],[-2.05,0.05],[0,-1.25],[2.05,0.05]],
+          4: [[0,1.18],[-2.05,0.05],[0,-1.08],[2.05,0.05]],
           5: [[0,1.18],[-2.1,0.1],[-1.25,-1.05],[1.25,-1.05],[2.1,0.1]],
-          6: [[0,1.18],[-2.1,0.15],[-1.4,-1.0],[0,-1.3],[1.4,-1.0],[2.1,0.15]]
+          6: [[0,1.18],[-2.1,0.15],[-1.4,-1.0],[0,-1.12],[1.4,-1.0],[2.1,0.15]]
         },
         house: [[0,1.18],[-2.05,0.05],[2.05,0.05],[-1.3,-1.0],[1.3,-1.0],[0,-0.55]]
       };
       /* Seat positions on the glass for n PLAYER seats (local player first,
          at the near edge). hasHouse reserves the far-center slot for the
-         dealer, so player seats use the house table instead. */
+         dealer, so player seats use the house table instead. The
+         far-center slot sits at z -1.08/-1.12 (not -1.25/-1.3): at the
+         old depth the far seat's fan (half-depth ~0.25) reached z ~-1.50,
+         across the etched game-name title on the glass (canvas y 60-128
+         = z -1.72..-1.46) and close enough to the table's top edge that
+         a revealed hand read as cut off. Pulled in, the fan's far edge
+         is z ~-1.33 — clear of the title with margin (test18 T23d). */
       function v3dSeatLayout(n, hasHouse){
         n = Math.max(1, Math.min(6, n|0));
         var table = hasHouse ? V3D_SLOTS.house.slice(0, n) : (V3D_SLOTS.plain[n] || V3D_SLOTS.plain[4]).slice();
@@ -10699,7 +10705,12 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
       function v3dGlassModel(model){
         if(!model) return null;
         var turnText = "";
-        if(model.activeKey){
+        // whose-turn is a MID-HAND line: once the hand is over (winner
+        // banner up, or the showdown/done phase) it must clear — a
+        // stale "Don's turn" lingered at the bottom of the glass
+        // through showdown because the engine keeps an active player
+        // pointed at the table after the last card falls
+        if(model.activeKey && !model.winBanner && model.phase !== "showdown" && model.phase !== "done"){
           var as = null;
           for(var i = 0; i < model.seats.length; i++) if(model.seats[i].key === model.activeKey) as = model.seats[i];
           if(as) turnText = as.isLocal ? "Your turn" : as.name + "’s turn";
@@ -11190,13 +11201,15 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
           var subLines = v3dWrap2(gm.centerSub, 1680, 37);
           for(var li = 0; li < subLines.length; li++) x.fillText(subLines[li], W / 2, 542 + li * 48);
         }
-        // the pot lives ON the glass, below the control row (canvas
-        // y 613-684 is where the control plates sit) where nothing covers it
+        // the pot lives ON the glass, below the control row (the
+        // enlarged control plates sit at canvas y ~594-693) where
+        // nothing covers it — glyph top at 768-68 = 700 clears the
+        // control band, and its z (~0.98) clears the local fan (~1.07)
         if(gm.pot > 0){
           var potStr = gm.potText || ("POT " + Number(gm.pot).toLocaleString("en-US"));
           x.fillStyle = "#ffd76a";
           x.font = "900 " + v3dFitPx(potStr, 1000, 68, 40) + "px Arial, sans-serif";
-          x.fillText(potStr, W / 2, 742);
+          x.fillText(potStr, W / 2, 768);
         }
         if(gm.turnText){
           x.fillStyle = gm.rimColor;
@@ -11274,18 +11287,23 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
           o.group.rotation.y = slot.rotY;
           gl.scene.add(o.group);
           var plate = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false }));
-          plate.scale.set(1.35, 0.38, 1); plate.position.set(0, 0.52, seat.isLocal ? -0.55 : 0.52);
+          plate.scale.set(1.35, 0.38, 1);
+          if(seat.isLocal) plate.position.set(1.80, 0.40, 0.66); else plate.position.set(0, 0.52, 0.52);
           o.group.add(plate); o.plate = plate;
           var chip = new THREE.Group(); chip.position.set(0.58, 0, -0.38); o.group.add(chip); o.chip = chip;
         }
         // the layout can re-deal slots as seats join/leave — always follow it
         o.group.position.set(slot.x, 0, slot.z);
         o.group.rotation.y = slot.rotY;
-        // the LOCAL player's plate parks BEHIND their cards (center side):
-        // at the usual outer spot it hangs between the camera and the
-        // cards and blankets them — every other seat's plate sits beyond
-        // its cards from the camera, the local seat must mirror that
-        if(o.plate) o.plate.position.set(0, 0.52, seat.isLocal ? -0.55 : 0.52);
+        // the LOCAL player's plate lives at the NEAR-RIGHT CORNER of
+        // their seat area (camera side): centered behind their cards it
+        // blanketed the cards; centered toward the middle it hung over
+        // the glass center text (phase line, center message/sub). At
+        // the corner its sight-line footprint lands on empty near-edge
+        // glass — clear of the center-text zone, the turn line, and
+        // the local fan (pinned by test18 T23e). Every other seat's
+        // plate sits beyond its cards from the camera, as before.
+        if(o.plate){ if(seat.isLocal) o.plate.position.set(1.80, 0.40, 0.66); else o.plate.position.set(0, 0.52, 0.52); }
         // nameplate
         var plateSig = [seat.name, seat.stack, seat.status, seat.folded, seat.away, seat.ready, seat.isHouse].join("|");
         if(plateSig !== o.plateSig){
@@ -11340,10 +11358,15 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
             var grp = v3dMakeCard(c, wilds, seat, lifted);
             var mid = (seat.cards.length - 1) / 2;
             // the local hand sits a step closer to the camera — bigger
-            // in view, clear of the plate's new home behind it
-            var tx = (i - mid) * 0.30, tz = seat.isLocal ? 0.14 : 0, ty = 0.014 + (lifted ? 0.10 : 0);
+            // in view, clear of the plate's new home behind it. The fan
+            // spacing (0.39) EXCEEDS the rotated card footprint (~0.37):
+            // at the old 0.30 the cards overlapped and each card's
+            // rank corner (top-left of the face) tucked under its left
+            // neighbor — now every corner stays exposed (test18 T23c),
+            // with a whisper of fan tilt (0.03) kept for the look.
+            var tx = (i - mid) * 0.39, tz = seat.isLocal ? 0.14 : 0, ty = 0.014 + (lifted ? 0.10 : 0);
             grp.position.set(tx, ty, tz);
-            grp.rotation.y = (i - mid) * 0.045;
+            grp.rotation.y = (i - mid) * 0.03;
             if(lifted) grp.rotation.x = -0.30;
             grp.userData.cardIndex = i; grp.userData.seatKey = seat.key;
             o.group.add(grp);
@@ -11407,32 +11430,39 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
         v3.ctlObjs = [];
         gl.interact = gl.interact.filter(function(o){ return !o.userData.controlSel; });
         var n = m.controls.length; if(!n) return;
-        var w = Math.min(0.7, 3.4 / n - 0.06), h = 0.27;
+        // these plates ARE the table's touch targets — sized for a
+        // thumb and for reading at arm's length, not for elegance
+        // (test18 T23a/T23b pin the minimums). The row sits at z 0.50:
+        // its glass band (canvas y ~594-693) clears the center sub
+        // above (ends y ~590) and the pot below (moved to y 768).
+        var w = Math.min(1.02, 4.8 / n - 0.08), h = 0.38;
         m.controls.forEach(function(c, i){
           var tex = v3dControlTexture(c);
           var mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
             new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
           mesh.rotation.x = -Math.PI / 2;
-          mesh.position.set((i - (n - 1) / 2) * (w + 0.06), 0.016, 0.52);
+          mesh.position.set((i - (n - 1) / 2) * (w + 0.06), 0.016, 0.50);
           mesh.userData.controlSel = c.selector;
           gl.scene.add(mesh);
           v3.ctlObjs.push(mesh); gl.interact.push(mesh);
         });
       }
       function v3dControlTexture(c){
-        var cv = document.createElement("canvas"); cv.width = 512; cv.height = 224;
+        var cv = document.createElement("canvas"); cv.width = 840; cv.height = 320;
         var x = cv.getContext("2d");
         var bg = c.kind === "primary" ? "#e9c34a" : (c.kind === "fold" ? "#5a1f24" : "rgba(10,26,22,.92)");
         var fg = c.kind === "primary" ? "#231a04" : "#eef7f2";
-        x.fillStyle = bg; v3dRoundRect(x, 8, 8, 496, 208, 44); x.fill();
-        x.strokeStyle = c.kind === "primary" ? "#fff2c4" : "rgba(94,231,255,.5)"; x.lineWidth = 6;
-        v3dRoundRect(x, 8, 8, 496, 208, 44); x.stroke();
+        x.fillStyle = bg; v3dRoundRect(x, 10, 10, 820, 300, 52); x.fill();
+        x.strokeStyle = c.kind === "primary" ? "#fff2c4" : "rgba(94,231,255,.5)"; x.lineWidth = 8;
+        v3dRoundRect(x, 10, 10, 820, 300, 52); x.stroke();
         x.fillStyle = fg; x.textAlign = "center";
         // shrink-to-fit: the full label always renders ("Deal a hand —
-        // ante 10" used to overflow the old 256px canvas on BOTH sides)
-        var px = v3dFitPx(c.label || "", 452, 84, 34);
+        // ante 10" used to overflow the old 256px canvas on BOTH sides),
+        // and it renders BIG — the fit starts at 128px, so a long label
+        // still lands ~65px on an 840px canvas (was 41px on 512)
+        var px = v3dFitPx(c.label || "", 720, 128, 48);
         x.font = "800 " + px + "px Arial, sans-serif";
-        x.fillText(c.label || "", 256, 112 + Math.round(px * 0.36));
+        x.fillText(c.label || "", 420, 160 + Math.round(px * 0.36));
         var t = new THREE.CanvasTexture(cv); t.encoding = THREE.sRGBEncoding;
         return t;
       }
