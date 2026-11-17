@@ -11280,6 +11280,15 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
       }
       function v3dSyncSeat(seat, slot, m){
         var gl = v3.gl;
+        // the corner parking below is for the LOCAL seat — and for ANY
+        // seat in the near-center slot. On a seat-less screen (a House
+        // host's glass) nobody is local, and the near seat's standard
+        // beyond-the-cards plate points AT the camera: its sight-line
+        // footprint drapes its own fan and the pot text on the glass.
+        // The near slot is the only one with that geometry (its +z
+        // faces the viewer), so it gets the corner on every screen;
+        // the local branch itself is unchanged (test18 T23e/T26).
+        var plateCorner = seat.isLocal || (slot.x === 0 && slot.z > 1);
         var o = v3.seatObjs[seat.key];
         if(!o){
           o = v3.seatObjs[seat.key] = { group: new THREE.Group(), cards: [], cardsSig: "__none__", plateSig: "", built: false, healSig: null };
@@ -11288,7 +11297,7 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
           gl.scene.add(o.group);
           var plate = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false }));
           plate.scale.set(1.35, 0.38, 1);
-          if(seat.isLocal) plate.position.set(1.80, 0.40, 0.66); else plate.position.set(0, 0.52, 0.52);
+          if(plateCorner) plate.position.set(1.80, 0.40, 0.66); else plate.position.set(0, 0.52, 0.52);
           o.group.add(plate); o.plate = plate;
           var chip = new THREE.Group(); chip.position.set(0.58, 0, -0.38); o.group.add(chip); o.chip = chip;
         }
@@ -11302,8 +11311,10 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
         // the corner its sight-line footprint lands on empty near-edge
         // glass — clear of the center-text zone, the turn line, and
         // the local fan (pinned by test18 T23e). Every other seat's
-        // plate sits beyond its cards from the camera, as before.
-        if(o.plate){ if(seat.isLocal) o.plate.position.set(1.80, 0.40, 0.66); else o.plate.position.set(0, 0.52, 0.52); }
+        // plate sits beyond its cards from the camera, as before —
+        // except any seat in the near-center slot, which takes the
+        // corner too (see plateCorner above; pinned by test18 T26).
+        if(o.plate){ if(plateCorner) o.plate.position.set(1.80, 0.40, 0.66); else o.plate.position.set(0, 0.52, 0.52); }
         // nameplate
         var plateSig = [seat.name, seat.stack, seat.status, seat.folded, seat.away, seat.ready, seat.isHouse].join("|");
         if(plateSig !== o.plateSig){
@@ -11334,8 +11345,16 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
         // fix-pass original compared against v3.backTex — a field nothing
         // ever assigns — so the check was dead code; the real back texture
         // lives in the face cache.)
+        // REVEAL EXCEPTION (final fix pass): a NON-LOCAL seat showing all
+        // faces exists only at a reveal (showdown / lone winner — mid-hand
+        // its cards are backs). A revealed seat whose meshes disagree with
+        // the model is never a "steady table", so the once-per-state bound
+        // does not apply there: the heal keeps correcting until the meshes
+        // match. It stays read-back-triggered — a correct table fires it
+        // zero times — and every other state keeps the bound (T19f2/T25b).
+        var revealed = !seat.isLocal && seat.cards.length > 0 && seat.cards.every(function(c){ return c.face === "up"; });
         var backTex = (v3.gl && v3.gl.faceCache) ? v3.gl.faceCache.back : null;
-        if(backTex && o.cardsSig === cardsSig && o.healSig !== cardsSig &&
+        if(backTex && o.cardsSig === cardsSig && (revealed || o.healSig !== cardsSig) &&
            o.cards.length && o.cards.length === seat.cards.length){
           for(var vi = 0; vi < seat.cards.length; vi++){
             if(seat.cards[vi].face !== "up") continue;
@@ -11356,6 +11375,11 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
             // the mark reads at a glance
             var lifted = (typeof c.lift === "boolean") ? c.lift : (seat.selected.indexOf(i) >= 0);
             var grp = v3dMakeCard(c, wilds, seat, lifted);
+            // a reveal rebuild re-marks the seat's face textures for a
+            // fresh upload: a texture cached earlier in the session is
+            // otherwise trusted forever, and the reveal is the one
+            // moment a stale image would be on full display (T25c)
+            if(revealed){ var fmesh = grp.children[1]; if(fmesh && fmesh.material && fmesh.material.map) fmesh.material.map.needsUpdate = true; }
             var mid = (seat.cards.length - 1) / 2;
             // the local hand sits a step closer to the camera — bigger
             // in view, clear of the plate's new home behind it. The fan
@@ -11435,13 +11459,23 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
         // (test18 T23a/T23b pin the minimums). The row sits at z 0.50:
         // its glass band (canvas y ~594-693) clears the center sub
         // above (ends y ~590) and the pot below (moved to y 768).
-        var w = Math.min(1.02, 4.8 / n - 0.08), h = 0.38;
+        // The row is ALSO capped to the clear center band and rides
+        // ABOVE the card plane: at the plate band the side seats'
+        // fans (4/5/6-player and House layouts) reach in to |x|
+        // 1.778, and the old row spanned |x| 2.32 at y 0.016 — BELOW
+        // the card faces (0.0295) — so the outer plates slid under
+        // the side fans' card bodies and lost the depth test there
+        // ("Raise +200" read as "Rais…" under the backs). Span cap
+        // 3.44 keeps every plate inside |x| 1.72, and y 0.045 puts
+        // the plates over the card plane, so no seat's cards can
+        // overlap them in plan or in depth (test18 T24 pins both).
+        var w = Math.min(1.02, (3.44 - (n - 1) * 0.06) / n), h = 0.38;
         m.controls.forEach(function(c, i){
           var tex = v3dControlTexture(c);
           var mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
             new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
           mesh.rotation.x = -Math.PI / 2;
-          mesh.position.set((i - (n - 1) / 2) * (w + 0.06), 0.016, 0.50);
+          mesh.position.set((i - (n - 1) / 2) * (w + 0.06), 0.045, 0.50);
           mesh.userData.controlSel = c.selector;
           gl.scene.add(mesh);
           v3.ctlObjs.push(mesh); gl.interact.push(mesh);
