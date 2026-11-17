@@ -10574,6 +10574,38 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
       function pageLog(html){ try{ if(typeof log === "function") log(html); }catch(e){} }
       function reducedMotion(){ try{ return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }catch(e){ return false; } }
 
+      /* ---------- debug instrumentation (?v3ddebug=1) ----------
+         Off unless the page URL carries ?v3ddebug=1. With the flag,
+         every error the V3D layer catches — plus any throw inside a
+         sync tick or a render tick — is written to the page's own log
+         panel with a V3D-ERR prefix and collected on
+         window.__v3dErrors, and each working sync tick logs one
+         V3D-STAGE line per completed stage (budgeted, so the log can
+         never flood). That makes a live session diagnosable from the
+         page log alone, no console needed. Without the flag every
+         helper here is a strict no-op and the guarded call sites run
+         exactly the code they ran before. */
+      var v3dDbg = false;
+      try{ v3dDbg = /[?&]v3ddebug=1(?:&|$)/.test(window.location.search || ""); }catch(e){}
+      if(v3dDbg){ try{ window.__v3dErrors = []; }catch(e){} }
+      var v3dStageBudget = 48;
+      function v3dErr(where, e){
+        if(!v3dDbg) return;
+        try{ if(window.__v3dErrors && window.__v3dErrors.length >= 200) return; }catch(_){}
+        var msg = "V3D-ERR " + where + ": " + (e && e.message ? e.message : String(e));
+        try{ if(window.__v3dErrors) window.__v3dErrors.push(msg); }catch(_){}
+        pageLog(msg);
+      }
+      function v3dStage(name){
+        if(!v3dDbg || v3dStageBudget <= 0) return;
+        v3dStageBudget--;
+        pageLog("V3D-STAGE " + name);
+      }
+      function v3dSyncGuarded(force){
+        if(!v3dDbg){ v3dSync(force); return; }
+        try{ v3dSync(force); }catch(e){ v3dErr("sync", e); }
+      }
+
       /* ---------- preference ---------- */
       function v3dLoadPref(){
         try{ var v = window.localStorage.getItem(V3D_KEY); if(v === "3d" || v === "classic") v3.pref = v; }catch(e){}
@@ -10785,7 +10817,7 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
           if(typeof game === "undefined") return null;
           if(typeof mp !== "undefined" && mp && (mp.role === "host" || mp.role === "guest") && mp.snap) return v3dSnapModel();
           return v3dSoloModel();
-        }catch(e){ return null; }
+        }catch(e){ v3dErr("buildModel", e); return null; }
       }
       function v3dModelSig(m){
         if(!m) return "";
@@ -10836,7 +10868,7 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
       function v3dEnter(){
         if(v3.active || v3.failed) { if(v3.failed) v3dShowClassic(); return; }
         if(!v3dCanShow()){ v3dShowClassic(); return; }
-        if(!v3dInitGL()){ v3.failed = true; v3dShowClassic(); pageLog("Table 3D couldn’t start on this device — Classic view it is."); return; }
+        if(!v3dInitGL()){ v3.failed = true; v3dErr("enter", new Error("GL init unavailable")); v3dShowClassic(); pageLog("Table 3D couldn’t start on this device — Classic view it is."); return; }
         v3.active = true;
         var t = el("table"), w = el("view3d-wrap");
         if(t) t.style.display = "none";
@@ -10844,9 +10876,9 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
         v3dPaintSeg();
         v3.sig = ""; // force a full sync
         v3dResize();
-        v3dSync(true);
+        v3dSyncGuarded(true);
         if(v3.syncTimer) clearInterval(v3.syncTimer);
-        v3.syncTimer = setInterval(function(){ v3dSync(false); }, 200);
+        v3.syncTimer = setInterval(function(){ v3dSyncGuarded(false); }, 200);
       }
       function v3dExit(){
         if(v3.syncTimer){ clearInterval(v3.syncTimer); v3.syncTimer = null; }
@@ -10903,8 +10935,19 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
           // table body + LED rim + the glass screen itself
           var body = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.22, 4.2), new THREE.MeshBasicMaterial({ color: 0x0d0a08 }));
           body.position.y = -0.13; scene.add(body);
+          // the rim is a SOLID box, not a frame: its top face must stay
+          // BELOW the glass (y 0.002) or the depth test swallows
+          // everything that sits on the glass — the screen itself, the
+          // card faces (top y 0.0295) and the control plates (y 0.016).
+          // At y -0.008 the top sat at +0.042 and did exactly that (the
+          // Nov 16 fix-pass regression, diagnosed Nov 17: only sprites
+          // at y 0.52 and lifted cards at y 0.13 stayed visible, and
+          // the "felt" that followed the turn was this box's top face).
+          // At y -0.06 the top is -0.01: the box reads as a glowing LED
+          // frame around the glass footprint plus a lit edge band, and
+          // test18 T20 pins rimTop < glassY so it can never creep back.
           var rim = new THREE.Mesh(new THREE.BoxGeometry(6.64, 0.1, 4.34), new THREE.MeshBasicMaterial({ color: 0x35d68a }));
-          rim.position.y = -0.008; scene.add(rim);
+          rim.position.y = -0.06; scene.add(rim);
           var glassCanvas = document.createElement("canvas"); glassCanvas.width = 2048; glassCanvas.height = 1024;
           var glassTex = new THREE.CanvasTexture(glassCanvas);
           glassTex.encoding = THREE.sRGBEncoding; glassTex.anisotropy = 4;
@@ -10919,10 +10962,11 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
           renderer.domElement.addEventListener("pointerdown", v3dOnPointer);
           window.addEventListener("resize", v3dResize);
           if(window.ResizeObserver){ try{ new ResizeObserver(function(){ v3dResize(); }).observe(el("view3d-wrap")); }catch(e){} }
-          renderer.setAnimationLoop(v3dTick);
+          renderer.setAnimationLoop(v3dDbg ? function(){ try{ v3dTick(); }catch(e){ v3dErr("tick", e); } } : v3dTick);
           v3dResize();
           return true;
         }catch(e){
+          v3dErr("init", e);
           v3.gl = null;
           return false;
         }
@@ -11184,11 +11228,13 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
         var sig = v3dModelSig(m);
         if(!force && sig === v3.sig) return;
         v3.sig = sig; v3.model = m;
+        v3dStage("sync begin");
         var gl = v3.gl;
         // glass screen + rim + glow follow the model
         var gm = v3dGlassModel(m);
         var gsig = JSON.stringify(gm);
         if(gsig !== gl.glassSig){ gl.glassSig = gsig; v3dDrawGlass(gm); }
+        v3dStage("glass ok");
         // the LED rim is driven by the BRIGHTENED twin of the active
         // player's color — the raw theme color on a thin unlit strip
         // read as a dark band next to the glowing glass
@@ -11209,12 +11255,15 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
         Object.keys(v3.seatObjs).forEach(function(k){
           if(!seen[k]){ gl.scene.remove(v3.seatObjs[k].group); delete v3.seatObjs[k]; }
         });
+        v3dStage("seats ok");
         // pot chips
         var psig = String(m.pot);
         if(psig !== gl.potSig){ gl.potSig = psig; v3dSyncPot(m); }
         // glass controls (the prompt, on the glass in front of the local seat)
         v3dSyncControls(m);
+        v3dStage("controls ok");
         gl.dirty = true;
+        v3dStage("sync done");
       }
       function v3dSyncSeat(seat, slot, m){
         var gl = v3.gl;
@@ -11400,7 +11449,7 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
           // glass controls first
           var hits = v3.gl.raycaster.intersectObjects(v3.ctlObjs, false);
           if(hits.length && hits[0].object.userData.controlSel){
-            if(v3dActivateControl(hits[0].object.userData.controlSel)) setTimeout(function(){ v3dSync(true); }, 40);
+            if(v3dActivateControl(hits[0].object.userData.controlSel)) setTimeout(function(){ v3dSyncGuarded(true); }, 40);
             return;
           }
           // own cards: discard selection during a draw, through the same toggle Classic uses
@@ -11415,12 +11464,12 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
                 var grp = ch[0].object.parent;
                 if(grp && grp.userData.seatKey === local.key){
                   v3dToggleOwnCard(grp.userData.cardIndex);
-                  setTimeout(function(){ v3dSync(true); }, 30);
+                  setTimeout(function(){ v3dSyncGuarded(true); }, 30);
                 }
               }
             }
           }
-        }catch(e){ /* a missed tap must never break the table */ }
+        }catch(e){ v3dErr("pointer", e); /* a missed tap must never break the table */ }
       }
 
       /* ---------- boot + public API (the harness tests the pure layer) ---------- */
@@ -11450,9 +11499,10 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
         activateControl: v3dActivateControl,
         phaseText: v3dPhaseText,
         fitPx: v3dFitPx, wrap2: v3dWrap2, estWidth: v3dEstWidth, ledColor: v3dLedColor,
+        debug: function(){ return v3dDbg; }, errors: function(){ return window.__v3dErrors || []; },
         _state: v3
       };
-      try{ v3dBoot(); }catch(e){ /* view garnish only — never a blocker */ }
+      try{ v3dBoot(); }catch(e){ v3dErr("boot", e); /* view garnish only — never a blocker */ }
     })();
   </script>
   </body>
