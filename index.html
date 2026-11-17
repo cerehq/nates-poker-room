@@ -11220,7 +11220,7 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
         var gl = v3.gl;
         var o = v3.seatObjs[seat.key];
         if(!o){
-          o = v3.seatObjs[seat.key] = { group: new THREE.Group(), cards: [], cardsSig: "__none__", plateSig: "", built: false };
+          o = v3.seatObjs[seat.key] = { group: new THREE.Group(), cards: [], cardsSig: "__none__", plateSig: "", built: false, healSig: null };
           o.group.position.set(slot.x, 0, slot.z);
           o.group.rotation.y = slot.rotY;
           gl.scene.add(o.group);
@@ -11256,20 +11256,26 @@ if(mp.role === "solo") netStatus("Not in a live room — you’re playing solo v
             cm.position.y = 0.02 + i * 0.032; o.chip.add(cm);
           }
         }
-        // self-heal (defect-2 hardening): if any live mesh is actually
-        // DISPLAYING the back texture while the model says that card is
-        // face-up, force a rebuild below regardless of the signature —
-        // the signature tracks the model, this reads back the meshes
-        if(o.cards.length && o.cards.length === seat.cards.length && v3.backTex){
-          for(var vi = 0; vi < seat.cards.length; vi++){
-            if(seat.cards[vi].face !== "up") continue;
-            var fm = o.cards[vi].grp.children[1];
-            if(fm && fm.material && fm.material.map === v3.backTex){ o.cardsSig = null; break; }
-          }
-        }
         // cards
         var cardsSig = seat.cards.map(function(c){ return (c.face === "up" ? v3dCardKey(c.card) : "B") + (c.lift ? "^" : ""); }).join(",") +
                        "|" + seat.selected.join(".") + "|" + (seat.folded ? "F" : "");
+        // self-heal (defect-2 hardening): if a live mesh is DISPLAYING the
+        // back texture while the model says that card is face-up, force one
+        // rebuild below. The signature tracks the model; this reads back
+        // the meshes. Bounded: it may fire at most once per distinct hand
+        // state (o.healSig), so it can never thrash a steady table. (The
+        // fix-pass original compared against v3.backTex — a field nothing
+        // ever assigns — so the check was dead code; the real back texture
+        // lives in the face cache.)
+        var backTex = (v3.gl && v3.gl.faceCache) ? v3.gl.faceCache.back : null;
+        if(backTex && o.cardsSig === cardsSig && o.healSig !== cardsSig &&
+           o.cards.length && o.cards.length === seat.cards.length){
+          for(var vi = 0; vi < seat.cards.length; vi++){
+            if(seat.cards[vi].face !== "up") continue;
+            var fm = o.cards[vi].grp.children[1];
+            if(fm && fm.material && fm.material.map === backTex){ o.cardsSig = null; o.healSig = cardsSig; break; }
+          }
+        }
         if(cardsSig !== o.cardsSig){
           var prevCount = o.cards.length;
           o.cardsSig = cardsSig;
